@@ -4,14 +4,12 @@
  */
 package fr.strapontin.web.email;
 
+import fr.strapontin.core.AccesAppConfig;
 import fr.strapontin.core.CompteurEnvoisResend;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
+import fr.strapontin.core.RegleQuotaResend;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -29,33 +27,27 @@ class GestionQuotaResend {
 
   /* package-private : réutilisé par
    * AlerteQuotaResendService/EmailAlerteService/EmailSender (même package). */
-  static final int LIMITE_JOUR = 100;
+  static final int LIMITE_JOUR = RegleQuotaResend.LIMITE_JOUR;
   /* package-private : réutilisé par
    * AlerteQuotaResendService/EmailAlerteService/EmailSender (même package). */
-  static final int LIMITE_MOIS = 3000;
+  static final int LIMITE_MOIS = RegleQuotaResend.LIMITE_MOIS;
   private static final double SEUIL_ALERTE = 0.8;
-  private static final String CLE_QUOTA = "RESEND_QUOTA_JSON";
+  private static final String CLE_QUOTA = RegleQuotaResend.CLE_QUOTA;
 
-  private final JdbcTemplate jdbc;
+  private final AccesAppConfig acces;
   private final ObjectMapper objectMapper;
 
   /* package-private : instancié uniquement par EmailSender (même package). */
-  GestionQuotaResend(final JdbcTemplate jdbc, final ObjectMapper objectMapper) {
-    this.jdbc = jdbc;
+  GestionQuotaResend(final AccesAppConfig acces, final ObjectMapper objectMapper) {
+    this.acces = acces;
     this.objectMapper = objectMapper;
   }
 
   private Optional<CompteurEnvoisResend> lireCompteurBrut() {
     try {
-      final String json =
-          jdbc.queryForObject(
-              "SELECT valeur_chiffree FROM app_config WHERE cle = ?", String.class, CLE_QUOTA);
-      if (json == null) {
-        return Optional.empty();
-      }
-      return Optional.of(objectMapper.readValue(json, CompteurEnvoisResend.class));
-    } catch (EmptyResultDataAccessException e) {
-      return Optional.empty();
+      return acces
+          .lire(CLE_QUOTA)
+          .map(json -> objectMapper.readValue(json, CompteurEnvoisResend.class));
     } catch (JacksonException e) {
       LOG.warn("compteur Resend malformé en base — ignoré : {}", e.getMessage());
       return Optional.empty();
@@ -65,39 +57,10 @@ class GestionQuotaResend {
   private void ecrireCompteur(final CompteurEnvoisResend compteur) {
     try {
       final String json = objectMapper.writeValueAsString(compteur);
-      jdbc.update(
-          "INSERT INTO app_config (cle, valeur_chiffree) VALUES (?, ?)"
-              + " ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = ?, mis_a_jour_le = now()",
-          CLE_QUOTA,
-          json,
-          json);
+      acces.ecrire(CLE_QUOTA, json);
     } catch (JacksonException e) {
       LOG.error("impossible de sérialiser le compteur Resend", e);
     }
-  }
-
-  private static String jourCourant() {
-    return LocalDate.now(ZoneOffset.UTC).toString();
-  }
-
-  private static String moisCourant(final String jour) {
-    return jour.substring(0, 7);
-  }
-
-  private static CompteurEnvoisResend appliquerRollover(
-      final CompteurEnvoisResend compteur, final String jour, final String mois) {
-    final boolean jourChange = !jour.equals(compteur.jour());
-    final boolean moisChange = !mois.equals(compteur.mois());
-    if (!jourChange && !moisChange) {
-      return compteur;
-    }
-    return new CompteurEnvoisResend(
-        jour,
-        jourChange ? 0 : compteur.envoyesJour(),
-        mois,
-        moisChange ? 0 : compteur.envoyesMois(),
-        !jourChange && compteur.alerteJourEnvoyee(),
-        !moisChange && compteur.alerteMoisEnvoyee());
   }
 
   /**
@@ -111,11 +74,7 @@ class GestionQuotaResend {
   /* package-private : appelé par
    * AlerteQuotaResendService/EmailAlerteService/EmailSender (même package). */
   CompteurEnvoisResend lireCompteurCourant() {
-    final String jour = jourCourant();
-    final String mois = moisCourant(jour);
-    return lireCompteurBrut()
-        .map(c -> appliquerRollover(c, jour, mois))
-        .orElse(new CompteurEnvoisResend(jour, 0, mois, 0, false, false));
+    return RegleQuotaResend.courant(lireCompteurBrut());
   }
 
   /**
@@ -129,7 +88,7 @@ class GestionQuotaResend {
    * AlerteQuotaResendService/EmailAlerteService/EmailSender (même package). */
   boolean reserverEnvoi() {
     final CompteurEnvoisResend actuel = lireCompteurCourant();
-    if (actuel.envoyesJour() >= LIMITE_JOUR || actuel.envoyesMois() >= LIMITE_MOIS) {
+    if (RegleQuotaResend.estAtteint(actuel)) {
       ecrireCompteur(actuel);
       LOG.error(
           "quota Resend atteint — envoi bloqué jour={}/{} mois={}/{}",
@@ -139,14 +98,7 @@ class GestionQuotaResend {
           LIMITE_MOIS);
       return false;
     }
-    ecrireCompteur(
-        new CompteurEnvoisResend(
-            actuel.jour(),
-            actuel.envoyesJour() + 1,
-            actuel.mois(),
-            actuel.envoyesMois() + 1,
-            actuel.alerteJourEnvoyee(),
-            actuel.alerteMoisEnvoyee()));
+    ecrireCompteur(RegleQuotaResend.apresEnvoi(actuel));
     return true;
   }
 

@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.invitation.InvitationUtilisateurService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -49,8 +50,11 @@ class AuthServiceTest {
     emailService = mock(EmailService.class);
     final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
     when(passwordEncoder.encode(any())).thenReturn("$hash$");
+    final InvitationUtilisateurService invitations = mock(InvitationUtilisateurService.class);
+    when(invitations.activer(any(), any(), any())).thenReturn(Optional.empty());
     authService =
-        new AuthService(verificationRepository, emailService, passwordEncoder, sessionRepository);
+        new AuthService(
+            verificationRepository, emailService, passwordEncoder, sessionRepository, invitations);
   }
 
   @Test

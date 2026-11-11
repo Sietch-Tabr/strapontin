@@ -23,9 +23,17 @@
         <module>web</module>
     </modules>
 
+    <licenses>
+        <license>
+            <name>GNU Affero General Public License v3.0</name>
+            <url>https://www.gnu.org/licenses/agpl-3.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <properties>
         <!-- Version CI-friendly : un seul bump ici met à jour parent + 4 modules enfants -->
-        <revision>3.1.3</revision>
+        <revision>3.1.4</revision>
         <java.version>27</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Versions plus récentes que celles du BOM Spring Boot 4.1.1 (Flyway 12.4.0, Caffeine 3.2.4) -->
@@ -35,11 +43,14 @@
         <bouncycastle.version>1.86</bouncycastle.version>
         <webpush.version>1.3.0</webpush.version>
         <okapibarcode.version>0.5.7</okapibarcode.version>
-        <resend.version>4.29.0</resend.version>
+        <resend.version>4.30.0</resend.version>
+        <!-- resend-java épingle org.json à 20250517 (avis GHSA-ghc9-756g-vrcv) : version corrigée imposée ici -->
+        <org-json.version>20260719</org-json.version>
+        <logback.version>1.6.6</logback.version>
         <!-- resend-java dépend directement d'okhttp-jvm (variante JVM d'okhttp 5, module Kotlin
              Multiplatform) ; version alignée ici sur la dernière publiée. -->
         <okhttp-jvm.version>5.5.1</okhttp-jvm.version>
-        <jsoup.version>1.23.2</jsoup.version>
+        <jsoup.version>1.24.1</jsoup.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
         <!-- Propriété dédiée à l'agent JaCoCo, distincte de argLine : le module worker fixe déjà
@@ -51,7 +62,7 @@
         <!-- PMD core surchargé — nécessaire pour le support Java 26, cf. commentaire sur le plugin -->
         <pmdCore.version>7.29.0</pmdCore.version>
         <jacoco.version>0.8.16</jacoco.version>
-        <spotless.version>3.10.4</spotless.version>
+        <spotless.version>3.11.0</spotless.version>
     </properties>
 
     <build>
@@ -122,6 +133,9 @@
                         <!-- Aucun rapport HTML JXR généré : sans ce réglage, chaque module
                              avertit qu'aucune source XRef n'est disponible. -->
                         <linkXRef>false</linkXRef>
+                        <!-- Duplication (CPD) : aucun bloc de 90 jetons ou plus répété dans un module,
+                             à 0 violation depuis 3.1.4 ; le seuil ne se relève pas. -->
+                        <minimumTokens>90</minimumTokens>
                     </configuration>
                     <executions>
                         <execution>
@@ -251,9 +265,13 @@
                 <artifactId>okhttp-jvm</artifactId>
                 <version>${okhttp-jvm.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.json</groupId>
+                <artifactId>json</artifactId>
+                <version>${org-json.version}</version>
+            </dependency>
 
-            <!-- Lecture des pages HTML des sites de salles (analyseur HTML seul : la vulnérabilité
-                 connue de 1.23.2 vise l'analyseur XML, jamais utilisé ici) -->
+            <!-- Lecture des pages HTML des sites de salles (analyseur HTML seul) -->
             <dependency>
                 <groupId>org.jsoup</groupId>
                 <artifactId>jsoup</artifactId>

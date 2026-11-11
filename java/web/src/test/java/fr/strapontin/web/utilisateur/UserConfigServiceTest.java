@@ -103,6 +103,19 @@ class UserConfigServiceTest {
         .hasMessageContaining("appareil");
   }
 
+  // La nouvelle version n'exige plus d'appareil push : l'email la porte.
+  @Test
+  void majNotifications_nouvelleVersionAvecEmailSansAppareilPush_estAcceptee() {
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
+    when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.of("re_test"));
+    final RequeteNotifications requete =
+        new RequeteNotifications("quotidien", true, false, false, false, true);
+
+    service.majNotifications("user-1", requete);
+
+    assertThat(parametresEcrits()).containsEntry("notifNouvelleVersion", true);
+  }
+
   @Test
   void majNotifications_emailCocheSansEnvoiPossible_estRefusee() {
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());

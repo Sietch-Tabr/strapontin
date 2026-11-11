@@ -59,7 +59,25 @@ public class SignalementDatesFestivalEcartees {
         signales += signaler(produit);
       }
     }
+    fermerObsoletes();
     return signales;
+  }
+
+  // Le concert n'existe plus, est passé, ou a gagné une autre billetterie : la
+  // date n'est plus attribuée à tort par ce seul produit.
+  private void fermerObsoletes() {
+    jdbc.update(
+        """
+        UPDATE signalements_matching sm SET resolu_le = now()
+        WHERE sm.type = :type AND sm.resolu_le IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM evenements e JOIN observations o ON o.evenement_id = e.id
+            WHERE e.id = sm.entite_id AND e.date >= CURRENT_DATE
+              AND o.source = 'eventim' AND o.url = sm.details ->> 'url'
+              AND NOT EXISTS (SELECT 1 FROM observations autre
+                              WHERE autre.evenement_id = e.id AND autre.url <> o.url))
+        """,
+        Map.of("type", TYPE));
   }
 
   // Attribué à tort seulement s'il n'existe que par ce produit (un billet

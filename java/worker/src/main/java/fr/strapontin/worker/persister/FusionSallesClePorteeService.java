@@ -6,8 +6,10 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.DistanceGeo;
+import fr.strapontin.core.FusionEvenementsSql;
 import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.core.QualificatifSalle;
+import fr.strapontin.core.ReglesCommunes;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -47,7 +49,6 @@ public class FusionSallesClePorteeService {
   private static final int NB_CONCERTS_PARTAGES_DISTANCE_ELARGIE = 2;
   // Deux billetteries publient la même séance à 30 ou 60 minutes d'écart
   // (ouverture des portes et début) ; au-delà, ce sont deux séances.
-  private static final int ECART_MAX_HEURE_SECONDES = 3600;
   private static final String CLE_CIBLE = "cible";
   private static final int NB_SALLES_PAIRE = 2;
   private static final String CLE_SOURCE = "source";
@@ -140,7 +141,7 @@ public class FusionSallesClePorteeService {
             GROUP BY c1.salle_id, c2.salle_id, sa.nom_norm, sb.nom_norm, sa.nom, sb.nom,
                      sa.ville, sb.ville, sa.latitude, sa.longitude, sb.latitude, sb.longitude
             """,
-            Map.of("ecartHeure", ECART_MAX_HEURE_SECONDES));
+            Map.of("ecartHeure", ReglesCommunes.ECART_MAX_HEURE_SECONDES));
     final List<PaireSalles> paires = new ArrayList<>();
     for (final Map<String, Object> ligne : lignes) {
       if (memeLieu(ligne)) {
@@ -293,7 +294,7 @@ public class FusionSallesClePorteeService {
     final String nomCible = decrireSalle(cibleId);
     final String nomSource = decrireSalle(sourceId);
 
-    fusionnerEvenements(ids);
+    FusionEvenementsSql.fusionner(jdbc, FusionEvenementsSql.SALLE, ids);
     fusionnerAbonnementsEtSources(ids, cibleId);
     fusionnerMetadonneesEtSousSalles(ids, cibleId, sourceId);
 
@@ -340,60 +341,6 @@ public class FusionSallesClePorteeService {
         .stream()
         .findFirst()
         .orElse(id.toString());
-  }
-
-  // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible)
-  // : leurs observations sont reportées sur l'événement cible plutôt que
-  // perdues (#1192) — celles qui entreraient en conflit sur (evenement_id,
-  // source, url) sont supprimées, déjà représentées côté cible. L'événement
-  // source, vidé de ses observations, est ensuite supprimé. 2. Réassigner les
-  // événements restants (ceux sans doublon côté cible).
-  private void fusionnerEvenements(final Map<String, Object> ids) {
-    jdbc.update(
-        """
-        DELETE FROM observations o1
-        USING observations o2, evenements e1, evenements e2
-        WHERE o1.evenement_id = e1.id AND o2.evenement_id = e2.id
-          AND e1.salle_id = CAST(:source AS uuid) AND e2.salle_id = CAST(:cible AS uuid)
-          AND e1.artiste_norm = e2.artiste_norm AND e1.date = e2.date
-          AND e1.heure IS NOT DISTINCT FROM e2.heure
-          AND o1.source = o2.source AND o1.url IS NOT DISTINCT FROM o2.url
-        """,
-        ids);
-    // Plateau de l'événement absorbé reporté sur la cible, jamais laissé au CASCADE.
-    jdbc.update(
-        """
-        INSERT INTO evenement_artistes (evenement_id, artiste_norm, artiste_nom, artiste_id)
-        SELECT e2.id, ea.artiste_norm, ea.artiste_nom, ea.artiste_id
-        FROM evenement_artistes ea, evenements e1, evenements e2
-        WHERE ea.evenement_id = e1.id
-          AND e1.salle_id = CAST(:source AS uuid) AND e2.salle_id = CAST(:cible AS uuid)
-          AND e1.artiste_norm = e2.artiste_norm AND e1.date = e2.date
-          AND e1.heure IS NOT DISTINCT FROM e2.heure
-        ON CONFLICT DO NOTHING
-        """,
-        ids);
-    jdbc.update(
-        """
-        UPDATE observations SET evenement_id = e2.id
-        FROM evenements e1, evenements e2
-        WHERE observations.evenement_id = e1.id
-          AND e1.salle_id = CAST(:source AS uuid) AND e2.salle_id = CAST(:cible AS uuid)
-          AND e1.artiste_norm = e2.artiste_norm AND e1.date = e2.date
-          AND e1.heure IS NOT DISTINCT FROM e2.heure
-        """,
-        ids);
-    jdbc.update(
-        """
-        DELETE FROM evenements
-        WHERE salle_id = CAST(:source AS uuid)
-          AND NOT EXISTS (SELECT 1 FROM observations WHERE observations.evenement_id = evenements.id)
-        """,
-        ids);
-    jdbc.update(
-        "UPDATE evenements SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source AS"
-            + " uuid)",
-        ids);
   }
 
   // 3. Abonnements en double supprimés, le reste réassigné. 4. Sources externes

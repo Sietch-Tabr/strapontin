@@ -81,7 +81,7 @@ class TriggerControllerTest {
     final Scheduler scheduler = mock(Scheduler.class);
     final JobExecutionContext ctxEnCours = mock(JobExecutionContext.class);
     final var jobDetail =
-        JobBuilder.newJob(fr.strapontin.worker.jobs.ReconciliationNocturneJob.class)
+        JobBuilder.newJob(fr.strapontin.worker.jobs.TacheExclusive.class)
             .withIdentity("reconciliationNocturne")
             .build();
     when(ctxEnCours.getJobDetail()).thenReturn(jobDetail);

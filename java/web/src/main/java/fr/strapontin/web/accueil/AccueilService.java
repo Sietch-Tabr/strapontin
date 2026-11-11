@@ -5,6 +5,7 @@
 package fr.strapontin.web.accueil;
 
 import fr.strapontin.web.concert.FiltreConcertsBuilder;
+import fr.strapontin.web.utilisateur.SuivisUtilisateur;
 import fr.strapontin.web.utilisateur.UserConfigService;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -218,20 +219,10 @@ public class AccueilService {
   }
 
   private int compterUserArtistes(final String userId) {
-    return Objects.requireNonNullElse(
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
-            Map.of(CLE_USER_ID, userId),
-            Integer.class),
-        0);
+    return SuivisUtilisateur.nombreArtistes(jdbc, userId);
   }
 
   private int compterUserSalles(final String userId) {
-    return Objects.requireNonNullElse(
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
-            Map.of(CLE_USER_ID, userId),
-            Integer.class),
-        0);
+    return SuivisUtilisateur.nombreSalles(jdbc, userId);
   }
 }

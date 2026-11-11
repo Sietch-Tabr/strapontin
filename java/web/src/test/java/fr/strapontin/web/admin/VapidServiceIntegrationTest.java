@@ -122,7 +122,7 @@ class VapidServiceIntegrationTest extends AbstractWebIntegrationTest {
                 + " FROM user_config WHERE user_id = 'v1'",
             Map.of());
     assertEquals(false, config.get("notif_artistes_push"));
-    assertEquals(false, config.get("notif_nouvelle_version"));
+    assertEquals(true, config.get("notif_nouvelle_version"));
     assertEquals("quotidien", config.get("frequence_notifications"));
   }
 

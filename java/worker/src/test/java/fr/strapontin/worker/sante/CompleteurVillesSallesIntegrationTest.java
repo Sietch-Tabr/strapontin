@@ -35,6 +35,7 @@ class CompleteurVillesSallesIntegrationTest extends AbstractWorkerIntegrationTes
 
   @Autowired private NamedParameterJdbcTemplate jdbc;
   @Autowired private LogsAdminWorker logsAdminWorker;
+  @Autowired private SignalementMatchingService signalements;
 
   private CompleteurVillesSalles completeur;
 
@@ -47,7 +48,8 @@ class CompleteurVillesSallesIntegrationTest extends AbstractWorkerIntegrationTes
         new CompleteurVillesSalles(
             jdbc,
             logsAdminWorker,
-            new AlignementCommuneSalles(jdbc, mock(ClientNominatim.class), logsAdminWorker));
+            new AlignementCommuneSalles(
+                jdbc, mock(ClientNominatim.class), logsAdminWorker, signalements));
   }
 
   private UUID salle(final String nom, final String ville, final String dept) {

@@ -121,7 +121,7 @@ Ordre de traitement, garde-fous et incidents : [`worker…/persister/CLAUDE.md`]
 
 UI/Vue, schéma SQL, style Java, tests E2E — scopées par type de fichier, chargées automatiquement en travaillant dessus plutôt que dupliquées ici : [`.claude/rules/frontend-vue.md`](.claude/rules/frontend-vue.md), [`.claude/rules/sql-migrations.md`](.claude/rules/sql-migrations.md), [`.claude/rules/backend-java.md`](.claude/rules/backend-java.md), [`.claude/rules/e2e-testing.md`](.claude/rules/e2e-testing.md).
 
-Commandes de test (à connaître même hors édition d'un fichier) : `mvn -f java/pom.xml clean test -pl core,sources,web,worker -am` (Docker requis, Testcontainers) ; `cd front && npm run test:unit` (Vitest, fonctions pures) ; `cd e2e && npx playwright test` (jamais `--project`, 5 navigateurs). Analyse statique (bloquante en CI) : `PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f java/pom.xml -pl core,sources,web,worker -am compile checkstyle:check pmd:check spotless:check -DskipTests` ; `cd front && npm run lint && npm run lint:css`.
+Commandes de test (à connaître même hors édition d'un fichier) : `mvn -f java/pom.xml clean test -pl core,sources,web,worker -am` (Docker requis, Testcontainers) ; `cd front && npm run test:unit` (Vitest, fonctions pures) ; `cd e2e && npx playwright test` (jamais `--project`, 5 navigateurs). Analyse statique (bloquante en CI) : `PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f java/pom.xml -pl core,sources,web,worker -am compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests` ; `cd front && npm run lint && npm run lint:css`.
 
 ## Skills projet (`.claude/commands/`, `.claude/skills/`)
 
@@ -132,7 +132,7 @@ Seul l'outillage partagé de `.claude/` est versionné (liste blanche dans `.git
 - `/pre-pr` : Wiki + CLAUDE.md + changelog + README + commit docs + `tea pr create`
 - `/suivi-fiabilite` : Check delta 360° du suivi de fiabilité prod — santé/jobs/données/tickets, état dans la mémoire personnelle (prérequis locaux listés dans le skill)
 - `check-deps` : Mises à jour Maven/npm/stack infra + changelogs — auto en début de jalon (`"Tickets du jalon X.Y.Z à implémenter :"`, mises à jour sûres appliquées au jalon) ; résumé + proposition de ticket en invocation ad-hoc
-- `/check-pipeline` : Statut et journaux de la dernière pipeline Woodpecker sur `main`
+- `/check-pipeline` : Statut et journaux de la dernière pipeline Woodpecker sur `main`, via `woodpecker-cli` en local (contexte enregistré par `woodpecker-cli setup`, aucun token à passer, aucun accès au LXC de CI)
 - `/ticket` : Création de ticket : doublon recherché, constat/analyse/attendu sans solution, étiquette et jalon vérifiés côté serveur
 - `/cloture-jalon` : Lancé par l'utilisateur uniquement : merge de la PR, pipeline, vérification prod, tag et release lisible, fermeture du jalon, nettoyage, wiki et mémoire
 - `/restauration-dev` : Base du dev remplacée par une copie de la prod, configuration du dev conservée (jamais `restore.sh`)

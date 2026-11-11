@@ -13,6 +13,7 @@ import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.http.CauseEchecHttp;
 import fr.strapontin.sources.http.ClientHttpFactory;
+import fr.strapontin.sources.http.ConstantesSources;
 import fr.strapontin.sources.http.UriSources;
 import java.net.URI;
 import java.time.Duration;
@@ -71,9 +72,9 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    */
   /* package-private : visibilité élargie pour EventimSourceTest (même
    * package). */
-  static final String USER_AGENT = "StrapontinBot/1.0 (+https://strapontin.kwaite.fr)";
 
   private final RestClient restClient;
+
   // Compteur cumulé depuis le dernier prélèvement (remonté dans logs_admin par
   // le worker, via un composant partagé).
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
@@ -106,7 +107,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   static RestClient.Builder builderAvecHeadersParDefaut() {
     return RestClient.builder()
         .defaultHeader("Accept", "application/json, text/plain, */*")
-        .defaultHeader("User-Agent", USER_AGENT)
+        .defaultHeader("User-Agent", ConstantesSources.USER_AGENT_ROBOT)
         .defaultHeader("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
         .defaultHeader("Connection", "keep-alive");
   }

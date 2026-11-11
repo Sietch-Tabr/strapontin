@@ -4,9 +4,11 @@
  */
 package fr.strapontin.web;
 
+import fr.strapontin.core.AccesAppConfig;
+import fr.strapontin.core.CadenceurAppels;
+import fr.strapontin.core.CadenceurAppelsPartage;
 import fr.strapontin.core.JetonInterneWorker;
 import fr.strapontin.sources.eventim.EventimSource;
-import fr.strapontin.sources.http.CadenceurAppels;
 import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.web.securite.ActiviteUtilisateurInterceptor;
 import fr.strapontin.web.securite.AppareilEnregistrementInterceptor;
@@ -65,7 +67,7 @@ public class WebConfiguration implements WebMvcConfigurer {
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  Clock horloge() {
+  static Clock horloge() {
     return Clock.systemDefaultZone();
   }
 
@@ -81,7 +83,7 @@ public class WebConfiguration implements WebMvcConfigurer {
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  RestClient restClient(@Value("${app.config.secret}") final String secret) {
+  static RestClient restClient(@Value("${app.config.secret}") final String secret) {
     final HttpClient httpClient =
         HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     final JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
@@ -113,7 +115,7 @@ public class WebConfiguration implements WebMvcConfigurer {
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  EventimSource eventimSource() {
+  static EventimSource eventimSource() {
     return new EventimSource();
   }
 
@@ -128,8 +130,17 @@ public class WebConfiguration implements WebMvcConfigurer {
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  CadenceurAppels cadenceurTicketmaster(final NamedParameterJdbcTemplate jdbc) {
+  static CadenceurAppels cadenceurTicketmaster(final NamedParameterJdbcTemplate jdbc) {
     return new CadenceurAppelsPartage(
         jdbc, "ticketmaster", TicketmasterSource.DELAI_MIN_ENTRE_APPELS_MS);
+  }
+
+  /**
+   * @param jdbc accès JDBC
+   * @return l'accès unique à la table {@code app_config}
+   */
+  @Bean
+  public static AccesAppConfig accesAppConfig(final NamedParameterJdbcTemplate jdbc) {
+    return new AccesAppConfig(jdbc);
   }
 }

@@ -22,8 +22,8 @@ import org.springframework.stereotype.Service;
 /**
  * Jobs de purge (concerts, salles, artistes orphelins, logs admin) —
  * extrait de {@code WorkerService}. Délégué par les jobs Quartz {@code
- * PurgerConcertsJob}/{@code PurgerSallesJob}/{@code PurgerArtistesJob}/
- * {@code PurgerLogsAdminJob}.
+ * TachesPlanifiees} (purgerConcerts, purgerSalles, purgerArtistes,
+ * purgerLogsAdmin).
  * @since 2.0.0 (extrait dans sa forme actuelle en 2.7.0)
  * @author Kwaite
  */

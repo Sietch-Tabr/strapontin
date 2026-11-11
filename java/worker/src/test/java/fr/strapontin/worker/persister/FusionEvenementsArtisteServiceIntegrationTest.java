@@ -719,6 +719,29 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertFalse(existe(ev));
   }
 
+  // Église de la Madeleine : le même programme sous deux intitulés Eventim au même instant.
+  @Test
+  void fusionnerVariantesDeTitreEventim_deuxIntitulesDuMemeProgramme_fusionne() {
+    final UUID madeleine = creerSalle("Eglise de la Madeleine");
+    final UUID a =
+        evenementSource(
+            madeleine, "les 4 saisons de vivaldi ave maria et celebres adagios", "eventim");
+    final UUID b =
+        evenementSource(madeleine, "extraits ave maria les 4 saisons de vivaldi", "eventim");
+
+    assertEquals(1, fusionSeancesDeuxSources.fusionnerVariantesDeTitreEventim());
+    assertTrue(existe(a) != existe(b));
+  }
+
+  @Test
+  void fusionnerVariantesDeTitreEventim_deuxProgrammesDifferents_neFusionnePas() {
+    final UUID madeleine = creerSalle("Eglise de la Madeleine");
+    evenementSource(madeleine, "requiem de mozart", "eventim");
+    evenementSource(madeleine, "gospel et negro spirituals", "eventim");
+
+    assertEquals(0, fusionSeancesDeuxSources.fusionnerVariantesDeTitreEventim());
+  }
+
   // Zénith Paris - La Villette : le spectacle annulé n'absorbe pas son remplaçant du même soir.
   @Test
   void fusionnerMemeCreneauDeuxSources_ficheAnnulee_neFusionnePasLeRemplacant() {
@@ -799,6 +822,42 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
               Integer.parseInt(o[2])));
     }
     return id;
+  }
+
+  // Salle Gaveau : le produit de 10h est resté sur la fiche de 11h30, qui porte son propre produit.
+  @Test
+  void retirerObservationsDeProduitReattribue_produitRepublieSurUneAutreFiche_leRetire() {
+    final UUID salle = creerSalle("Salle Gaveau");
+    final UUID matin =
+        ficheAvecObservations(
+            salle,
+            "le petit prince",
+            "10:00",
+            new String[] {"eventim", "https://www.eventim.fr/event/petit-prince-21738765", "1"});
+    final UUID midi =
+        ficheAvecObservations(
+            salle,
+            "le petit prince",
+            "11:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/petit-prince-21738765", "100"},
+            new String[] {"eventim", "https://www.eventim.fr/event/petit-prince-21738766", "1"});
+
+    assertEquals(1, fusionProduitsEventim.retirerObservationsDeProduitReattribue());
+
+    assertEquals(1L, nombreObservations(matin, "eventim"));
+    assertEquals(1L, nombreObservations(midi, "eventim"));
+  }
+
+  @Test
+  void retirerObservationsDeProduitReattribue_ficheSeuleSurSonProduit_neRetireRien() {
+    final UUID salle = creerSalle("Salle Gaveau");
+    ficheAvecObservations(
+        salle,
+        "le petit prince",
+        "10:00",
+        new String[] {"eventim", "https://www.eventim.fr/event/petit-prince-21738765", "100"});
+
+    assertEquals(0, fusionProduitsEventim.retirerObservationsDeProduitReattribue());
   }
 
   private long nombreObservations(final UUID evenementId, final String source) {

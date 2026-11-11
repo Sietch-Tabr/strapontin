@@ -13,10 +13,8 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -42,8 +40,7 @@ class ConfigServiceWorkerTest {
 
   @Test
   void lireConfig_cleAbsenteEnBase_retourneVide() {
-    when(jdbc.query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any()))
-        .thenReturn(List.of());
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
     assertEquals(Optional.empty(), creerService().lireConfig("CLE_INEXISTANTE"));
   }
 
@@ -51,8 +48,7 @@ class ConfigServiceWorkerTest {
   void lireConfig_valeurChiffreeParLeMemeSecret_retourneValeurEnClair() {
     final ConfigCipher cipher = new ConfigCipher(SECRET);
     final String chiffre = cipher.chiffrer("valeur-en-clair");
-    when(jdbc.query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any()))
-        .thenReturn(List.of(chiffre));
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of(chiffre));
 
     assertEquals(Optional.of("valeur-en-clair"), creerService().lireConfig("MA_CLE"));
   }
@@ -63,7 +59,7 @@ class ConfigServiceWorkerTest {
     // planter le worker, seulement logger l'échec et traiter la clé comme absente.
     final ConfigCipher autreCipher = new ConfigCipher("autre-secret-32-caracteres-ok!!");
     final String chiffreAvecAutreSecret = autreCipher.chiffrer("peu importe");
-    when(jdbc.query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any()))
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
         .thenReturn(List.of(chiffreAvecAutreSecret));
 
     assertEquals(Optional.empty(), creerService().lireConfig("CLE_AVEC_MAUVAIS_SECRET"));

@@ -9,6 +9,7 @@ import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.core.ReglesCommunes;
 import fr.strapontin.sources.SourceAvecBilanFetch;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +34,6 @@ public class NominatimSalleSource implements SourceEnrichissementSalle, SourceAv
   private static final Logger LOG = LoggerFactory.getLogger(NominatimSalleSource.class);
 
   // Rayon d'un même lieu à la résolution des salles par position.
-  private static final double RAYON_MEME_LIEU_METRES = 300;
   private static final Pattern SEPARATEUR_NOM = Pattern.compile("\\s[-–(]\\s?");
 
   private final ClientNominatim client;
@@ -116,7 +116,7 @@ public class NominatimSalleSource implements SourceEnrichissementSalle, SourceAv
                 lieu.position().longitude(),
                 salle.latitude(),
                 salle.longitude())
-            <= RAYON_MEME_LIEU_METRES;
+            <= ReglesCommunes.RAYON_MEME_LIEU_METRES;
   }
 
   private static EnrichissementSalle versEnrichissement(final ClientNominatim.LieuOsm lieu) {

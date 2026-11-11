@@ -201,24 +201,7 @@
                 <span v-if="concert.estNew" class="badge badge-nouveau"
                   >Nouveau</span
                 >
-                <span
-                  v-if="concert.statut === 'cancelled'"
-                  class="badge badge-annule"
-                  >Annulé</span
-                >
-                <span
-                  v-if="
-                    concert.statut === 'rescheduled' ||
-                    concert.statut === 'postponed'
-                  "
-                  class="badge badge-reporte"
-                  >Reporté</span
-                >
-                <span
-                  v-if="concert.statut === 'offsale'"
-                  class="badge badge-complet"
-                  >Complet</span
-                >
+                <BadgesStatutConcert :statut="concert.statut" />
                 <span
                   v-if="concert.statut === 'presale'"
                   class="badge badge-prevente"
@@ -235,26 +218,8 @@
                   >À vérifier</span
                 >
               </td>
-              <td data-label="Date">
-                <time class="concert-date" :datetime="concert.date">{{
-                  formaterAvecHeure(concert.date, concert.heure)
-                }}</time>
-              </td>
-              <td
-                data-label="Où"
-                :class="{ 'cel-vide': !concert.salle && !concert.ville }"
-              >
-                <span v-if="concert.salle">{{ concert.salle }}</span>
-                <span
-                  v-if="concert.salle && concert.ville"
-                  class="concert-separateur"
-                >
-                  ·
-                </span>
-                <span v-if="concert.ville" class="concert-ville">{{
-                  concert.ville
-                }}</span>
-              </td>
+              <CelluleDateConcert :date="concert.date" :heure="concert.heure" />
+              <CelluleOuConcert :salle="concert.salle" :ville="concert.ville" />
               <td data-label="" class="actions-cellule">
                 <a
                   v-if="concert.url"
@@ -283,35 +248,25 @@
       </div>
     </div>
 
-    <div v-if="donnees && donnees.totalPages > 1" class="pagination">
-      <button
-        v-if="donnees.page > 0"
-        type="button"
-        class="bouton bouton-secondaire"
-        @click="changerPage(donnees.page - 1)"
-      >
-        Précédent
-      </button>
-      <span>Page {{ donnees.page + 1 }} / {{ donnees.totalPages }}</span>
-      <button
-        v-if="donnees.page + 1 < donnees.totalPages"
-        type="button"
-        class="bouton bouton-secondaire"
-        @click="changerPage(donnees.page + 1)"
-      >
-        Suivant
-      </button>
-    </div>
+    <PaginationListe
+      v-if="donnees"
+      :page="donnees.page"
+      :total-pages="donnees.totalPages"
+      @changer="changerPage"
+    />
   </div>
 </template>
 
 <script setup>
-import { appelApi, lireJson } from "../utils/api.js";
+import PaginationListe from "../components/PaginationListe.vue";
+import BadgesStatutConcert from "../components/concert/BadgesStatutConcert.vue";
+import CelluleDateConcert from "../components/concert/CelluleDateConcert.vue";
+import CelluleOuConcert from "../components/concert/CelluleOuConcert.vue";
+import { appelApi } from "../utils/api.js";
 defineOptions({ name: "SpectaclesPage" });
 
-import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from "vue";
+import { computed, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { formaterAvecHeure } from "../composables/useDates.js";
 import { useToasts } from "../composables/useToasts.js";
 import {
   choixExplicite,
@@ -320,20 +275,35 @@ import {
   valeurApresBascule,
 } from "../utils/filtreIndisponibles.js";
 import EtatChargement from "../components/EtatChargement.vue";
+import { useListeConcertsFiltree } from "../composables/useListeConcertsFiltree.js";
 
 const route = useRoute();
 const router = useRouter();
 const { afficherToast } = useToasts();
 
-const chargement = ref(false);
-const donnees = shallowRef(null);
-const filtresVisibles = ref(false);
-
-const qLocal = ref("");
-const moisLocal = ref("");
-const genreLocal = ref("");
-const classificationLocal = ref("");
-const triLocal = ref("date");
+const {
+  chargement,
+  donnees,
+  filtresVisibles,
+  qLocal,
+  moisLocal,
+  genreLocal,
+  classificationLocal,
+  triLocal,
+  nbFiltresActifs,
+  appliquerFiltres,
+  changerPage,
+} = useListeConcertsFiltree({
+  url: "/api/spectacles",
+  messageErreur: "Impossible de charger les spectacles.",
+  ajouterParametres(params) {
+    if (quinzaineActive.value) params.set("quinzaine", "true");
+    if (masquesActive.value) params.set("masques", "true");
+    sources.value.forEach((s) => params.append("source", s));
+    const indisponibles = choixExplicite(route.query.indisponibles);
+    if (indisponibles) params.set("indisponibles", indisponibles);
+  },
+});
 
 const sources = computed(() => {
   const s = route.query.source;
@@ -353,78 +323,7 @@ const indisponiblesActive = computed(() =>
   indisponiblesAffiches(route.query.indisponibles, donnees.value),
 );
 
-const nbFiltresActifs = computed(() => {
-  let n = 0;
-  if (route.query.q) n++;
-  if (route.query.mois) n++;
-  if (route.query.genre) n++;
-  if (route.query.classification) n++;
-  return n;
-});
-
-function syncFiltresLocaux() {
-  qLocal.value = route.query.q ?? "";
-  moisLocal.value = route.query.mois ?? "";
-  genreLocal.value = route.query.genre ?? "";
-  classificationLocal.value = route.query.classification ?? "";
-  triLocal.value = route.query.tri ?? "date";
-}
-
 const controleurComposant = new AbortController();
-
-// Un nouvel appel (changement de filtre pendant qu'un chargement précédent est en cours)
-// annule le précédent plutôt que de laisser deux requêtes concurrentes risquer d'appliquer
-// leurs résultats dans le désordre.
-let controleurActuel = null;
-
-async function charger() {
-  controleurActuel?.abort();
-  const controleur = new AbortController();
-  controleurActuel = controleur;
-  chargement.value = true;
-  try {
-    const params = new URLSearchParams();
-    if (route.query.q) params.set("q", route.query.q);
-    if (route.query.mois) params.set("mois", route.query.mois);
-    if (route.query.genre) params.set("genre", route.query.genre);
-    if (route.query.classification)
-      params.set("classification", route.query.classification);
-    if (quinzaineActive.value) params.set("quinzaine", "true");
-    if (triLocal.value && triLocal.value !== "date")
-      params.set("tri", triLocal.value);
-    if (masquesActive.value) params.set("masques", "true");
-    sources.value.forEach((s) => params.append("source", s));
-    const indisponibles = choixExplicite(route.query.indisponibles);
-    if (indisponibles) params.set("indisponibles", indisponibles);
-    if (route.query.page) params.set("page", route.query.page);
-    const rep = await appelApi("/api/spectacles?" + params, {
-      signal: controleur.signal,
-    });
-    if (!rep.ok) throw new Error();
-    donnees.value = await lireJson(rep);
-  } catch (e) {
-    if (e.name === "AbortError") return;
-    afficherToast("Impossible de charger les spectacles.", "erreur");
-  } finally {
-    if (controleurActuel === controleur) chargement.value = false;
-  }
-}
-
-function appliquerFiltres() {
-  const q = { ...route.query };
-  delete q.page;
-  if (qLocal.value) q.q = qLocal.value;
-  else delete q.q;
-  if (moisLocal.value) q.mois = moisLocal.value;
-  else delete q.mois;
-  if (genreLocal.value) q.genre = genreLocal.value;
-  else delete q.genre;
-  if (classificationLocal.value) q.classification = classificationLocal.value;
-  else delete q.classification;
-  if (triLocal.value && triLocal.value !== "date") q.tri = triLocal.value;
-  else delete q.tri;
-  router.push({ query: q });
-}
 
 function toggleSource(source) {
   const q = { ...route.query };
@@ -472,10 +371,6 @@ function toggleIndisponibles() {
   router.push({ query: q });
 }
 
-function changerPage(page) {
-  router.push({ query: { ...route.query, page: String(page) } });
-}
-
 async function demasquerConcert(concert) {
   try {
     const rep = await appelApi(`/api/spectacles/matches/${concert.id}`, {
@@ -503,24 +398,7 @@ function formaterPresale(instantIso) {
   );
 }
 
-watch(
-  () => route.query,
-  () => {
-    syncFiltresLocaux();
-    charger();
-  },
-  { deep: true },
-);
-
-onMounted(() => {
-  syncFiltresLocaux();
-  charger();
-});
-
-onUnmounted(() => {
-  controleurComposant.abort();
-  controleurActuel?.abort();
-});
+onUnmounted(() => controleurComposant.abort());
 </script>
 
 <style scoped>

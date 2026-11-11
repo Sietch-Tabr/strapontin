@@ -220,6 +220,20 @@ class UserControllerTest {
   }
 
   @Test
+  void lireProfil_totpActifEnBaseMaisPrincipalPerime_rendLaValeurDeLaBase() {
+    when(utilisateurRepository.lireEmails("user-1"))
+        .thenReturn(Optional.of(new UtilisateurRepository.EmailsUtilisateur("test@test.fr", null)));
+    when(utilisateurRepository.deuxFacteursActif("user-1")).thenReturn(true);
+
+    // authPour fabrique un principal dont twoFactorActif est faux, comme une session ouverte
+    // avant l'activation du TOTP.
+    final ResponseEntity<ProfilUtilisateur> rep = controller.lireProfil(authPour("user-1", "user"));
+
+    assertEquals(HttpStatus.OK, rep.getStatusCode());
+    assertTrue(rep.getBody().twoFactorActif());
+  }
+
+  @Test
   void lireProfil_utilisateurAbsent_retourne404() {
     when(utilisateurRepository.lireEmails("user-1")).thenReturn(Optional.empty());
 

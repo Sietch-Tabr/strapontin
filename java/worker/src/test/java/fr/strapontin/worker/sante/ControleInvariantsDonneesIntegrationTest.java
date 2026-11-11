@@ -5,6 +5,7 @@
 package fr.strapontin.worker.sante;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
@@ -384,6 +385,38 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
             artiste));
   }
 
+  private void plusieursCreneauxDoubles(
+      final UUID salle, final String titreA, final String titreB) {
+    for (final String heure : List.of("18:00", "19:00", "20:00", "21:00")) {
+      evenementAvecSource(salle, titreA, heure, "eventim");
+      evenementAvecSource(salle, titreB, heure, "eventim");
+    }
+  }
+
+  // Madeleine : onze créneaux doubles, mais deux variantes du même programme à chacun.
+  @Test
+  void verifier_salleAGrosVolumeAvecVariantesDuMemeProgramme_signale() {
+    plusieursCreneauxDoubles(
+        creerSalle(),
+        "les 4 saisons de vivaldi ave maria celebres adagios",
+        "extraits ave maria les 4 saisons de vivaldi");
+
+    controle.verifier();
+
+    assertEquals(4, actifs().size(), "un signalement par créneau");
+    assertTrue(actifs().stream().allMatch("creneau_double_meme_source"::equals));
+  }
+
+  // Théâtre à plusieurs salles : des spectacles différents au même instant, légitimes.
+  @Test
+  void verifier_salleAGrosVolumeAvecSpectaclesDifferents_neSignaleRien() {
+    plusieursCreneauxDoubles(creerSalle(), "le bourgeois gentilhomme", "cyrano de bergerac");
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
   // L'église de la Madeleine : deux programmes Eventim pour un seul concert du soir.
   @Test
   void verifier_deuxFichesEventimAuMemeCreneau_signaleSansFusionner() {
@@ -461,6 +494,54 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
 
     assertEquals(java.util.Set.of("produit_eventim_double"), java.util.Set.copyOf(actifs()));
     assertEquals(3L, jdbc.queryForObject("SELECT count(*) FROM evenements", Map.of(), Long.class));
+  }
+
+  // Zimmer90 : la même fiche reçoit un doublon, recréé par le cycle, cinq nuits de suite.
+  @Test
+  void verifier_ficheQuiRecoitUnDoublonTroisNuits_estSignalee() {
+    final UUID salle = creerSalle();
+    final UUID cible = evenementHeure(salle, "zimmer90", "20:00");
+    for (int jour = 1; jour <= 3; jour++) {
+      jdbc.update(
+          "INSERT INTO logs_admin (ts, niveau, source, message, meta) VALUES"
+              + " (now() - make_interval(days => :jour), 'info', 'reconciliation-nocturne', 'm',"
+              + " CAST(:meta AS jsonb))",
+          Map.of("jour", jour, "meta", "{\"evenementCible\": \"" + cible + "\"}"));
+    }
+
+    controle.verifier();
+
+    assertTrue(actifs().contains("fusion_nocturne_repetee"));
+  }
+
+  @Test
+  void verifier_ficheQuiRecoitUnDoublonUneSeuleNuit_neSignaleRien() {
+    final UUID salle = creerSalle();
+    final UUID cible = evenementHeure(salle, "zimmer90", "20:00");
+    jdbc.update(
+        "INSERT INTO logs_admin (ts, niveau, source, message, meta) VALUES"
+            + " (now(), 'info', 'reconciliation-nocturne', 'm', CAST(:meta AS jsonb))",
+        Map.of("meta", "{\"evenementCible\": \"" + cible + "\"}"));
+
+    controle.verifier();
+
+    assertTrue(!actifs().contains("fusion_nocturne_repetee"));
+  }
+
+  @Test
+  void verifier_ficheAvecProduitDePrestation_estSignalee() {
+    final UUID salle = creerSalle();
+    final UUID celine = evenementHeure(salle, "celine dion", "20:00");
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut) VALUES"
+            + " (CAST(:id AS uuid), 'ticketmaster',"
+            + " 'https://www.ticketmaster.fr/fr/manifestation/prestation-hospitalite-celine-dion-billet/idmanif/1',"
+            + " 'Celine Dion', 'Arena')",
+        Map.of("id", celine.toString()));
+
+    controle.verifier();
+
+    assertTrue(actifs().contains("produit_prestation_visible"));
   }
 
   // Flashdance à Pleyel : deux séances du même jour sous une seule adresse de produit.

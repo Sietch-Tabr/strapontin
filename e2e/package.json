@@ -1,12 +1,13 @@
 {
   "name": "strapontin-e2e",
+  "license": "AGPL-3.0-only",
   "private": true,
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.1",
+    "@playwright/test": "^1.65.0",
     "@types/node": "^26.6.6"
   }
 }

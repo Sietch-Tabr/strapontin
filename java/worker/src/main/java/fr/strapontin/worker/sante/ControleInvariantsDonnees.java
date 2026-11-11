@@ -5,7 +5,6 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.ProduitEventim;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,20 +22,20 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 final class ControleInvariantsDonnees {
 
   private static final String TYPE_ENTITE_GLOBAL = "invariant";
-  private static final String CONFIANCE_HAUTE = "haute";
   private static final String SALLE = "salle";
+  private static final String EVENEMENT = "evenement";
   private static final String DATE = "date";
   private static final String JUMEAU = "jumeau";
 
   private final NamedParameterJdbcTemplate jdbc;
-  private final SignalementMatchingService signalements;
+  private final PublicationAnomalies publication;
   private final ControleInvariantsComplementaires complementaires;
 
   /* package-private : instancié par ControleIntegriteService. */
   ControleInvariantsDonnees(
       final NamedParameterJdbcTemplate jdbc, final SignalementMatchingService signalements) {
     this.jdbc = jdbc;
-    this.signalements = signalements;
+    this.publication = new PublicationAnomalies(signalements);
     this.complementaires = new ControleInvariantsComplementaires(jdbc, signalements);
   }
 
@@ -45,39 +44,26 @@ final class ControleInvariantsDonnees {
    */
   /* package-private : appelé par ControleIntegriteService. */
   int verifier() {
-    return publier("orphelins_fk", TYPE_ENTITE_GLOBAL, orphelinsFk())
-        + publier("sessions_sans_appareil", TYPE_ENTITE_GLOBAL, sessionsSansAppareil())
-        + publier("notifications_non_envoyees", "utilisateur", notificationsNonEnvoyees())
-        + publier("salle_multi_departements", SALLE, sallesMultiDepartements())
-        + publier("salle_suivie_contaminee", SALLE, sallesSuiviesContaminees())
-        + publier("migration_flyway_echec", TYPE_ENTITE_GLOBAL, migrationsEnEchec())
-        + publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
-        + publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques())
-        + publier(
-            "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
-        + publier("produit_eventim_double", "evenement", produitsEventimDoubles())
-        + publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
-        + publier("salle_sans_ville", SALLE, sallesSansVille())
-        + publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces())
+    return publication.publier("orphelins_fk", TYPE_ENTITE_GLOBAL, orphelinsFk())
+        + publication.publier("sessions_sans_appareil", TYPE_ENTITE_GLOBAL, sessionsSansAppareil())
+        + publication.publier(
+            "notifications_non_envoyees", "utilisateur", notificationsNonEnvoyees())
+        + publication.publier("salle_multi_departements", SALLE, sallesMultiDepartements())
+        + publication.publier("salle_suivie_contaminee", SALLE, sallesSuiviesContaminees())
+        + publication.publier("migration_flyway_echec", TYPE_ENTITE_GLOBAL, migrationsEnEchec())
+        + publication.publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
+        + publication.publier(
+            "identifiant_externe_duplique", "identifiant", identifiantsDupliques())
+        + publication.publier(
+            "concert_double_salles_distinctes", EVENEMENT, concertsDoublesSallesDistinctes())
+        + publication.publier("produit_eventim_double", EVENEMENT, produitsEventimDoubles())
+        + publication.publier("produit_prestation_visible", EVENEMENT, produitsPrestationVisibles())
+        + publication.publier("fusion_nocturne_repetee", EVENEMENT, fusionsNocturnesRepetees())
+        + publication.publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
+        + publication.publier("salle_sans_ville", SALLE, sallesSansVille())
+        + publication.publier(
+            "artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces())
         + complementaires.verifier();
-  }
-
-  private int publier(
-      final String type, final String entiteType, final Map<UUID, Map<String, Object>> anomalies) {
-    anomalies.forEach(
-        (entite, details) ->
-            signalements.signaler(type, entiteType, entite, CONFIANCE_HAUTE, details));
-    signalements.clore(type, anomalies.keySet());
-    return anomalies.size();
-  }
-
-  private static UUID uuidDe(final String valeur) {
-    return UUID.nameUUIDFromBytes(valeur.getBytes(StandardCharsets.UTF_8));
-  }
-
-  private static Map<UUID, Map<String, Object>> globale(
-      final String type, final Map<String, Object> details) {
-    return details.isEmpty() ? Map.of() : Map.of(uuidDe("invariant:" + type), details);
   }
 
   private Map<UUID, Map<String, Object>> orphelinsFk() {
@@ -106,7 +92,7 @@ final class ControleInvariantsDonnees {
             comptes.put(rs.getString("cle"), rs.getLong("nb"));
           }
         });
-    return globale("orphelins_fk", comptes);
+    return PublicationAnomalies.globale("orphelins_fk", comptes);
   }
 
   // L'appareil n'est enregistré qu'au premier appel API après connexion,
@@ -125,7 +111,8 @@ final class ControleInvariantsDonnees {
             String.class);
     return comptes.isEmpty()
         ? Map.of()
-        : globale("sessions_sans_appareil", Map.of("comptes", String.join(", ", comptes)));
+        : PublicationAnomalies.globale(
+            "sessions_sans_appareil", Map.of("comptes", String.join(", ", comptes)));
   }
 
   private Map<UUID, Map<String, Object>> concertsDoublesSallesDistinctes() {
@@ -220,12 +207,56 @@ final class ControleInvariantsDonnees {
             details.put("horsHorizon", rs.getLong("hors_horizon"));
           }
         });
-    return globale("fiches_figees", details);
+    return PublicationAnomalies.globale("fiches_figees", details);
   }
 
-  // Produit Eventim sur plusieurs fiches du même jour, salle et d'heures voisines
-  // après la fusion : artistes différents ou plus de deux fiches. Deux séances
-  // d'un produit (matinée, soirée) ne comptent pas.
+  // Produit Eventim sur plusieurs fiches du même jour, salle et d'heures
+  // voisines après la fusion : artistes différents ou plus de deux fiches. Deux
+  // séances d'un produit (matinée, soirée) ne comptent pas. Promesse du
+  // changelog : un produit de prestation, d'hospitalité ou d'accès prioritaire
+  // n'est jamais pris pour un séance. Toute fiche à venir qui en porte encore
+  // un est signalée, quelle que soit la billetterie.
+  private Map<UUID, Map<String, Object>> produitsPrestationVisibles() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT DISTINCT e.id, o.source::text AS source, o.url
+        FROM observations o JOIN evenements e ON e.id = o.evenement_id
+        WHERE e.date >= CURRENT_DATE
+          AND lower(o.url) ~ 'prestation|hospitalit|priority-(pass|access)'
+        """,
+        Map.of(),
+        rs -> {
+          anomalies.put(
+              rs.getObject("id", UUID.class),
+              Map.of("source", rs.getString("source"), "url", rs.getString("url")));
+        });
+    return anomalies;
+  }
+
+  // Une fiche que la fusion nocturne reçoit trois nuits sur sept est recréée
+  // chaque jour : la résolution à l'écriture ne la rattache pas, la fusion ne
+  // fait que corriger après coup.
+  private Map<UUID, Map<String, Object>> fusionsNocturnesRepetees() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT c.cible, c.nuits FROM (
+          SELECT CAST(meta ->> 'evenementCible' AS uuid) AS cible,
+                 count(DISTINCT ts::date) AS nuits
+          FROM logs_admin
+          WHERE source = 'reconciliation-nocturne' AND meta ->> 'evenementCible' IS NOT NULL
+            AND ts > now() - interval '7 days'
+          GROUP BY 1 HAVING count(DISTINCT ts::date) >= 3) c
+        JOIN evenements e ON e.id = c.cible AND e.date >= CURRENT_DATE
+        """,
+        Map.of(),
+        rs -> {
+          anomalies.put(rs.getObject("cible", UUID.class), Map.of("nuits", rs.getLong("nuits")));
+        });
+    return anomalies;
+  }
+
   private Map<UUID, Map<String, Object>> produitsEventimDoubles() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     final String produit = ProduitEventim.expressionSql("o");
@@ -331,7 +362,8 @@ final class ControleInvariantsDonnees {
           details.put("concerts", rs.getLong("nb"));
           details.put("plusAncien", rs.getObject("plus_ancien", LocalDate.class).toString());
           details.put("userId", rs.getString("user_id"));
-          anomalies.put(uuidDe("utilisateur:" + rs.getString("user_id")), details);
+          anomalies.put(
+              PublicationAnomalies.uuidDe("utilisateur:" + rs.getString("user_id")), details);
         });
     return anomalies;
   }
@@ -388,7 +420,8 @@ final class ControleInvariantsDonnees {
             String.class);
     return versions.isEmpty()
         ? Map.of()
-        : globale("migration_flyway_echec", Map.of("migrations", String.join(", ", versions)));
+        : PublicationAnomalies.globale(
+            "migration_flyway_echec", Map.of("migrations", String.join(", ", versions)));
   }
 
   // Compte activé : un seul identifiant de connexion, mot de passe bcrypt.
@@ -413,7 +446,7 @@ final class ControleInvariantsDonnees {
             comptes.put(rs.getString("cle"), rs.getLong("nb"));
           }
         });
-    return globale("comptes_incoherents", comptes);
+    return PublicationAnomalies.globale("comptes_incoherents", comptes);
   }
 
   // Un identifiant Wikidata ou Deezer désigne une seule salle ou un seul
@@ -436,7 +469,7 @@ final class ControleInvariantsDonnees {
           final String nature = rs.getString("nature");
           final String valeur = rs.getString("valeur");
           anomalies.put(
-              uuidDe(nature + ":" + valeur),
+              PublicationAnomalies.uuidDe(nature + ":" + valeur),
               Map.of("nature", nature, "valeur", valeur, "nb", rs.getLong("nb")));
         });
     return anomalies;

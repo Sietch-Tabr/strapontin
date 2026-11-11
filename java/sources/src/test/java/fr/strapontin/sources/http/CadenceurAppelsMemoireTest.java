@@ -7,6 +7,7 @@ package fr.strapontin.sources.http;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import fr.strapontin.core.CadenceurAppels;
 import org.junit.jupiter.api.Test;
 
 /**

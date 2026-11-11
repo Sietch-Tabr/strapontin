@@ -808,6 +808,68 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(2L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
   }
 
+  private void vieillirObservations() {
+    jdbc.update("UPDATE observations SET updated_at = now() - interval '3 hours'", Map.of());
+  }
+
+  // Keren Ann : la billetterie déplace le produit au lendemain, l'ancienne date n'est plus publiée.
+  @Test
+  void persisterConcerts_produitEventimDontLaDateChange_suitSaFiche() {
+    persisterConcerts.persisterConcerts(
+        List.of(produitEventim("Keren Ann", "20:30", "2098-12-11", "keren-ann-21934489")));
+    vieillirObservations();
+    persisterConcerts.persisterConcerts(
+        List.of(produitEventim("Keren Ann", "20:30", "2098-12-12", "keren-ann-21934489")));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    assertEquals(
+        "2098-12-12",
+        jdbc.queryForObject("SELECT date::text FROM evenements", Map.of(), String.class));
+  }
+
+  // Zimmer90 : Eventim publie 18h30, Ticketmaster 20h00, la fiche garde l'heure de Ticketmaster.
+  @Test
+  void persisterConcerts_produitEventimAHeureEloigneeDeLAutreBilletterie_rejointLaMemeFiche() {
+    final ConcertBrut ticketmaster =
+        ConcertBrut.nouveau()
+            .artiste("Zimmer90")
+            .date("2098-11-17")
+            .heure("20:00")
+            .salle("Seine Musicale")
+            .ville("Boulogne-Billancourt")
+            .dept("92")
+            .url("https://www.ticketmaster.fr/idmanif/zimmer")
+            .source("ticketmaster")
+            .classification("music")
+            .genre("Rap")
+            .construire();
+    persisterConcerts.persisterConcerts(List.of(ticketmaster));
+    persisterConcerts.persisterConcerts(
+        List.of(produitEventim("Zimmer90", "20:00", "2098-11-17", "zimmer90-21305058")));
+    vieillirObservations();
+    persisterConcerts.persisterConcerts(
+        List.of(produitEventim("Zimmer90", "18:30", "2098-11-17", "zimmer90-21305058")));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    assertEquals(
+        "20:00:00",
+        jdbc.queryForObject("SELECT heure::text FROM evenements", Map.of(), String.class));
+  }
+
+  // Un produit publié deux fois dans le lot, ce sont deux séances : jamais une heure qui a changé.
+  @Test
+  void persisterConcerts_produitEventimDeDeuxSeancesDansLeLot_garde_deuxFiches() {
+    persisterConcerts.persisterConcerts(
+        List.of(produitEventim("Flashdance", "13:30", "2098-05-02", "flashdance-21040341")));
+    vieillirObservations();
+    persisterConcerts.persisterConcerts(
+        List.of(
+            produitEventim("Flashdance", "13:30", "2098-05-02", "flashdance-21040341"),
+            produitEventim("Flashdance", "21:00", "2098-05-02", "flashdance-21040341")));
+
+    assertEquals(2L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+  }
+
   @Test
   void persisterConcerts_statutPreventeApresDeuxCyclesEventimSuccessifs_resteProtege() {
     // Eventim envoie systématiquement un statut null (pas de distinction prévente/vente

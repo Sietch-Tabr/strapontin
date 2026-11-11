@@ -8,6 +8,7 @@ import static fr.strapontin.web.concert.FiltreConcertsBuilder.CONCERTS_PAR_PAGE;
 
 import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.concert.FiltreConcertsBuilder;
+import fr.strapontin.web.utilisateur.SuivisUtilisateur;
 import fr.strapontin.web.utilisateur.UserConfigService;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -269,13 +270,7 @@ public class SpectacleService {
    * @return le nombre total de suivis
    */
   private int compterSuivi(final Map<String, Object> baseParams) {
-    return Objects.requireNonNullElse(
-        jdbc.queryForObject(
-            "SELECT (SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId)"
-                + " + (SELECT COUNT(*) FROM user_salles WHERE user_id = :userId)",
-            baseParams,
-            Integer.class),
-        0);
+    return SuivisUtilisateur.nombreTotal(jdbc, (String) baseParams.get("userId"));
   }
 
   /**

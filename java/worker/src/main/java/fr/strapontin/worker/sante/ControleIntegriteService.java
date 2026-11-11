@@ -5,6 +5,7 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.SalleHierarchie;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +72,7 @@ public class ControleIntegriteService {
     signales += verifierCoherenceDeptSalle();
     signales += verifierEvenementsOrphelinsAnciens();
     signales += verifierSourcesOrphelines();
+    fermerSignalementsEvenementiels();
     signales += dispersionGeo.verifier();
     signales += invariants.verifier();
     LOG.info("controle:integrite signales={}", signales);
@@ -89,7 +91,7 @@ public class ControleIntegriteService {
       parentParSalle.put((UUID) ligne.get("id"), (UUID) ligne.get("salle_parent_id"));
     }
 
-    int signalees = 0;
+    final List<UUID> sallesEnCycle = new ArrayList<>();
     for (final Map.Entry<UUID, UUID> entree : parentParSalle.entrySet()) {
       final UUID salleId = entree.getKey();
       final UUID parentId = entree.getValue();
@@ -103,10 +105,11 @@ public class ControleIntegriteService {
             salleId,
             "haute",
             Map.of("salleParentId", parentId.toString()));
-        signalees++;
+        sallesEnCycle.add(salleId);
       }
     }
-    return signalees;
+    signalementMatchingService.clore("cycle_salle_parent", sallesEnCycle);
+    return sallesEnCycle.size();
   }
 
   /**
@@ -131,7 +134,7 @@ public class ControleIntegriteService {
             """,
             Map.of());
 
-    int signalees = 0;
+    final List<UUID> sallesIncoherentes = new ArrayList<>();
     for (final Map<String, Object> ligne : lignes) {
       final UUID salleId = (UUID) ligne.get("salle_id");
       signalementMatchingService.signaler(
@@ -140,9 +143,10 @@ public class ControleIntegriteService {
           salleId,
           "basse",
           Map.of("deptSalle", ligne.get("dept_salle")));
-      signalees++;
+      sallesIncoherentes.add(salleId);
     }
-    return signalees;
+    signalementMatchingService.clore("incoherence_dept_salle", sallesIncoherentes);
+    return sallesIncoherentes.size();
   }
 
   private int verifierEvenementsOrphelinsAnciens() {
@@ -161,6 +165,7 @@ public class ControleIntegriteService {
       signalementMatchingService.signaler(
           "evenement_orphelin_ancien", "evenement", id, "basse", null);
     }
+    signalementMatchingService.clore("evenement_orphelin_ancien", ids);
     return ids.size();
   }
 
@@ -237,5 +242,42 @@ public class ControleIntegriteService {
       signalees++;
     }
     return signalees;
+  }
+
+  // Signalements posés au fil d'un événement (enrichissement, fetch) plutôt
+  // qu'énumérés à chaque passage : refermés ici dès que leur condition a
+  // disparu.
+  private void fermerSignalementsEvenementiels() {
+    jdbc.update(
+        """
+        UPDATE signalements_matching sm SET resolu_le = now()
+        WHERE sm.type = 'collision_wikidata_salle' AND sm.resolu_le IS NULL
+          AND (NOT EXISTS (SELECT 1 FROM salles s
+                           WHERE s.id = sm.entite_id AND s.wikidata_id IS NULL)
+               OR NOT EXISTS (SELECT 1 FROM salles p
+                              WHERE p.wikidata_id = sm.details ->> 'wikidataId'
+                                AND p.id <> sm.entite_id))
+        """,
+        Map.of());
+    jdbc.update(
+        """
+        UPDATE signalements_matching sm SET resolu_le = now()
+        WHERE sm.type = 'collision_wikidata_artiste' AND sm.resolu_le IS NULL
+          AND (NOT EXISTS (SELECT 1 FROM artistes a
+                           WHERE a.id = sm.entite_id AND a.wikidata_id IS NULL)
+               OR NOT EXISTS (SELECT 1 FROM artistes p
+                              WHERE p.wikidata_id = sm.details ->> 'wikidataId'
+                                AND p.id <> sm.entite_id))
+        """,
+        Map.of());
+    jdbc.update(
+        """
+        UPDATE signalements_matching sm SET resolu_le = now()
+        WHERE sm.type = 'wikidata_ambiguite' AND sm.entite_type = 'artiste'
+          AND sm.resolu_le IS NULL
+          AND NOT EXISTS (SELECT 1 FROM artistes a
+                          WHERE a.id = sm.entite_id AND a.wikidata_id IS NULL)
+        """,
+        Map.of());
   }
 }

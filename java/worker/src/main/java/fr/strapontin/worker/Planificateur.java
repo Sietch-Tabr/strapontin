@@ -8,17 +8,7 @@ import fr.strapontin.core.HorairesJobs;
 import fr.strapontin.worker.jobs.FetchArtistesBatchJob;
 import fr.strapontin.worker.jobs.FetchRegionJob;
 import fr.strapontin.worker.jobs.FetchSallesAllJob;
-import fr.strapontin.worker.jobs.FetchSitesSallesJob;
-import fr.strapontin.worker.jobs.GererComptesInactifsJob;
-import fr.strapontin.worker.jobs.GererInvitesExpiresJob;
-import fr.strapontin.worker.jobs.PurgerArtistesJob;
-import fr.strapontin.worker.jobs.PurgerConcertsJob;
-import fr.strapontin.worker.jobs.PurgerLogsAdminJob;
-import fr.strapontin.worker.jobs.PurgerSallesJob;
-import fr.strapontin.worker.jobs.RecalculerMatchesJob;
-import fr.strapontin.worker.jobs.ReconciliationNocturneJob;
-import fr.strapontin.worker.jobs.RevoquerAdminsJob;
-import fr.strapontin.worker.jobs.SuiviCyclesJobsJob;
+import fr.strapontin.worker.jobs.TachesPlanifiees;
 import java.util.TimeZone;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.Job;
@@ -132,7 +122,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   JobDetail jobDetailFetchSitesSalles() {
-    return creerJobDetail(FetchSitesSallesJob.class, "fetchSitesSalles");
+    return TachesPlanifiees.jobDetail("fetchSitesSalles");
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -146,7 +136,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   JobDetail jobDetailRecalculerMatches() {
-    return creerJobDetail(RecalculerMatchesJob.class, "recalculerMatches");
+    return TachesPlanifiees.jobDetail("recalculerMatches");
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -161,7 +151,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   JobDetail jobDetailPurgerConcerts() {
-    return creerJobDetail(PurgerConcertsJob.class, "purgerConcerts");
+    return TachesPlanifiees.jobDetail("purgerConcerts");
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -176,7 +166,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   JobDetail jobDetailPurgerSalles() {
-    return creerJobDetail(PurgerSallesJob.class, "purgerSalles");
+    return TachesPlanifiees.jobDetail("purgerSalles");
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -190,7 +180,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   JobDetail jobDetailPurgerArtistes() {
-    return creerJobDetail(PurgerArtistesJob.class, "purgerArtistes");
+    return TachesPlanifiees.jobDetail("purgerArtistes");
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -205,7 +195,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   JobDetail jobDetailPurgerLogsAdmin() {
-    return creerJobDetail(PurgerLogsAdminJob.class, "purgerLogsAdmin");
+    return TachesPlanifiees.jobDetail("purgerLogsAdmin");
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -220,7 +210,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   JobDetail jobDetailGererComptesInactifs() {
-    return creerJobDetail(GererComptesInactifsJob.class, "gererComptesInactifs");
+    return TachesPlanifiees.jobDetail("gererComptesInactifs");
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -237,7 +227,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   JobDetail jobDetailGererInvitesExpires() {
-    return creerJobDetail(GererInvitesExpiresJob.class, "gererInvitesExpires");
+    return TachesPlanifiees.jobDetail("gererInvitesExpires");
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -252,7 +242,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   JobDetail jobDetailRevoquerAdmins() {
-    return creerJobDetail(RevoquerAdminsJob.class, "revoquerAdmins");
+    return TachesPlanifiees.jobDetail("revoquerAdmins");
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -267,7 +257,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   JobDetail jobDetailReconciliationNocturne() {
-    return creerJobDetail(ReconciliationNocturneJob.class, "reconciliationNocturne");
+    return TachesPlanifiees.jobDetail("reconciliationNocturne");
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -284,7 +274,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   JobDetail jobDetailSuiviCyclesJobs() {
-    return creerJobDetail(SuiviCyclesJobsJob.class, "suiviCyclesJobs");
+    return TachesPlanifiees.jobDetail("suiviCyclesJobs");
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du

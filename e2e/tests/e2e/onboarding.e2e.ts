@@ -374,10 +374,9 @@ test.describe("Scénario: nudge notifications — premier ajout", () => {
       const boutonAjouterQuandMeme = page.getByRole("button", {
         name: /Ajouter «.*» quand même/,
       });
-      await Promise.race([
-        boutonSuivre.click({ timeout: 8000 }),
-        boutonAjouterQuandMeme.click({ timeout: 8000 }),
-      ]).catch(() => {});
+      await boutonSuivre.or(boutonAjouterQuandMeme).first().click({
+        timeout: 8000,
+      });
 
       await expect(
         page

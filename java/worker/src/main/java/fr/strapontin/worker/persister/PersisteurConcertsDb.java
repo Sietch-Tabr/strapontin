@@ -6,7 +6,6 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.Hommage;
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.core.ProduitEventim;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -157,13 +156,14 @@ public class PersisteurConcertsDb {
    * flou même salle et même date ({@link RechercheEvenementExistant}), sinon
    * création.
    */
-  private ResolutionEvenement resoudreOuCreerEvenement(final ValeurConcert concert) {
+  private ResolutionEvenement resoudreOuCreerEvenement(
+      final ValeurConcert concert, final List<ValeurConcert> lot) {
     final UUID exactId = rechercheEvenement.exact(concert);
     if (exactId != null) {
       return new ResolutionEvenement(exactId, false, false);
     }
 
-    final UUID produitId = rechercheEvenement.parProduit(concert);
+    final UUID produitId = rechercheEvenement.parProduit(concert, lot);
     if (produitId != null) {
       return new ResolutionEvenement(produitId, false, true);
     }
@@ -286,25 +286,6 @@ public class PersisteurConcertsDb {
 
   // L'adresse d'un produit suit son titre : l'ancienne, qui ne sera plus revue,
   // ne doit pas rester à côté de la nouvelle.
-  private void retirerAnciennesAdressesProduit(
-      final UUID evenementId, final ValeurConcert concert) {
-    if (!"eventim".equals(concert.source())) {
-      return;
-    }
-    jdbc.update(
-        "DELETE FROM observations o WHERE o.evenement_id = CAST(:id AS uuid)"
-            + " AND o.source = 'eventim' AND o.url IS DISTINCT FROM :url AND "
-            + ProduitEventim.expressionSql("o")
-            + " = :produit",
-        Map.of(
-            "id",
-            evenementId.toString(),
-            "url",
-            concert.url(),
-            "produit",
-            ProduitEventim.identifiant(concert.url()).orElse("")));
-  }
-
   // Un événement que la seule source du produit alimente en suit les changements
   // de titre et d'heure ; une autre source garde l'identité établie.
   // La clé (artiste, date, heure, salle) ne doit pas déjà exister, sinon l'identité
@@ -313,6 +294,7 @@ public class PersisteurConcertsDb {
     jdbc.update(
         """
         UPDATE evenements e SET
+            date        = CAST(:date AS date),
             heure       = COALESCE(CAST(:heure AS time), e.heure),
             artiste_norm = CASE WHEN e.artiste_id IS NULL OR e.artiste_id = CAST(:artisteId AS uuid)
                                 THEN :artisteNorm ELSE e.artiste_norm END,
@@ -323,7 +305,8 @@ public class PersisteurConcertsDb {
                             AND o.source <> CAST(:source AS source_concert))
           AND NOT EXISTS (
             SELECT 1 FROM evenements x
-            WHERE x.id <> e.id AND x.date = e.date AND x.salle_id IS NOT DISTINCT FROM e.salle_id
+            WHERE x.id <> e.id AND x.date = CAST(:date AS date)
+              AND x.salle_id IS NOT DISTINCT FROM e.salle_id
               AND x.heure IS NOT DISTINCT FROM COALESCE(CAST(:heure AS time), e.heure)
               AND x.artiste_norm = CASE WHEN e.artiste_id IS NULL
                                              OR e.artiste_id = CAST(:artisteId AS uuid)
@@ -331,6 +314,7 @@ public class PersisteurConcertsDb {
         """,
         new MapSqlParameterSource()
             .addValue("id", evenementId.toString())
+            .addValue(CLE_DATE, concert.date(), Types.DATE)
             .addValue(CLE_HEURE, concert.heure(), Types.TIME)
             .addValue("source", concert.source())
             .addValue("artisteNorm", concert.artisteNorm())
@@ -430,7 +414,7 @@ public class PersisteurConcertsDb {
         republications++;
         continue;
       }
-      final ResolutionEvenement resolution = resoudreOuCreerEvenement(concert);
+      final ResolutionEvenement resolution = resoudreOuCreerEvenement(concert, valeurs);
       upsertObservation(resolution.id(), concert);
       enregistrerPlateau(resolution.id(), concert);
       if (resolution.nouveau()) {
@@ -439,7 +423,7 @@ public class PersisteurConcertsDb {
         mettreAJourChampsEvenement(resolution.id(), concert);
         if (resolution.parProduit()) {
           detacherArtisteImite(resolution.id(), concert);
-          retirerAnciennesAdressesProduit(resolution.id(), concert);
+          rechercheEvenement.retirerAnciennesAdressesProduit(resolution.id(), concert);
           alignerIdentiteSurProduit(resolution.id(), concert);
         }
         updates++;

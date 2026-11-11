@@ -46,7 +46,8 @@ public class FusionsNocturnes {
    * @return nombre de fusions effectuées
    */
   public int fusionnerFichesPerimeesEtSeances() {
-    return parProduit.fusionner()
+    return parProduit.retirerObservationsDeProduitReattribue()
+        + parProduit.fusionner()
         + parProduit.fusionnerProduitsRepublies()
         + parProduit.fusionnerProduitsRepubliesAilleurs()
         + parArtiste.fusionnerFichesPerimees()
@@ -67,6 +68,7 @@ public class FusionsNocturnes {
    * @return nombre de spectacles publiés sous deux intitulés fusionnés
    */
   public int fusionnerMemeCreneauDeuxSources() {
-    return parSeance.fusionnerMemeCreneauDeuxSources();
+    return parSeance.fusionnerMemeCreneauDeuxSources()
+        + parSeance.fusionnerVariantesDeTitreEventim();
   }
 }

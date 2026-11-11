@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# backup-local.sh — dump PostgreSQL + .env + logs dans une archive locale
+# backup-local.sh — dump PostgreSQL compressé à la volée + .env, en local (voir backup.sh)
 # Usage : bash /opt/strapontin/scripts/backup-local.sh
 # À exécuter en tant que root depuis le LXC.
 
-BACKUP_DIR="/opt/strapontin/backup"
-APP_DIR="/opt/strapontin"
+# Surchargeables par l'environnement pour le test (tester-sauvegardes.sh).
+APP_DIR="${APP_DIR:-/opt/strapontin}"
+BACKUP_DIR="${BACKUP_DIR:-$APP_DIR/backup}"
 
 mkdir -p "$BACKUP_DIR"
 
@@ -16,7 +17,9 @@ if [ -f "$APP_DIR/.env" ]; then
 fi
 
 HORODATAGE=$(date +%Y%m%d_%H%M%S)
-ARCHIVE="$BACKUP_DIR/strapontin_${HORODATAGE}.tar.gz"
+ARCHIVE="$BACKUP_DIR/strapontin_${HORODATAGE}.sql.gz"
+ENV_SAUVEGARDE="$BACKUP_DIR/strapontin_${HORODATAGE}.env"
+PARTIEL="${ARCHIVE}.partiel"
 
 _appel_statut() {
     curl -sf -X POST \
@@ -25,7 +28,7 @@ _appel_statut() {
         --data-urlencode "horodatage=$HORODATAGE" \
         --data-urlencode "raison=${2:-}" \
         --data-urlencode "archive=${3:-}" \
-        "http://localhost:8080/api/interne/backup-statut" \
+        "${URL_STATUT:-http://localhost:8080/api/interne/backup-statut}" \
         >/dev/null 2>&1 || true
 }
 
@@ -36,28 +39,20 @@ notifier_echec() {
 ERREUR_CMD=""
 ERREUR_LIGNE=0
 trap 'ERREUR_CMD=$BASH_COMMAND; ERREUR_LIGNE=$LINENO' ERR
-trap notifier_echec EXIT
+nettoyer_partiel() { rm -f "$PARTIEL"; }
+trap 'nettoyer_partiel; notifier_echec' EXIT
 
 echo "Sauvegarde locale en cours — $HORODATAGE"
 
-su - postgres -c "pg_dump strapontin" > /tmp/dump_local.sql
-echo "  dump DB : OK"
-
-TAR_ARGS=(-czf "$ARCHIVE" -C /tmp dump_local.sql)
+su - postgres -c "pg_dump strapontin" | gzip -c > "$PARTIEL"
+gzip -t "$PARTIEL"
+mv "$PARTIEL" "$ARCHIVE"
+echo "  dump DB : OK ($ARCHIVE)"
 
 if [ -f "$APP_DIR/.env" ]; then
-    TAR_ARGS+=(-C "$APP_DIR" .env)
-    echo "  .env    : OK"
+    install -m 600 "$APP_DIR/.env" "$ENV_SAUVEGARDE"
+    echo "  .env    : OK ($ENV_SAUVEGARDE)"
 fi
-
-if [ -d "$APP_DIR/logs" ]; then
-    TAR_ARGS+=(-C "$APP_DIR" logs)
-    echo "  logs    : OK"
-fi
-
-tar "${TAR_ARGS[@]}"
-rm /tmp/dump_local.sql
-echo "  archive : $ARCHIVE"
 
 find "$BACKUP_DIR" -type f -name "strapontin_*" -mtime +7 -delete
 echo "  purge   : OK (rétention 7 jours)"
@@ -65,5 +60,6 @@ echo "  purge   : OK (rétention 7 jours)"
 echo "Sauvegarde locale terminée"
 
 # Succès — désarmer le trap d'échec avant d'appeler le statut succès
+nettoyer_partiel
 trap - EXIT
 _appel_statut "succes" "" "$ARCHIVE"

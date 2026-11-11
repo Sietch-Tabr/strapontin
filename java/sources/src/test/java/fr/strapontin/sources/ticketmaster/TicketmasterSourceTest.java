@@ -105,6 +105,21 @@ class TicketmasterSourceTest {
             evenementTMRaw(Map.of("name", "M E N Arena Priority Pass")), null));
   }
 
+  // Céline Dion : la prestation d'hospitalité a le titre de l'artiste, seule l'adresse la trahit.
+  @Test
+  void mapper_produitDePrestationDansLAdresse_retourneNull() {
+    assertNull(
+        MapeurEvenementTM.mapper(
+            evenementTMRaw(
+                Map.of(
+                    "name",
+                    "Celine Dion",
+                    "url",
+                    "https://www.ticketmaster.fr/fr/manifestation/"
+                        + "prestation-hospitalite-celine-dion-billet/idmanif/1")),
+            null));
+  }
+
   @Test
   void mapper_billetCombineAvecPriorityPass_resteUnConcert() {
     assertNotNull(

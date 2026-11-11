@@ -4,7 +4,7 @@
  */
 package fr.strapontin.sources.enrichissement;
 
-import fr.strapontin.sources.http.CadenceurAppels;
+import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.sources.http.CadenceurAppelsMemoire;
 import fr.strapontin.sources.http.ClientHttpFactory;
 import java.time.Duration;

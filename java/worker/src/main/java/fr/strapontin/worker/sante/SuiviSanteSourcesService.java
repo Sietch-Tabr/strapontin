@@ -96,7 +96,7 @@ public class SuiviSanteSourcesService {
       final List<Map<String, Object>> lignes =
           jdbc.queryForList(
               """
-              UPDATE salle_sources ss SET dernier_nb_resultats = :nb
+              UPDATE salle_sources ss SET dernier_nb_resultats = :nb, dernier_fetch_le = now()
               FROM salle_sources avant
               WHERE ss.source = :source
                 AND ss.identifiant_externe = :identifiant
@@ -128,6 +128,9 @@ public class SuiviSanteSourcesService {
                 precedent.intValue(),
                 "actuel",
                 nbResultats));
+      } else {
+        signalementMatchingService.cloreEntite(
+            "chute_resultats_salle", (UUID) lignes.get(0).get("salle_id"));
       }
     } catch (Exception e) {
       LOG.warn("Suivi du volume impossible source={} identifiant={}", source, identifiant, e);

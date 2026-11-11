@@ -150,8 +150,11 @@ final class MapeurProduitEventim {
       }
 
       final String[] datHeure = parseDateEventim(dateStr);
-      final String artiste = artisteFallback != null ? artisteFallback : extraireNomArtiste(titre);
       final Map<String, Object> location = (Map<String, Object>) liveEnt.get("location");
+      final String artiste =
+          artisteFallback != null
+              ? artisteFallback
+              : TitreDuLieu.artisteHorsNomDuLieu(extraireNomArtiste(titre), location, produit);
       return construireConcertEventim(
           produit, location, artiste, datHeure[0], datHeure[1], artisteSourceId);
     } catch (Exception e) {

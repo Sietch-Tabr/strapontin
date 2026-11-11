@@ -5,7 +5,7 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.EchecPush;
-import java.nio.charset.StandardCharsets;
+import fr.strapontin.core.TitresDeSpectacle;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +22,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 final class ControleInvariantsComplementaires {
 
   private static final String TYPE_ENTITE_GLOBAL = "invariant";
-  private static final String CONFIANCE_HAUTE = "haute";
   private static final String EVENEMENT = "evenement";
   private static final String DATE = "date";
   private static final String JUMEAU = "jumeau";
@@ -71,13 +70,13 @@ final class ControleInvariantsComplementaires {
         """;
 
   private final NamedParameterJdbcTemplate jdbc;
-  private final SignalementMatchingService signalements;
+  private final PublicationAnomalies publication;
 
   /* package-private : instancié par ControleInvariantsDonnees. */
   ControleInvariantsComplementaires(
       final NamedParameterJdbcTemplate jdbc, final SignalementMatchingService signalements) {
     this.jdbc = jdbc;
-    this.signalements = signalements;
+    this.publication = new PublicationAnomalies(signalements);
   }
 
   /**
@@ -85,30 +84,12 @@ final class ControleInvariantsComplementaires {
    */
   /* package-private : appelé par ControleInvariantsDonnees. */
   int verifier() {
-    return publier("hommage_rattache_artiste", EVENEMENT, hommagesRattachesAUnArtiste())
-        + publier("annulation_une_billetterie", EVENEMENT, annulationsUneBilletterie())
-        + publier("secret_totp_non_chiffre", "utilisateur", secretsTotpNonChiffres())
-        + publier("envois_push_en_panne", TYPE_ENTITE_GLOBAL, envoisPushEnPanne())
-        + publier("seance_dans_deux_salles", EVENEMENT, seancesDansDeuxSalles())
-        + publier("creneau_double_meme_source", EVENEMENT, creneauxDoublesMemeSource());
-  }
-
-  private int publier(
-      final String type, final String entiteType, final Map<UUID, Map<String, Object>> anomalies) {
-    anomalies.forEach(
-        (entite, details) ->
-            signalements.signaler(type, entiteType, entite, CONFIANCE_HAUTE, details));
-    signalements.clore(type, anomalies.keySet());
-    return anomalies.size();
-  }
-
-  private static UUID uuidDe(final String valeur) {
-    return UUID.nameUUIDFromBytes(valeur.getBytes(StandardCharsets.UTF_8));
-  }
-
-  private static Map<UUID, Map<String, Object>> globale(
-      final String type, final Map<String, Object> details) {
-    return details.isEmpty() ? Map.of() : Map.of(uuidDe("invariant:" + type), details);
+    return publication.publier("hommage_rattache_artiste", EVENEMENT, hommagesRattachesAUnArtiste())
+        + publication.publier("annulation_une_billetterie", EVENEMENT, annulationsUneBilletterie())
+        + publication.publier("secret_totp_non_chiffre", "utilisateur", secretsTotpNonChiffres())
+        + publication.publier("envois_push_en_panne", TYPE_ENTITE_GLOBAL, envoisPushEnPanne())
+        + publication.publier("seance_dans_deux_salles", EVENEMENT, seancesDansDeuxSalles())
+        + publication.publier("creneau_double_meme_source", EVENEMENT, creneauxDoublesMemeSource());
   }
 
   // L'adresse annonce un hommage, la fiche reste rattachée à l'artiste imité.
@@ -192,7 +173,7 @@ final class ControleInvariantsComplementaires {
         rs -> {
           services.put(rs.getString("service"), rs.getInt("comptes") + " comptes");
         });
-    return globale("envois_push_en_panne", services);
+    return PublicationAnomalies.globale("envois_push_en_panne", services);
   }
 
   // Un secret chiffré est un base64 d'au moins 28 octets ; un Base32 brut ou
@@ -210,7 +191,9 @@ final class ControleInvariantsComplementaires {
         """,
         Map.of(),
         rs -> {
-          anomalies.put(uuidDe(rs.getString("id")), Map.of("utilisateurId", rs.getString("id")));
+          anomalies.put(
+              PublicationAnomalies.uuidDe(rs.getString("id")),
+              Map.of("utilisateurId", rs.getString("id")));
         });
     return anomalies;
   }
@@ -287,23 +270,29 @@ final class ControleInvariantsComplementaires {
             .collect(Collectors.groupingBy(paire -> paire.get("salle_id"), Collectors.counting()));
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     for (final Map<String, Object> paire : paires) {
-      if (parSalle.get(paire.get("salle_id")) >= SEUIL_CRENEAUX_SALLE_MULTIPLE) {
+      // Un théâtre à plusieurs salles joue des spectacles différents au même
+      // créneau ; deux variantes d'un même programme dans une église, non.
+      if (parSalle.get(paire.get("salle_id")) >= SEUIL_CRENEAUX_SALLE_MULTIPLE
+          && !TitresDeSpectacle.sontVariantes(
+              (String) paire.get("titre_a"), (String) paire.get("titre_b"))) {
         continue;
       }
-      anomalies.put(
-          (UUID) paire.get("recent"),
-          Map.of(
-              SALLE,
-              paire.get(SALLE),
-              DATE,
-              paire.get(DATE),
-              "heure",
-              paire.get("heure"),
-              "intitules",
-              paire.get("titre_a") + " / " + paire.get("titre_b"),
-              JUMEAU,
-              paire.get(JUMEAU).toString()));
+      anomalies.put((UUID) paire.get("recent"), detailsCreneauDouble(paire));
     }
     return anomalies;
+  }
+
+  private static Map<String, Object> detailsCreneauDouble(final Map<String, Object> paire) {
+    return Map.of(
+        SALLE,
+        paire.get(SALLE),
+        DATE,
+        paire.get(DATE),
+        "heure",
+        paire.get("heure"),
+        "intitules",
+        paire.get("titre_a") + " / " + paire.get("titre_b"),
+        JUMEAU,
+        paire.get(JUMEAU).toString());
   }
 }

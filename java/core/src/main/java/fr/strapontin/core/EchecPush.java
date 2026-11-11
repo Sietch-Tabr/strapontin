@@ -28,7 +28,6 @@ public final class EchecPush {
   private static final String COLONNE_ECHECS = "echecs_consecutifs";
   private static final String SQL_DECOCHER_PUSH =
       "UPDATE user_config SET notif_artistes_push = false, notif_salles_push = false,"
-          + " notif_nouvelle_version = false,"
           + " frequence_notifications = CASE WHEN notif_artistes OR notif_salles"
           + " THEN frequence_notifications ELSE 'jamais' END";
 
@@ -53,7 +52,9 @@ public final class EchecPush {
           + " days') AS "
           + COLONNE_SERIE_ASSEZ_LONGUE;
 
-  /** Remet à zéro la série d'un abonnement {@code :id} et date l'envoi réussi. */
+  /**
+   * Remet à zéro la série d'un abonnement {@code :id} et date l'envoi réussi.
+   */
   public static final String SQL_REINITIALISER_ECHECS =
       "UPDATE push_abonnements SET echecs_consecutifs = 0, dernier_echec_le = NULL,"
           + " dernier_echec_statut = NULL, premier_echec_le = NULL,"
@@ -105,7 +106,9 @@ public final class EchecPush {
           + " WHERE NOT EXISTS (SELECT 1 FROM push_abonnements pa"
           + " WHERE pa.user_id = user_config.user_id)";
 
-  /** Cause lisible d'un appareil dont le service push n'est pas pris en charge. */
+  /**
+   * Cause lisible d'un appareil dont le service push n'est pas pris en charge.
+   */
   public static final String CAUSE_SERVICE_NON_PRIS_EN_CHARGE =
       "le service de notification de votre navigateur n'est pas pris en charge";
 

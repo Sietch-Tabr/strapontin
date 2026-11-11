@@ -4,16 +4,17 @@
  */
 package fr.strapontin.worker.sante;
 
+import fr.strapontin.core.AccesAppConfig;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.JacksonException;
@@ -43,6 +44,7 @@ public class SuggestionMotsGenericsService {
   public static final int SEUIL_OCCURRENCES_MOT_GENERIQUE = 15;
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final AccesAppConfig acces;
   private final LogsAdminWorker logsAdminWorker;
   private final ObjectMapper objectMapper;
 
@@ -56,6 +58,7 @@ public class SuggestionMotsGenericsService {
       final LogsAdminWorker logsAdminWorker,
       final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
+    this.acces = new AccesAppConfig(jdbc);
     this.logsAdminWorker = logsAdminWorker;
     this.objectMapper = objectMapper;
   }
@@ -107,17 +110,11 @@ public class SuggestionMotsGenericsService {
 
   private Set<String> lireDejaSuggeres() {
     try {
-      final String json =
-          jdbc.queryForObject(
-              "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
-              Map.of("cle", CLE_CONFIG),
-              String.class);
-      if (json == null) {
+      final Optional<String> json = acces.lire(CLE_CONFIG);
+      if (json.isEmpty()) {
         return new HashSet<>();
       }
-      return objectMapper.readValue(json, new TypeReference<>() {});
-    } catch (EmptyResultDataAccessException e) {
-      return new HashSet<>();
+      return objectMapper.readValue(json.get(), new TypeReference<>() {});
     } catch (JacksonException e) {
       LOG.warn(
           "liste des mots génériques suggérés malformée en base — réinitialisée : {}",
@@ -129,13 +126,7 @@ public class SuggestionMotsGenericsService {
   private void ecrireDejaSuggeres(final Set<String> mots) {
     try {
       final String json = objectMapper.writeValueAsString(mots);
-      jdbc.update(
-          """
-          INSERT INTO app_config (cle, valeur_chiffree)
-          VALUES (:cle, :json)
-          ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = :json, mis_a_jour_le = now()
-          """,
-          Map.of("cle", CLE_CONFIG, "json", json));
+      acces.ecrire(CLE_CONFIG, json);
     } catch (JacksonException e) {
       LOG.error("impossible de sérialiser les mots génériques suggérés", e);
     }

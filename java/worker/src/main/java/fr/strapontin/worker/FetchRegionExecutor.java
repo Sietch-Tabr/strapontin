@@ -4,9 +4,12 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.Classement;
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.ResultatRegion;
 import fr.strapontin.sources.SourceConcerts;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
@@ -17,8 +20,10 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +39,11 @@ class FetchRegionExecutor {
 
   private static final Logger LOG = LoggerFactory.getLogger(FetchRegionExecutor.class);
   private static final int TAILLE_LOT_DEPTS = 5;
+  // Niveaux de classement demandés à Ticketmaster (classificationName).
+  private static final Set<String> CLASSIFICATIONS_DEMANDEES =
+      TicketmasterSource.CLASSIFICATIONS.stream()
+          .map(Normalisation::normaliserTexte)
+          .collect(Collectors.toUnmodifiableSet());
 
   private final List<SourceConcerts> sources;
   private final PersisterConcerts persisterConcerts;
@@ -184,19 +194,32 @@ class FetchRegionExecutor {
           sallesConnuesDesDepartements(lotDepts),
           debutLot,
           horizons,
-          classementsRenvoyes(tous, "ticketmaster"));
+          classementsDemandesEtRenvoyes(tous, "ticketmaster"));
     }
     return new ResultatLotDepartements(resultat, sourceInjoignable);
   }
 
-  // Ticketmaster ne renvoie que les classifications demandées : un spectacle
-  // d'humour venu d'une salle autrefois suivie n'y apparaîtra jamais.
-  private static Set<String> classementsRenvoyes(
+  // Un spectacle renvoyé pour une classification secondaire n'est pas demandé :
+  // ses fiches ne gagnent pas d'absence.
+  /* package-private : testé directement (même package). */
+  static Set<String> classementsDemandesEtRenvoyes(
       final List<ConcertBrut> concerts, final String source) {
     return concerts.stream()
         .filter(c -> source.equals(c.source()))
-        .map(c -> c.classement().cle())
+        .map(ConcertBrut::classement)
+        .filter(FetchRegionExecutor::estDemande)
+        .map(Classement::cle)
         .collect(Collectors.toSet());
+  }
+
+  // Classement inconnu : dans le périmètre de la recherche qui l'a renvoyé.
+  private static boolean estDemande(final Classement classement) {
+    final List<String> niveaux =
+        Stream.of(classement.classification(), classement.genre(), classement.sousGenre())
+            .filter(Objects::nonNull)
+            .map(Normalisation::normaliserTexte)
+            .toList();
+    return niveaux.isEmpty() || niveaux.stream().anyMatch(CLASSIFICATIONS_DEMANDEES::contains);
   }
 
   /**

@@ -5,6 +5,7 @@
 package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.ProduitEventim;
+import fr.strapontin.core.ReglesCommunes;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,6 @@ import org.springframework.stereotype.Service;
 public class FusionProduitsEventimService {
 
   // Écart d'heure maximal entre deux fiches d'un produit : au-delà, deux séances.
-  private static final int ECART_MAX_HEURE_SECONDES = 3600;
   private static final long VIVANT_UNIQUE = 1;
   private static final String CLE_ECART_SECONDES = "ecartSecondes";
 
@@ -71,7 +71,7 @@ public class FusionProduitsEventimService {
                 + " OR a.artiste_id = b.artiste_id)"
                 + " AND (SELECT count(*) FROM p x WHERE x.produit = a.produit"
                 + " AND x.date = a.date AND x.salle_id = a.salle_id) = 2",
-            Map.of(CLE_ECART_SECONDES, ECART_MAX_HEURE_SECONDES));
+            Map.of(CLE_ECART_SECONDES, ReglesCommunes.ECART_MAX_HEURE_SECONDES));
     int fusions = 0;
     for (final Map<String, Object> paire : paires) {
       final UUID evtA = (UUID) paire.get("evt_a");
@@ -121,7 +121,7 @@ public class FusionProduitsEventimService {
                 + " GROUP BY a.id",
             Map.of(
                 CLE_ECART_SECONDES,
-                ECART_MAX_HEURE_SECONDES,
+                ReglesCommunes.ECART_MAX_HEURE_SECONDES,
                 "seuil",
                 FusionEvenementsArtisteService.SEUIL_ABSENCES_FICHE_PERIMEE));
     int fusions = 0;
@@ -173,7 +173,7 @@ public class FusionProduitsEventimService {
               AND b.absences_consecutives = 0 AND b.derniere_arrivee > a.derniere_vue
             GROUP BY a.id
             """,
-            Map.of(CLE_ECART_SECONDES, ECART_MAX_HEURE_SECONDES));
+            Map.of(CLE_ECART_SECONDES, ReglesCommunes.ECART_MAX_HEURE_SECONDES));
     int fusions = 0;
     for (final Map<String, Object> ligne : lignes) {
       if (((Number) ligne.get("nb_vivants")).longValue() != VIVANT_UNIQUE) {
@@ -277,7 +277,7 @@ public class FusionProduitsEventimService {
               WHERE (SELECT count(*) FROM paires q WHERE q.origine = p.origine) = 1
                 AND (SELECT count(*) FROM paires q WHERE q.reporte = p.reporte) = 1)
             """,
-            Map.of(CLE_ECART_SECONDES, ECART_MAX_HEURE_SECONDES));
+            Map.of(CLE_ECART_SECONDES, ReglesCommunes.ECART_MAX_HEURE_SECONDES));
     if (marquees > 0) {
       logsAdminWorker.inserer(
           "info",
@@ -286,5 +286,45 @@ public class FusionProduitsEventimService {
           Map.of("fiches", marquees));
     }
     return marquees;
+  }
+
+  /**
+   * Retire l'observation d'un produit Eventim restée sur une fiche qui en porte
+   * un autre, revu depuis, alors qu'une autre fiche de la salle publie ce
+   * produit à son tour : l'ancien rattachement par l'heure, que les deux
+   * fiches ne se sont pas partagé, n'a plus de raison d'être.
+   * @return nombre d'observations retirées
+   */
+  public int retirerObservationsDeProduitReattribue() {
+    final int retirees =
+        jdbc.update(
+            """
+            DELETE FROM observations o USING evenements e
+            WHERE e.id = o.evenement_id AND o.source = 'eventim'
+              AND o.updated_at < now() - interval '2 days'
+              AND e.date >= CURRENT_DATE
+              AND EXISTS (SELECT 1 FROM observations r
+                          WHERE r.evenement_id = e.id AND r.source = 'eventim'
+                            AND r.updated_at > now() - interval '1 day'
+                            AND %1$s IS DISTINCT FROM %2$s)
+              AND EXISTS (SELECT 1 FROM observations v JOIN evenements ev ON ev.id = v.evenement_id
+                          WHERE v.source = 'eventim' AND v.updated_at > now() - interval '1 day'
+                            AND %3$s = %2$s AND ev.id <> e.id
+                            AND ev.salle_id IS NOT DISTINCT FROM e.salle_id AND ev.date = e.date)
+            """
+                .formatted(
+                    ProduitEventim.expressionSql("r"),
+                    ProduitEventim.expressionSql("o"),
+                    ProduitEventim.expressionSql("v")),
+            Map.of());
+    if (retirees > 0) {
+      logsAdminWorker.inserer(
+          "info",
+          "reconciliation-nocturne",
+          retirees
+              + " observation(s) de produit Eventim retirée(s) d'une fiche qui en porte un autre",
+          Map.of("observations", retirees));
+    }
+    return retirees;
   }
 }

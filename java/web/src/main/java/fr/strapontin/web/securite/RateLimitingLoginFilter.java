@@ -54,6 +54,15 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
     this.logAdminService = logAdminService;
   }
 
+  /**
+   * Remet à zéro les limiteurs de connexion et de réinitialisation de mot de
+   * passe (profil {@code dev}, appelé par le global-setup des tests E2E).
+   */
+  public void reinitialiserLimites() {
+    limiteurLogin.reinitialiser();
+    limiteurReset.reinitialiser();
+  }
+
   @Override
   protected void doFilterInternal(
       final HttpServletRequest request, final HttpServletResponse response, final FilterChain chain)

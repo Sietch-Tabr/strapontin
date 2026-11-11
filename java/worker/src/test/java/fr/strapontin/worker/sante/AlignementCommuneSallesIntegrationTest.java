@@ -41,6 +41,7 @@ class AlignementCommuneSallesIntegrationTest extends AbstractWorkerIntegrationTe
 
   @Autowired private NamedParameterJdbcTemplate jdbc;
   @Autowired private LogsAdminWorker logsAdminWorker;
+  @Autowired private SignalementMatchingService signalements;
 
   private ClientNominatim nominatim;
   private AlignementCommuneSalles alignement;
@@ -51,7 +52,49 @@ class AlignementCommuneSallesIntegrationTest extends AbstractWorkerIntegrationTe
     jdbc.update("DELETE FROM salles", Map.of());
     jdbc.update("DELETE FROM logs_admin", Map.of());
     nominatim = mock(ClientNominatim.class);
-    alignement = new AlignementCommuneSalles(jdbc, nominatim, logsAdminWorker);
+    alignement = new AlignementCommuneSalles(jdbc, nominatim, logsAdminWorker, signalements);
+  }
+
+  private void villeDesConcerts(final UUID salleId, final String ville) {
+    jdbc.update(
+        "UPDATE evenements SET ville = :ville WHERE salle_id = CAST(:id AS uuid)",
+        Map.of("ville", ville, "id", salleId.toString()));
+  }
+
+  private long signalementsActifs(final UUID salleId) {
+    return jdbc.queryForObject(
+        "SELECT count(*) FROM signalements_matching WHERE type = 'ville_salle_divergente'"
+            + " AND resolu_le IS NULL AND entite_id = CAST(:id AS uuid)",
+        Map.of("id", salleId.toString()),
+        Long.class);
+  }
+
+  @Test
+  void aligner_concertsNommentLaVilleActuelle_gardeLaVilleEtSignale() {
+    final UUID salle = salle("Espace Malraux", "Chateaudun", null);
+    villeDesConcerts(salle, "Chateaudun");
+    when(nominatim.communeDe(any())).thenReturn(commune("La Chapelle-du-Noyer", "51430"));
+
+    assertEquals(0, alignement.aligner());
+
+    assertEquals("Chateaudun", ville(salle));
+    assertEquals(1L, signalementsActifs(salle));
+  }
+
+  @Test
+  void aligner_concertsNommentLaCommuneCalculee_alignePuisFermeLeSignalement() {
+    final UUID salle = salle("Salle Z", "Reims", null);
+    villeDesConcerts(salle, "Reims");
+    when(nominatim.communeDe(any())).thenReturn(commune("Tinqueux", "51430"));
+    alignement.aligner();
+    assertEquals(1L, signalementsActifs(salle));
+
+    villeDesConcerts(salle, "Tinqueux");
+    jdbc.update("UPDATE salles SET commune_verifiee_le = NULL", Map.of());
+    assertEquals(1, alignement.aligner());
+
+    assertEquals("Tinqueux", ville(salle));
+    assertEquals(0L, signalementsActifs(salle));
   }
 
   private UUID salle(final String nom, final String ville, final String wikidataId) {
@@ -137,7 +180,8 @@ class AlignementCommuneSallesIntegrationTest extends AbstractWorkerIntegrationTe
     assertEquals(
         1L,
         jdbc.queryForObject(
-            "SELECT count(*) FROM logs_admin WHERE message LIKE '%renseignée d''après sa position%'",
+            "SELECT count(*) FROM logs_admin WHERE message LIKE '%renseignée d''après sa"
+                + " position%'",
             Map.of(), Long.class));
   }
 

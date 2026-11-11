@@ -13,13 +13,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.core.AccesAppConfig;
 import fr.strapontin.core.CompteurEnvoisResend;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -30,7 +30,7 @@ import tools.jackson.databind.ObjectMapper;
  */
 class GestionQuotaResendTest {
 
-  private JdbcTemplate jdbc;
+  private AccesAppConfig acces;
   private GestionQuotaResend gestionQuotaResend;
 
   private static String jourCourant() {
@@ -43,27 +43,25 @@ class GestionQuotaResendTest {
 
   @BeforeEach
   void setUp() {
-    jdbc = mock(JdbcTemplate.class);
-    gestionQuotaResend = new GestionQuotaResend(jdbc, new ObjectMapper());
+    acces = mock(AccesAppConfig.class);
+    gestionQuotaResend = new GestionQuotaResend(acces, new ObjectMapper());
   }
 
   private void enBase(final CompteurEnvoisResend compteur) throws Exception {
     final String json = new ObjectMapper().writeValueAsString(compteur);
-    when(jdbc.queryForObject(anyString(), eq(String.class), eq("RESEND_QUOTA_JSON")))
-        .thenReturn(json);
+    when(acces.lire("RESEND_QUOTA_JSON")).thenReturn(Optional.of(json));
   }
 
   // --- reserverEnvoi ---
 
   @Test
   void reserverEnvoi_aucunCompteurEnBase_autoriseEtInitialise() {
-    when(jdbc.queryForObject(anyString(), eq(String.class), eq("RESEND_QUOTA_JSON")))
-        .thenThrow(new EmptyResultDataAccessException(1));
+    when(acces.lire("RESEND_QUOTA_JSON")).thenReturn(Optional.empty());
 
     final boolean autorise = gestionQuotaResend.reserverEnvoi();
 
     assertTrue(autorise);
-    verify(jdbc).update(anyString(), eq("RESEND_QUOTA_JSON"), anyString(), anyString());
+    verify(acces).ecrire(eq("RESEND_QUOTA_JSON"), anyString());
   }
 
   @Test
@@ -158,7 +156,7 @@ class GestionQuotaResendTest {
 
     final org.mockito.ArgumentCaptor<String> jsonCaptor =
         org.mockito.ArgumentCaptor.forClass(String.class);
-    verify(jdbc).update(anyString(), eq("RESEND_QUOTA_JSON"), jsonCaptor.capture(), anyString());
+    verify(acces).ecrire(eq("RESEND_QUOTA_JSON"), jsonCaptor.capture());
     final CompteurEnvoisResend persiste =
         new ObjectMapper().readValue(jsonCaptor.getValue(), CompteurEnvoisResend.class);
     assertTrue(persiste.alerteJourEnvoyee());
@@ -167,8 +165,7 @@ class GestionQuotaResendTest {
 
   @Test
   void lireCompteurCourant_compteurMalforme_retourneCompteurInitial() {
-    when(jdbc.queryForObject(anyString(), eq(String.class), eq("RESEND_QUOTA_JSON")))
-        .thenReturn("{pas-du-json-valide");
+    when(acces.lire("RESEND_QUOTA_JSON")).thenReturn(Optional.of("{pas-du-json-valide"));
 
     final CompteurEnvoisResend compteur = gestionQuotaResend.lireCompteurCourant();
 
@@ -185,12 +182,9 @@ class GestionQuotaResendTest {
 
     assertTrue(gestionQuotaResend.recalerSurUsageReel(12, 80));
 
-    verify(jdbc)
-        .update(
-            anyString(),
-            eq("RESEND_QUOTA_JSON"),
-            org.mockito.ArgumentMatchers.contains("\"envoyesJour\":12"),
-            anyString());
+    verify(acces)
+        .ecrire(
+            eq("RESEND_QUOTA_JSON"), org.mockito.ArgumentMatchers.contains("\"envoyesJour\":12"));
   }
 
   @Test
@@ -199,7 +193,6 @@ class GestionQuotaResendTest {
 
     assertFalse(gestionQuotaResend.recalerSurUsageReel(3, 40));
 
-    verify(jdbc, org.mockito.Mockito.never())
-        .update(anyString(), eq("RESEND_QUOTA_JSON"), anyString(), anyString());
+    verify(acces, org.mockito.Mockito.never()).ecrire(eq("RESEND_QUOTA_JSON"), anyString());
   }
 }

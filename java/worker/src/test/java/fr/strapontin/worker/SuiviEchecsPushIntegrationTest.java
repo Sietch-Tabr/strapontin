@@ -136,7 +136,8 @@ class SuiviEchecsPushIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(0, nombreAbonnements());
     final Map<String, Object> apres = config();
     assertEquals(false, apres.get("notif_artistes_push"));
-    assertEquals(false, apres.get("notif_nouvelle_version"));
+    // L'annonce de nouvelle version passe alors par email : le choix est conservé.
+    assertEquals(true, apres.get("notif_nouvelle_version"));
     assertEquals("quotidien", apres.get("frequence_notifications"));
     assertNotNull(apres.get("dernier_appareil_retire_le"));
   }

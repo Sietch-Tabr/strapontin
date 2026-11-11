@@ -105,19 +105,30 @@
                 />
                 <span>Concerts des salles suivies</span>
               </label>
-              <label>
-                <input
-                  v-model="notifNouvelleVersion"
-                  type="checkbox"
-                  :disabled="!canalPush"
-                />
-                <span>Nouvelle version de l'application</span>
-              </label>
             </div>
             <p v-if="messagePush" class="alerte alerte-info" role="status">
               {{ messagePush }}
             </p>
           </template>
+        </div>
+
+        <div class="param-bloc">
+          <h3 class="param-libelle">Nouvelle version</h3>
+          <div class="form-checkboxes">
+            <label>
+              <input
+                v-model="notifNouvelleVersion"
+                type="checkbox"
+                :disabled="frequence === 'jamais'"
+                aria-describedby="aide-nouvelle-version"
+              />
+              <span>Être prévenu d'une nouvelle version de l'application</span>
+            </label>
+          </div>
+          <p id="aide-nouvelle-version" class="param-aide">
+            Par push sur vos appareils abonnés ; sans appareil push, par email.
+            Une seule annonce par version.
+          </p>
         </div>
 
         <div class="notif-enregistrement">

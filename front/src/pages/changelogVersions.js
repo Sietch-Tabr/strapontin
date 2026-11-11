@@ -4,6 +4,52 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.1.4 — 10 novembre 2026",
+    categories: [
+      {
+        categorie: "Concerts et salles",
+        items: [
+          "La ville d'une salle ne devient plus la commune voisine quand la position de la billetterie est proche d'une limite communale : si les concerts de la salle nomment sa ville, elle est gardée (Espace André Malraux à Châteaudun, Scène de Bayssan à Béziers).",
+          "Un lieu de billetterie n'est plus rattaché à une salle dont le code postal diffère du sien sous prétexte que son nom contient celui de la salle (Vendôme Club Paris n'est pas le Dôme de Paris, Le Passage vers les Étoiles n'est pas Les Étoiles).",
+          "Une prestation d'hospitalité, un accès prioritaire ou un produit de prestation Ticketmaster n'est plus affiché comme un concert (Céline Dion, Rush, Priority Pass) ; ceux déjà enregistrés sont retirés.",
+          "Les spectacles de théâtre et d'humour d'une salle Ticketmaster (Marigny, Gaîté-Montparnasse) restent rafraîchis même quand leurs absences avaient atteint le seuil avant le premier passage du lieu : ils ne glissent plus vers la suppression suggérée alors qu'ils sont à l'affiche, et la récupération par région ne leur compte plus d'absence à chaque passage.",
+          "Les spectacles sportifs et les combats de grandes salles (Horse GP, T-Show, MMA) sont de nouveau rafraîchis comme les autres séances ; les matchs d'équipe restent écartés.",
+          "Un produit Eventim dont la date ou l'heure change reste sur sa fiche au lieu d'en créer une seconde chaque nuit (Zimmer90 à l'Élysée Montmartre, Keren Ann, Erella), et un produit rattaché par erreur à la fiche d'un autre n'y reste plus (Le Petit Prince, salle Gaveau).",
+          "Un concert ne se répète plus, et aucun ne manque, à la frontière de deux pages de Découverte et de Mes spectacles quand un artiste joue deux fois le même jour : l'ordre des concerts est désormais le même d'une page à l'autre.",
+          "Un même programme publié par Eventim sous plusieurs variantes de titre n'apparaît plus qu'une fois au même créneau (Église de la Madeleine, Saint-Germain-des-Prés), et un produit dont le titre n'est que le nom du lieu prend le nom de l'ensemble qui joue.",
+        ],
+      },
+      {
+        categorie: "Licence",
+        items: [
+          "Strapontin passe de la licence MIT à la licence GNU Affero General Public License v3.0 (AGPL-3.0) : une version modifiée proposée en ligne doit mettre son code source à disposition de ses utilisateurs. Le code déjà publié sous MIT le reste pour ceux qui l'ont récupéré.",
+        ],
+      },
+      {
+        categorie: "Notifications",
+        items: [
+          "L'annonce d'une nouvelle version de l'application peut maintenant arriver par email : l'option « Être prévenu d'une nouvelle version » ne demande plus d'appareil push, elle est portée par le push si un appareil est abonné, par email sinon, une seule fois par version.",
+          "Perdre son dernier appareil push ne décoche plus cette option.",
+        ],
+      },
+      {
+        categorie: "Invitations",
+        items: [
+          "Vous pouvez inviter une personne par son adresse email depuis Paramètres, onglet Inviter : l'email part aussitôt et aucun compte n'existe tant que le lien n'est pas activé.",
+          "Deux invitations en attente au plus à la fois ; une invitation activée, expirée ou annulée libère sa place. Vous suivez l'état de chacune, la renvoyez ou l'annulez, et le nombre restant est lisible avant la saisie.",
+          "Les envois sont limités (5 par heure) pour protéger les adresses invitées ; annuler une invitation ne remet pas cette limite à zéro.",
+          "Dans l'administration, la liste des utilisateurs indique qui a invité chaque compte, et un administrateur règle le nombre d'invitations de chaque compte, ou la valeur par défaut.",
+        ],
+      },
+      {
+        categorie: "Administration",
+        items: [
+          "Un signalement dont la condition a disparu se ferme seul à la vérification suivante, quel que soit le contrôle qui l'a posé (identifiant Eventim d'un autre artiste, date de festival écartée, cycle de salles, collision Wikidata, chute de résultats…), et un test échoue si un contrôle signale sans prévoir sa fermeture.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.1.3 — 2 novembre 2026",
     categories: [
       {

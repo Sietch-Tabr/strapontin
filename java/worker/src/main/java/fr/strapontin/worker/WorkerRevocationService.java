@@ -15,8 +15,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Job de révocation des admins dont le préavis est écoulé — extrait de
- * {@code WorkerService}, délégué par le job Quartz {@code RevoquerAdminsJob}.
+ * Job de révocation des admins dont le préavis est écoulé — extrait de {@code
+ * WorkerService}, délégué par la tâche planifiée {@code revoquerAdmins} ({@code
+ * TachesPlanifiees}).
  * @since 2.0.0 (extrait dans sa forme actuelle en 2.7.0)
  * @author Kwaite
  */

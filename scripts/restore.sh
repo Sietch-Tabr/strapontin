@@ -1,16 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# restore.sh — restaure la base strapontin depuis une archive backup tar.gz
-# Usage : restore.sh <strapontin_YYYYMMDD_HHMMSS.tar.gz>
+# restore.sh — restaure la base strapontin depuis une sauvegarde
+# Usage : restore.sh <strapontin_YYYYMMDD_HHMMSS.sql.gz | strapontin_YYYYMMDD_HHMMSS.tar.gz>
+# Une sauvegarde .sql.gz est restaurée avec le .env de même nom (.env) s'il est à côté ; une
+# ancienne archive .tar.gz (dump + .env + journaux) l'est avec son contenu.
 # À exécuter en tant que root depuis le LXC prod/dev.
 
-FICHIER="${1:?Usage: restore.sh <strapontin_YYYYMMDD_HHMMSS.tar.gz>}"
-APP_DIR="/opt/strapontin"
+FICHIER="${1:?Usage: restore.sh <strapontin_YYYYMMDD_HHMMSS.sql.gz|.tar.gz>}"
+# Surchargeable par l'environnement pour le test (tester-sauvegardes.sh).
+APP_DIR="${APP_DIR:-/opt/strapontin}"
 APP_USER_DEFAUT="strapontin"
 
 [ -f "$FICHIER" ] || { echo "ERREUR : fichier introuvable : $FICHIER" >&2; exit 1; }
-[[ "$FICHIER" == *.tar.gz ]] || { echo "ERREUR : fichier attendu en .tar.gz" >&2; exit 1; }
+case "$FICHIER" in
+    *.sql.gz) FORMAT=sql ;;
+    *.tar.gz) FORMAT=tar ;;
+    *) echo "ERREUR : fichier attendu en .sql.gz ou .tar.gz" >&2; exit 1 ;;
+esac
 
 echo "=== Restauration Strapontin ==="
 echo "Fichier : $FICHIER"
@@ -19,24 +26,31 @@ echo ""
 echo "[1/6] Arrêt des services..."
 systemctl stop strapontin-web strapontin-worker
 
-echo "[2/6] Extraction de l'archive..."
-# Capturer le contenu une seule fois : grep -q sur un pipe direct depuis tar
-# quitte dès la première correspondance, tar reçoit alors un SIGPIPE en
-# tentant d'écrire la suite et pipefail remonte à tort cet échec plutôt que
-# le succès de grep — bug constaté en conditions réelles, jamais détecté
-# avant faute d'exécution de ce script.
-CONTENU_ARCHIVE=$(tar -tzf "$FICHIER")
-if grep -q "^dump\.sql$" <<< "$CONTENU_ARCHIVE"; then
-    tar -xzf "$FICHIER" -C /tmp dump.sql
-    DUMP=/tmp/dump.sql
-elif grep -q "^dump_local\.sql$" <<< "$CONTENU_ARCHIVE"; then
-    tar -xzf "$FICHIER" -C /tmp dump_local.sql
-    DUMP=/tmp/dump_local.sql
+echo "[2/6] Lecture de la sauvegarde..."
+DUMP=""
+CONTENU_ARCHIVE=""
+if [ "$FORMAT" = "tar" ]; then
+    # Capturer le contenu une seule fois : grep -q sur un pipe direct depuis tar
+    # quitte dès la première correspondance, tar reçoit alors un SIGPIPE en
+    # tentant d'écrire la suite et pipefail remonte à tort cet échec plutôt que
+    # le succès de grep — bug constaté en conditions réelles, jamais détecté
+    # avant faute d'exécution de ce script.
+    CONTENU_ARCHIVE=$(tar -tzf "$FICHIER")
+    if grep -q "^dump\.sql$" <<< "$CONTENU_ARCHIVE"; then
+        tar -xzf "$FICHIER" -C /tmp dump.sql
+        DUMP=/tmp/dump.sql
+    elif grep -q "^dump_local\.sql$" <<< "$CONTENU_ARCHIVE"; then
+        tar -xzf "$FICHIER" -C /tmp dump_local.sql
+        DUMP=/tmp/dump_local.sql
+    else
+        echo "ERREUR : aucun dump SQL trouvé dans l'archive" >&2
+        exit 1
+    fi
+    echo "  $DUMP extrait"
 else
-    echo "ERREUR : aucun dump SQL trouvé dans l'archive" >&2
-    exit 1
+    gzip -t "$FICHIER" || { echo "ERREUR : dump compressé illisible : $FICHIER" >&2; exit 1; }
+    echo "  dump compressé vérifié, lu à la volée"
 fi
-echo "  $DUMP extrait"
 
 echo "[3/6] Lecture du .env de l'archive (si présent)..."
 # Extrait avant de toucher à la base : le propriétaire de la base recréée à
@@ -44,8 +58,15 @@ echo "[3/6] Lecture du .env de l'archive (si présent)..."
 ENV_PRESENT=0
 APP_USER="$APP_USER_DEFAUT"
 NOUVEAU_MDP=""
-if grep -q "^\.env$" <<< "$CONTENU_ARCHIVE"; then
+ENV_COMPAGNON="${FICHIER%.sql.gz}.env"
+# Un .env laissé par une restauration précédente ne doit jamais être pris pour celui de cette sauvegarde.
+rm -f /tmp/.env
+if [ "$FORMAT" = "tar" ] && grep -q "^\.env$" <<< "$CONTENU_ARCHIVE"; then
     tar -xzf "$FICHIER" -C /tmp .env
+elif [ "$FORMAT" = "sql" ] && [ -f "$ENV_COMPAGNON" ]; then
+    install -m 600 "$ENV_COMPAGNON" /tmp/.env
+fi
+if [ -f /tmp/.env ]; then
     APP_USER=$(grep '^SPRING_DATASOURCE_USERNAME=' /tmp/.env | cut -d'=' -f2-)
     NOUVEAU_MDP=$(grep '^SPRING_DATASOURCE_PASSWORD=' /tmp/.env | cut -d'=' -f2-)
     if [ -z "$APP_USER" ] || [ -z "$NOUVEAU_MDP" ]; then
@@ -75,8 +96,12 @@ echo "[4/6] Réinitialisation de la base (propriétaire : $APP_USER)..."
 su - postgres -c "dropdb --if-exists strapontin && createdb -O '$APP_USER' strapontin"
 
 echo "[5/6] Restauration du dump..."
-su - postgres -c "psql strapontin" < "$DUMP"
-rm "$DUMP"
+if [ "$FORMAT" = "sql" ]; then
+    gzip -dc "$FICHIER" | su - postgres -c "psql strapontin"
+else
+    su - postgres -c "psql strapontin" < "$DUMP"
+    rm "$DUMP"
+fi
 
 echo "[6/6] Finalisation..."
 if [ "$ENV_PRESENT" = "1" ]; then

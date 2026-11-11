@@ -39,9 +39,12 @@ class FetchSallesExecutor {
   private static final int JOURS_AVANT_RAFRAICHISSEMENT_EVENTIM = 3;
 
   // Salle d'un département suivi dont une fiche à venir n'a plus été revue
-  // depuis plusieurs jours : le fetch de région borne catégories et date (6 mois).
-  // Interrogée par lieu, sans filtre. Une fiche déjà absente au seuil n'est pas
-  // renvoyée par le lieu : elle ne le fait plus réinterroger.
+  // depuis plusieurs jours : le fetch de région borne catégories et date (6
+  // mois). Interrogée par lieu, sans filtre. Le lieu n'est jamais réinterrogé
+  // avant le même délai, que ses fiches soient revues ou non : une fiche que le
+  // lieu ne renvoie plus le fait réinterroger à ce rythme et non à chaque
+  // cycle, une fiche encore en vente que personne ne revoit (absences
+  // accumulées avant le premier passage) est rattrapée.
   private static final String CONDITION_SALLE_A_RAFRAICHIR =
       "((ss.source = 'ticketmaster' AND "
           + fichePasRevueDepuis(JOURS_AVANT_RAFRAICHISSEMENT_TICKETMASTER)
@@ -56,10 +59,10 @@ class FetchSallesExecutor {
   private final WorkerFetchCommun commun;
 
   private static String fichePasRevueDepuis(final int jours) {
-    return "EXISTS (SELECT 1 FROM evenements e"
+    return "(ss.dernier_fetch_le IS NULL OR ss.dernier_fetch_le < now() - interval '"
+        + jours
+        + " days') AND EXISTS (SELECT 1 FROM evenements e"
         + " WHERE e.salle_id = ss.salle_id AND e.date >= CURRENT_DATE"
-        + " AND e.absences_consecutives < "
-        + WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES
         + " AND EXISTS (SELECT 1 FROM user_config uc WHERE e.dept = ANY(uc.departements))"
         + " AND NOT EXISTS (SELECT 1 FROM observations o"
         + " WHERE o.evenement_id = e.id"

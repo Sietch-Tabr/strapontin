@@ -6,12 +6,12 @@ package fr.strapontin.web.salle;
 
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.ticketmaster.TicketmasterSource;
+import fr.strapontin.web.utilisateur.SuivisUtilisateur;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -129,12 +129,7 @@ class SalleRepository {
   /* package-private : accès SQL réservé à SalleService (même package), pattern
    * service/repository. */
   int compterPourUtilisateur(final String userId) {
-    return Objects.requireNonNullElse(
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
-            Map.of(CLE_USER_ID, userId),
-            Integer.class),
-        0);
+    return SuivisUtilisateur.nombreSalles(jdbc, userId);
   }
 
   /**

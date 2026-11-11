@@ -7,9 +7,11 @@ package fr.strapontin.web.securite;
 import fr.strapontin.core.GenerateurSecrets;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.invitation.InvitationUtilisateurService;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,23 +38,26 @@ public class AuthService {
   private final EmailService emailService;
   private final PasswordEncoder passwordEncoder;
   private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
+  private final InvitationUtilisateurService invitations;
 
   /**
    * @param verificationRepository accès aux tokens de vérification
    * @param emailService service d'envoi d'emails
    * @param passwordEncoder encodeur bcrypt
-   * @param sessionRepository dépôt de sessions JDBC (révocation après reset de
-   *     mdp)
+   * @param sessionRepository dépôt de sessions JDBC (révocation après reset)
+   * @param invitations invitations d'utilisateurs (compte créé à l'activation)
    */
   public AuthService(
       final VerificationRepository verificationRepository,
       final EmailService emailService,
       final PasswordEncoder passwordEncoder,
-      final FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
+      final FindByIndexNameSessionRepository<? extends Session> sessionRepository,
+      final InvitationUtilisateurService invitations) {
     this.verificationRepository = verificationRepository;
     this.emailService = emailService;
     this.passwordEncoder = passwordEncoder;
     this.sessionRepository = sessionRepository;
+    this.invitations = invitations;
   }
 
   /**
@@ -90,10 +95,11 @@ public class AuthService {
    * @return {@code true} si le token est de type {@code invite:}
    */
   public boolean estTokenInvite(final String token) {
-    return verificationRepository
-        .lireIdentifiantParTokenHash(GenerateurSecrets.sha256Hex(token))
-        .map(s -> s.startsWith("invite:"))
-        .orElse(false);
+    return invitations.estLienInvitation(token)
+        || verificationRepository
+            .lireIdentifiantParTokenHash(GenerateurSecrets.sha256Hex(token))
+            .map(s -> s.startsWith("invite:"))
+            .orElse(false);
   }
 
   /**
@@ -107,6 +113,10 @@ public class AuthService {
   @Transactional
   public String activerCompteInvite(
       final String token, final String identifiant, final String motDePasse) {
+    final Optional<String> compteCree = invitations.activer(token, identifiant, motDePasse);
+    if (compteCree.isPresent()) {
+      return compteCree.get();
+    }
     final String tokenHash = GenerateurSecrets.sha256Hex(token);
     final String fullIdentifiant =
         verificationRepository

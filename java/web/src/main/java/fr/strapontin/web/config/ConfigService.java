@@ -6,11 +6,9 @@ package fr.strapontin.web.config;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import fr.strapontin.core.AccesAppConfig;
 import fr.strapontin.core.ConfigCipher;
 import java.time.Duration;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -35,7 +33,7 @@ public class ConfigService {
   private static final String CLE_CLE = "cle";
 
   private final ConfigCipher cipher;
-  private final NamedParameterJdbcTemplate jdbc;
+  private final AccesAppConfig acces;
   private final Cache<String, Optional<String>> cache;
 
   /**
@@ -48,7 +46,7 @@ public class ConfigService {
       @Value("${app.config.secret-precedent:}") final String secretPrecedent,
       final NamedParameterJdbcTemplate jdbc) {
     this.cipher = new ConfigCipher(secret, secretPrecedent);
-    this.jdbc = jdbc;
+    this.acces = new AccesAppConfig(jdbc);
     this.cache =
         Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(5)).maximumSize(200).build();
   }
@@ -76,20 +74,11 @@ public class ConfigService {
     Objects.requireNonNull(cle, "La clé de configuration est requise");
     cache.invalidate(cle);
     if (valeur == null || valeur.isBlank()) {
-      jdbc.update("DELETE FROM app_config WHERE cle = :cle", Map.of(CLE_CLE, cle));
+      acces.supprimer(cle);
       LOG.info("config supprimée cle={}", cle);
       return;
     }
-    final String valeurChiffree = cipher.chiffrer(valeur);
-    final String sql =
-        """
-        INSERT INTO app_config (cle, valeur_chiffree)
-        VALUES (:cle, :valeur)
-        ON CONFLICT (cle) DO UPDATE
-          SET valeur_chiffree = EXCLUDED.valeur_chiffree,
-              mis_a_jour_le   = now()
-        """;
-    jdbc.update(sql, Map.of(CLE_CLE, cle, "valeur", valeurChiffree));
+    acces.ecrire(cle, cipher.chiffrer(valeur));
   }
 
   /**
@@ -98,22 +87,16 @@ public class ConfigService {
    * @return les clés configurées
    */
   public Set<String> lireConfigsPresentes() {
-    final List<String> cles =
-        jdbc.query("SELECT cle FROM app_config", Map.of(), (rs, _) -> rs.getString(CLE_CLE));
-    return new HashSet<>(cles);
+    return acces.cles();
   }
 
   private Optional<String> chargerDepuisDb(final String cle) {
-    final List<String> lignes =
-        jdbc.query(
-            "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
-            Map.of(CLE_CLE, cle),
-            (rs, _) -> rs.getString("valeur_chiffree"));
-    if (lignes.isEmpty()) {
+    final Optional<String> chiffree = acces.lire(cle);
+    if (chiffree.isEmpty()) {
       return Optional.empty();
     }
     try {
-      return Optional.of(cipher.dechiffrer(lignes.get(0)));
+      return Optional.of(cipher.dechiffrer(chiffree.get()));
     } catch (Exception e) {
       LOG.error("Échec déchiffrement config '{}' — APP_CONFIG_SECRET modifié ?", cle, e);
       return Optional.empty();

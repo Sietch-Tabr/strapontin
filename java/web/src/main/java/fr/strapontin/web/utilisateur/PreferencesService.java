@@ -195,12 +195,7 @@ public class PreferencesService {
   // doublon de référentiel pour une variante orthographique mineure (ex. "The
   // Rolling Stones" importé alors que "Rolling Stones" est déjà suivi).
   private int[] importerArtistes(final String userId, final List<ArtisteExport> artistes) {
-    final Integer nbExistants =
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
-            Map.of(CLE_USER_ID, userId),
-            Integer.class);
-    final int restant = Math.max(0, 500 - (nbExistants != null ? nbExistants : 0));
+    final int restant = Math.max(0, 500 - SuivisUtilisateur.nombreArtistes(jdbc, userId));
     int traites = 0;
     int rejetes = 0;
     for (final ArtisteExport a : artistes) {
@@ -237,12 +232,7 @@ public class PreferencesService {
   // volontairement pas utilisé pour retrouver une salle existante (comportement
   // inchangé) — le nom est toujours re-normalisé.
   private int[] importerSalles(final String userId, final List<SalleExport> salles) {
-    final Integer nbExistants =
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
-            Map.of(CLE_USER_ID, userId),
-            Integer.class);
-    final int restant = Math.max(0, 200 - (nbExistants != null ? nbExistants : 0));
+    final int restant = Math.max(0, 200 - SuivisUtilisateur.nombreSalles(jdbc, userId));
     int traites = 0;
     int rejetes = 0;
     for (final SalleExport s : salles) {

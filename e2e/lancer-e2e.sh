@@ -26,6 +26,36 @@ journal=/tmp/e2e-run.log
 fin=/tmp/e2e-run.fin
 verrou=/tmp/e2e-run.pid
 
+# Durée cumulée des tests de chaque projet (lignes « ✓/✘ N [projet] … (durée) » du journal) ; un
+# projet qui dépasse deux fois la médiane des projets signale un run anormal (poste ou dev).
+durees_par_projet() {
+  awk '
+    function secondes(d,   v) {
+      v = d + 0
+      if (d ~ /ms$/) return v / 1000
+      if (d ~ /m$/) return v * 60
+      return v
+    }
+    match($0, /^ +(✓|✘) +[0-9]+ \[[a-z-]+\]/) {
+      projet = $0; sub(/^[^\[]*\[/, "", projet); sub(/\].*$/, "", projet)
+      if (match($0, /\([0-9.]+(ms|s|m)\)$/)) {
+        duree = substr($0, RSTART + 1, RLENGTH - 2)
+        somme[projet] += secondes(duree); nombre[projet]++
+      }
+    }
+    END {
+      n = 0
+      for (p in somme) { noms[++n] = p; valeurs[n] = somme[p] }
+      for (i = 1; i <= n; i++) for (j = i + 1; j <= n; j++) if (valeurs[j] < valeurs[i]) { t = valeurs[i]; valeurs[i] = valeurs[j]; valeurs[j] = t }
+      mediane = n ? valeurs[int((n + 1) / 2)] : 0
+      for (p in somme) {
+        alerte = (mediane > 0 && somme[p] > 2 * mediane) ? "  <- plus de deux fois la médiane, run anormal ?" : ""
+        printf "  %-14s %3d tests %6.1f min%s\n", p, nombre[p], somme[p] / 60, alerte
+      }
+    }
+  ' "$journal" | sort
+}
+
 bilan() {
   local passes echecs instables ignores code
   code="$(cat "$fin" 2>/dev/null || echo 99)"
@@ -34,6 +64,8 @@ bilan() {
   instables=$(grep -Eo '^ +[0-9]+ flaky' "$journal" | tail -1 | grep -Eo '[0-9]+' || echo 0)
   ignores=$(grep -Eo '^ +[0-9]+ skipped' "$journal" | tail -1 | grep -Eo '[0-9]+' || echo 0)
   echo "E2E : $passes réussis, $echecs échecs, $instables instables, $ignores ignorés (code $code)"
+  echo "Durée cumulée par projet :"
+  durees_par_projet
   [ "${echecs:-0}" = "0" ] && [ "${instables:-0}" = "0" ] && [ "$code" = "0" ]
 }
 

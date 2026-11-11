@@ -1,6 +1,10 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import crypto from "node:crypto";
 import { FICHIER_AUTH_ADMIN } from "./global-setup";
+import {
+  creerCompteJetableEtSeConnecter,
+  supprimerUtilisateurParEmail,
+} from "./helpers/admin.js";
 
 const USER = "e2euser";
 const MDP = process.env["E2E_USER_MOT_DE_PASSE"] ?? "e2e-user-2026";
@@ -243,6 +247,65 @@ test.describe("Scénario: flux TOTP complet (enrollment + challenge)", () => {
       }
       await adminCtx.close();
       await ctx.close();
+    }
+  });
+
+  // Compte jetable : l'état du TOTP ne dépend ni de e2euser ni de l'ordre des scénarios.
+  test("desactivation_codeIncorrectPuisCodeValide_retireLeTotp", async ({
+    browser,
+    browserName,
+    isMobile,
+  }) => {
+    test.skip(
+      browserName !== "chromium" || isMobile,
+      "compte créé, attente d'une fenêtre TOTP — chromium desktop uniquement",
+    );
+
+    const { page, ctx, email } = await creerCompteJetableEtSeConnecter(
+      browser,
+      "e2etotpdes",
+    );
+    try {
+      const setup = await page.request.get("/api/totp/setup");
+      expect(setup.status()).toBe(200);
+      const secret = (await setup.json()).totpSecret as string;
+      const confirmation = await page.request.post("/api/totp/confirmer", {
+        data: { code: calculerCode(secret) },
+      });
+      expect(confirmation.status()).toBe(200);
+      // Le code de confirmation est consommé : la désactivation attend la fenêtre suivante.
+      await attendreProchaineFenetre();
+
+      await page.goto("/parametres#compte");
+      const champ = page.locator("input#totp-desact-code");
+      await expect(champ).toBeVisible();
+      expect((await champ.boundingBox())!.width).toBeLessThan(200);
+      await expect(champ).not.toHaveAttribute("placeholder", /.+/);
+      await expect(page.locator("#aide-totp-desact")).toContainText(
+        "application d'authentification",
+      );
+
+      const codeValide = calculerCode(secret);
+      const codeFaux = codeValide === "123456" ? "654321" : "123456";
+      await champ.fill(codeFaux);
+      await page.getByRole("button", { name: "Désactiver le TOTP" }).click();
+      await expect(page.locator(".alerte-erreur").first()).toBeVisible();
+      await expect(champ).toBeVisible();
+
+      await champ.fill(calculerCode(secret));
+      await page.getByRole("button", { name: "Désactiver le TOTP" }).click();
+      await expect(
+        page
+          .locator(".alerte-succes")
+          .filter({ hasText: "Authentification à deux facteurs désactivée" }),
+      ).toBeVisible();
+      await expect(champ).toHaveCount(0);
+      await expect(
+        page.getByRole("link", { name: "Configurer le TOTP" }),
+      ).toBeVisible();
+    } finally {
+      await ctx.close();
+      await supprimerUtilisateurParEmail(email);
     }
   });
 });

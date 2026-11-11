@@ -6,6 +6,7 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.ProduitEventim;
+import fr.strapontin.core.ReglesCommunes;
 import java.sql.Time;
 import java.sql.Types;
 import java.time.Duration;
@@ -27,17 +28,19 @@ final class RechercheEvenementExistant {
 
   // Écart d'heure toléré entre deux fiches TM d'un même événement, très en
   // dessous de tout écart matinée/soirée réel.
-  private static final int TOLERANCE_HEURE_MINUTES = 3;
   // Écart d'heure toléré pour un même produit Eventim : au-delà, deux séances.
   private static final int ECART_MAX_PRODUIT_MINUTES = 60;
+  private static final String CLE_SALLE_ID = "salleId";
   private static final String CLE_DATE = "date";
   private static final String CLE_HEURE = "heure";
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final RechercheProduitDeplace produitDeplace;
 
   /* package-private : instancié par PersisteurConcertsDb. */
   RechercheEvenementExistant(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
+    this.produitDeplace = new RechercheProduitDeplace(jdbc);
   }
 
   /* package-private : appelé par PersisteurConcertsDb. */
@@ -48,7 +51,7 @@ final class RechercheEvenementExistant {
             .addValue(CLE_DATE, concert.date(), Types.DATE)
             .addValue(CLE_HEURE, concert.heure(), Types.TIME)
             .addValue(
-                "salleId",
+                CLE_SALLE_ID,
                 concert.salleId() != null ? concert.salleId().toString() : null,
                 Types.VARCHAR);
     final List<UUID> exact =
@@ -70,7 +73,15 @@ final class RechercheEvenementExistant {
    * @return l'événement, ou {@code null} sans candidat ou si les artistes divergent
    */
   /* package-private : appelé par PersisteurConcertsDb. */
-  UUID parProduit(final ValeurConcert concert) {
+  UUID parProduit(final ValeurConcert concert, final List<ValeurConcert> lot) {
+    final UUID memeJour = parProduitMemeJour(concert);
+    if (memeJour != null || !ProduitsDuLot.estUnique(lot, concert)) {
+      return memeJour;
+    }
+    return produitDeplace.chercher(concert);
+  }
+
+  private UUID parProduitMemeJour(final ValeurConcert concert) {
     final String condition = CritereProduitEvenement.condition(concert);
     if (condition == null) {
       return null;
@@ -91,7 +102,7 @@ final class RechercheEvenementExistant {
                 .addValue("source", concert.source())
                 .addValue(CLE_DATE, concert.date(), Types.DATE)
                 .addValue(
-                    "salleId",
+                    CLE_SALLE_ID,
                     concert.salleId() != null ? concert.salleId().toString() : null,
                     Types.VARCHAR));
     if (CritereProduitEvenement.choixAmbigu(concert, candidats.size())) {
@@ -110,6 +121,31 @@ final class RechercheEvenementExistant {
       }
     }
     return null;
+  }
+
+  /**
+   * Retire d'une fiche les anciennes adresses du produit Eventim qu'une
+   * publication vient de renommer.
+   * @param evenementId fiche retrouvée par son produit
+   * @param concert publication entrante
+   */
+  /* package-private : appelé par PersisteurConcertsDb (même package). */
+  void retirerAnciennesAdressesProduit(final UUID evenementId, final ValeurConcert concert) {
+    if (!"eventim".equals(concert.source())) {
+      return;
+    }
+    jdbc.update(
+        "DELETE FROM observations o WHERE o.evenement_id = CAST(:id AS uuid)"
+            + " AND o.source = 'eventim' AND o.url IS DISTINCT FROM :url AND "
+            + ProduitEventim.expressionSql("o")
+            + " = :produit",
+        Map.of(
+            "id",
+            evenementId.toString(),
+            "url",
+            concert.url(),
+            "produit",
+            ProduitEventim.identifiant(concert.url()).orElse("")));
   }
 
   private static boolean heureProche(final LocalTime existante, final LocalTime entrante) {
@@ -133,7 +169,7 @@ final class RechercheEvenementExistant {
                           AND o.url ~* '/pack/') AS a_observation_package
             FROM evenements e WHERE e.salle_id = CAST(:salleId AS uuid) AND e.date = :date
             """,
-            Map.of("salleId", concert.salleId().toString(), CLE_DATE, concert.date()));
+            Map.of(CLE_SALLE_ID, concert.salleId().toString(), CLE_DATE, concert.date()));
     final boolean entrantPackage = estPackage(concert.url());
     for (final Map<String, Object> c : candidats) {
       final Object heureBrute = c.get(CLE_HEURE);
@@ -174,7 +210,8 @@ final class RechercheEvenementExistant {
   private static boolean memeHeure(final LocalTime existante, final LocalTime entrante) {
     return existante != null
         && entrante != null
-        && Math.abs(Duration.between(existante, entrante).toMinutes()) <= TOLERANCE_HEURE_MINUTES;
+        && Math.abs(Duration.between(existante, entrante).toMinutes())
+            <= ReglesCommunes.TOLERANCE_HEURE_MINUTES;
   }
 
   /**
@@ -198,6 +235,6 @@ final class RechercheEvenementExistant {
       return true;
     }
     final long diffMinutes = Math.abs(Duration.between(existante, entrante).toMinutes());
-    return diffMinutes <= TOLERANCE_HEURE_MINUTES;
+    return diffMinutes <= ReglesCommunes.TOLERANCE_HEURE_MINUTES;
   }
 }

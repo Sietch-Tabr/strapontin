@@ -18,9 +18,9 @@ import fr.strapontin.core.CompteurEnvoisResend;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import tools.jackson.databind.ObjectMapper;
 
@@ -55,13 +55,12 @@ class GestionQuotaResendWorkerTest {
 
   private void enBase(final CompteurEnvoisResend compteur) throws Exception {
     final String json = new ObjectMapper().writeValueAsString(compteur);
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(String.class))).thenReturn(json);
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of(json));
   }
 
   @Test
   void reserverEnvoi_aucunCompteurEnBase_autorise() {
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(String.class)))
-        .thenThrow(new EmptyResultDataAccessException(1));
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
 
     assertTrue(gestionQuotaResendWorker.reserverEnvoi());
     verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
@@ -103,8 +102,8 @@ class GestionQuotaResendWorkerTest {
 
   @Test
   void reserverEnvoi_compteurMalforme_autoriseCommeUnCompteurInitial() {
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(String.class)))
-        .thenReturn("{pas-du-json-valide");
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
+        .thenReturn(List.of("{pas-du-json-valide"));
 
     assertTrue(gestionQuotaResendWorker.reserverEnvoi());
   }

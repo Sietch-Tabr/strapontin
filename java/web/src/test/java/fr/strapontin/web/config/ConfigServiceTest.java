@@ -15,10 +15,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -64,8 +62,7 @@ class ConfigServiceTest {
 
   @Test
   void lireConfig_cleAbsenteEnBase_retourneVide() {
-    when(jdbc.query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any()))
-        .thenReturn(List.of());
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
     final ConfigService service = creerService();
     assertEquals(Optional.empty(), service.lireConfig("CLE_INEXISTANTE"));
   }
@@ -76,7 +73,7 @@ class ConfigServiceTest {
     // service doit logger l'échec et retourner Optional.empty(), jamais propager l'exception.
     final ConfigCipher autreCipher = new ConfigCipher("autre-secret-32-caracteres-ok!!");
     final String chiffreAvecAutreSecret = autreCipher.chiffrer("peu importe");
-    when(jdbc.query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any()))
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
         .thenReturn(List.of(chiffreAvecAutreSecret));
 
     final ConfigService service = creerService();
@@ -85,14 +82,13 @@ class ConfigServiceTest {
 
   @Test
   void lireConfig_appelsRepetes_utiliseLeCache() {
-    when(jdbc.query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any()))
-        .thenReturn(List.of());
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
     final ConfigService service = creerService();
 
     service.lireConfig("CLE_INEXISTANTE");
     service.lireConfig("CLE_INEXISTANTE");
 
     // Un seul appel DB malgré deux lectures — la seconde est servie par le cache Caffeine.
-    verify(jdbc, times(1)).query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any());
+    verify(jdbc, times(1)).queryForList(anyString(), anyMap(), eq(String.class));
   }
 }

@@ -169,8 +169,28 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     verify(ticketmasterSource, never()).fetchSalle("tm:venue-lyon", null);
   }
 
+  // Théâtre Marigny : les fiches ont atteint le seuil d'absences avant le premier passage du lieu,
+  // alors que le lieu les renvoie.
   @Test
-  void executerFetchSallesAll_ficheFigeeDejaComptéeAbsenteAuSeuil_neReinterrogePasLaSalle() {
+  void executerFetchSallesAll_ficheAuSeuilSurUnLieuJamaisInterroge_fetcheLaSalle() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    final UUID salle = insererSalleAvecSourceTm("salle-marigny", "venue-marigny");
+    insererFicheDeSalle(salle, "75", 10);
+    jdbc.update(
+        "UPDATE evenements SET absences_consecutives = :seuil WHERE salle_id = CAST(:id AS uuid)",
+        Map.of("seuil", WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES, "id", salle.toString()));
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+    when(ticketmasterSource.fetchSalle(startsWith("tm:"), any()))
+        .thenReturn(List.<ConcertBrut>of());
+
+    fetchService.executerFetchSallesAll();
+
+    verify(ticketmasterSource).fetchSalle("tm:venue-marigny", null);
+  }
+
+  @Test
+  void executerFetchSallesAll_ficheAuSeuilSurUnLieuInterrogeRecemment_neReinterrogePasLaSalle() {
     insererUser("u1");
     insererUserConfigDept("u1", "75");
     final UUID salle = insererSalleAvecSourceTm("salle-sans-retour", "venue-sans-retour");
@@ -178,6 +198,9 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     jdbc.update(
         "UPDATE evenements SET absences_consecutives = :seuil WHERE salle_id = CAST(:id AS uuid)",
         Map.of("seuil", WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES, "id", salle.toString()));
+    jdbc.update(
+        "UPDATE salle_sources SET dernier_fetch_le = now() WHERE salle_id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
     when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
 
     fetchService.executerFetchSallesAll();

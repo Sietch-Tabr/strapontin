@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { creerContexteAdmin } from "./helpers/admin.js";
+import { creerContexteAdmin, nettoyer } from "./helpers/admin.js";
 
 // La communication d'incident est un état global (une seule active, affichée à tous) : un seul
 // navigateur la publie, sinon les cinq projets se la retireraient mutuellement. Aucun email,
@@ -7,7 +7,10 @@ import { creerContexteAdmin } from "./helpers/admin.js";
 test.describe("Communication d'incident", () => {
   test.afterEach(async () => {
     const ctx = await creerContexteAdmin();
-    await ctx.post("/api/admin/incident/terminer").catch(() => {});
+    await nettoyer(
+      "fin de la communication",
+      ctx.post("/api/admin/incident/terminer"),
+    );
     await ctx.dispose();
   });
 
@@ -47,7 +50,10 @@ test.describe("Communication d'incident", () => {
   }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium");
     const admin = await creerContexteAdmin();
-    await admin.post("/api/admin/incident/terminer").catch(() => {});
+    await nettoyer(
+      "fin de la communication",
+      admin.post("/api/admin/incident/terminer"),
+    );
     await admin.dispose();
     const ctx = await browser.newContext({ storageState: undefined });
 

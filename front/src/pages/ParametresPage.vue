@@ -43,6 +43,9 @@
         ><ParametresCompte v-if="ongletActif === '#compte'"
       /></KeepAlive>
       <KeepAlive
+        ><ParametresInvitations v-if="ongletActif === '#inviter'"
+      /></KeepAlive>
+      <KeepAlive
         ><ParametresDonnees v-if="ongletActif === '#donnees'"
       /></KeepAlive>
     </div>
@@ -61,6 +64,7 @@ const estMobile = useEstMobile();
 import ParametresPreferences from "../components/parametres/ParametresPreferences.vue";
 import ParametresNotifications from "../components/parametres/ParametresNotifications.vue";
 import ParametresCompte from "../components/parametres/ParametresCompte.vue";
+import ParametresInvitations from "../components/parametres/ParametresInvitations.vue";
 import ParametresDonnees from "../components/parametres/ParametresDonnees.vue";
 
 const route = useRoute();
@@ -71,6 +75,7 @@ const onglets = [
   { ancre: "#preferences", label: "Préférences" },
   { ancre: "#notifications", label: "Notifications" },
   { ancre: "#compte", label: "Compte" },
+  { ancre: "#inviter", label: "Inviter" },
   { ancre: "#donnees", label: "Données" },
 ];
 const ongletActif = ref("#preferences");

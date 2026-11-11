@@ -2,8 +2,9 @@
   <div class="param-bloc">
     <h3 class="param-libelle">Notification de nouvelle version</h3>
     <p class="param-aide">
-      Envoie une notification push aux utilisateurs ayant activé « Nouvelle
-      version de l'application » dans leurs préférences (version courante :
+      Prévient les utilisateurs ayant activé « Être prévenu d'une nouvelle
+      version de l'application » dans leurs préférences, par push sur leurs
+      appareils abonnés, sinon par email (version courante :
       {{ versionApplication || "—" }}). Vérifiez d'abord qu'une entrée existe
       pour cette version dans le changelog utilisateur : aucune vérification
       automatique n'est faite côté serveur.
@@ -30,10 +31,11 @@
       Notifier la nouvelle version ?
     </h2>
     <p class="dialog-corps">
-      Une notification push sera envoyée à tous les utilisateurs ayant activé «
-      Nouvelle version de l'application ». Vérifiez au préalable qu'une entrée
-      existe bien pour la version {{ versionApplication || "—" }} dans le
-      changelog utilisateur.
+      Une notification push (ou, sans appareil abonné, un email) sera envoyée à
+      tous les utilisateurs ayant activé « Être prévenu d'une nouvelle version
+      de l'application », une seule fois pour cette version. Vérifiez au
+      préalable qu'une entrée existe bien pour la version
+      {{ versionApplication || "—" }} dans le changelog utilisateur.
     </p>
     <div class="dialog-pied">
       <button

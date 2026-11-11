@@ -6,6 +6,7 @@ package fr.strapontin.web.utilisateur;
 
 import static fr.strapontin.web.ControllerUtils.erreur;
 
+import fr.strapontin.core.ReglesCommunes;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.securite.LimiteurDebit;
 import fr.strapontin.web.securite.RegleIdentifiant;
@@ -41,7 +42,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/user")
 public class UserController {
 
-  private static final int LONGUEUR_MIN_MOT_DE_PASSE = 12;
   private static final int MAX_ECHECS_MOT_DE_PASSE = 5;
   private static final Duration FENETRE_ECHECS_MOT_DE_PASSE = Duration.ofMinutes(15);
 
@@ -94,7 +94,7 @@ public class UserController {
                     e.email(),
                     details.identifiant(),
                     e.pendingEmail(),
-                    details.twoFactorActif()))
+                    utilisateurRepository.deuxFacteursActif(details.id())))
         .map(ResponseEntity::ok)
         .orElse(ResponseEntity.notFound().build());
   }
@@ -136,11 +136,11 @@ public class UserController {
     if (requete.motDePasseActuel() == null || requete.motDePasseNouveau() == null) {
       return erreur(400, "Tous les champs sont obligatoires.");
     }
-    if (requete.motDePasseNouveau().length() < LONGUEUR_MIN_MOT_DE_PASSE) {
+    if (requete.motDePasseNouveau().length() < ReglesCommunes.LONGUEUR_MIN_MOT_DE_PASSE) {
       return erreur(
           400,
           "Le nouveau mot de passe doit contenir au moins "
-              + LONGUEUR_MIN_MOT_DE_PASSE
+              + ReglesCommunes.LONGUEUR_MIN_MOT_DE_PASSE
               + " caractères.");
     }
     if (echecsMotDePasseActuel.estEpuise(details.id())) {

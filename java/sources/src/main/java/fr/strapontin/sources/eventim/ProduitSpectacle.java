@@ -23,6 +23,13 @@ final class ProduitSpectacle {
   private static final Set<String> CATEGORIES_SPECTACLE =
       Set.of("Concerts & Festivals", "Classique & Danse", "Théâtre", "Humour", "Spectacles");
 
+  // Le sport est un match, sauf ces sous-catégories : un spectacle sportif
+  // (Horse GP, T-Show) ou un combat (MMA) se vend et s'annule comme une séance,
+  // un match de championnat non.
+  private static final String CATEGORIE_SPORTS = "Sports";
+  private static final Set<String> SOUS_CATEGORIES_SPORT_SPECTACLE =
+      Set.of("Autres sports", "Sports de combat");
+
   private ProduitSpectacle() {}
 
   /**
@@ -60,8 +67,18 @@ final class ProduitSpectacle {
         if (CATEGORIES_SPECTACLE.contains(nom)) {
           return true;
         }
+      } else if (estSousCategorieSportSpectacle(categorie)) {
+        return true;
       }
     }
     return !racineConnue;
+  }
+
+  private static boolean estSousCategorieSportSpectacle(final Object categorie) {
+    return categorie instanceof Map<?, ?> fiche
+        && fiche.get(CLE_NOM) instanceof String nom
+        && SOUS_CATEGORIES_SPORT_SPECTACLE.contains(nom)
+        && fiche.get("parentCategory") instanceof Map<?, ?> parent
+        && CATEGORIE_SPORTS.equals(parent.get(CLE_NOM));
   }
 }

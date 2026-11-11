@@ -9,7 +9,7 @@ Nécessite le LXC dev actif (port 8080). Lancer : `cd e2e && npx playwright test
 
 **Deux comptes dédiés** créés par `bash scripts/seed-e2e.sh root@192.168.20.78` : `e2eadmin`/`e2euser`. Idempotent, supprime et recrée les users (CASCADE DELETE) — après relance, supprimer `e2e/tests/e2e/.auth-*.json` pour forcer la reconnexion. Réinitialise aussi `user_config.departements` à `{}` pour `e2euser` (un filtre resté positionné fait disparaître silencieusement ses matches au cycle suivant de `RecalculerMatchesJob`).
 
-`global-setup.ts` ouvre 2 sessions (`.auth-admin.json`, `.auth-user.json`) via `POST /api/auth/login`, puis réinitialise les buckets rate-limit (`DELETE /api/salles/rate-limits/signalement`, profil `dev` uniquement). Échoue immédiatement (avant tout login) si un `playwright-mcp` externe persistant est détecté — une session de debug manuelle active en parallèle peut ralentir toute la suite d'un facteur ~4x sans jamais la faire échouer clairement.
+`global-setup.ts` ouvre 2 sessions (`.auth-admin.json`, `.auth-user.json`) via `POST /api/auth/login`, puis réinitialise les buckets rate-limit (`DELETE /api/salles/rate-limits/signalement`) la cadence d'invitations (`DELETE /api/admin/invitations/envois`) et les limiteurs de connexion et de création de compte (`DELETE /api/admin/rate-limits/connexion`), profil `dev` uniquement : plus besoin de redémarrer `strapontin-web` entre deux runs rapprochés. Échoue immédiatement (avant tout login) si un `playwright-mcp` externe persistant est détecté — une session de debug manuelle active en parallèle peut ralentir toute la suite d'un facteur ~4x sans jamais la faire échouer clairement.
 
 Tests "Scénario: API auth" et le test signalement valide restreints à chromium (rate limiter bucket4j). `invitation_tokenValide` ne tourne que sur chromium — crée sa propre invitation via l'API admin, indépendant du seed.
 
@@ -34,3 +34,9 @@ Toujours écarter ces causes connues avec des preuves avant de conclure à un bu
 - `node e2e/outils/releve-console.mjs [pages…]` : console (error, warning), erreurs de page et HTTP ≥ 400 en session utilisateur puis admin, chromium, firefox et webkit. Le seul relevé connu, compté à part : WebKit signale une violation `style-src-attr` par `<select>` sous la politique `style-src 'self'` (une page vide avec un `<select>` la produit aussi, Chromium jamais) ; l'assouplir affaiblirait la politique, rien n'est donc changé.
 - `node e2e/outils/verifier-service-worker.mjs [dossier] [port]` : enregistrement, précache et rechargement hors ligne du `sw.js` construit, sur `localhost` (le dev en HTTP sur IP privée ne l'expose pas, voir `pwa.e2e.ts`).
 
+## Règles de la suite (3.1.4)
+
+- Durée normale d'un run complet : environ 15 minutes (cinq projets, `workers: 1`, `trace: on-first-retry`). `lancer-e2e.sh` affiche la durée par projet et avertit au-delà de deux fois la médiane ; un run à 40 minutes ou plus est une anomalie à diagnostiquer, pas une durée normale.
+- Jamais de tolérance de statut (`[401, 429]`) ni de `test.skip` faute de donnée : la précondition est posée (seed, API, compte jetable `creerCompteJetableEtSeConnecter`) ou le test échoue. `e2euser` suit plus de 150 concerts (pagination de Mes spectacles).
+- Pas de `networkidle` comme substitut de « page prête » : attendre un élément ou un état (`toPass` pour un rendu refait). Les nettoyages passent par `nettoyer()`, qui journalise l'échec.
+- Montée de Playwright : `npx playwright install` pour télécharger les navigateurs de la nouvelle version (sinon 1 281 échecs `Executable doesn't exist`).

@@ -325,17 +325,17 @@ class WorkerStatsServiceTest {
   // jdbc mocké, fidèle au comportement réel (INSERT ... ON CONFLICT DO UPDATE).
   private void simulerPersistanceAppConfig() {
     final AtomicReference<String> valeur = new AtomicReference<>();
-    when(jdbc.queryForObject(
+    when(jdbc.queryForList(
             anyString(),
             org.mockito.ArgumentMatchers.<Map<String, ?>>any(),
             org.mockito.ArgumentMatchers.eq(String.class)))
-        .thenAnswer(_ -> valeur.get());
+        .thenAnswer(_ -> valeur.get() == null ? List.<String>of() : List.of(valeur.get()));
     when(jdbc.update(
             contains("INSERT INTO app_config"), org.mockito.ArgumentMatchers.<Map<String, ?>>any()))
         .thenAnswer(
             invocation -> {
               final Map<String, ?> params = invocation.getArgument(1);
-              valeur.set((String) params.get("json"));
+              valeur.set((String) params.get("valeur"));
               return 1;
             });
   }

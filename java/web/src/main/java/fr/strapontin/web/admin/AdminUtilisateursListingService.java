@@ -67,14 +67,17 @@ class AdminUtilisateursListingService {
         """
         SELECT u.id, u.email, u.role::text, u.username, u.display_username,
                u.must_change_credentials, u.created_at, u.revocation_admin_le, u.verrouille,
+               p.username AS parrain, u.plafond_invitations,
                COUNT(DISTINCT us.salle_id) AS nb_salles,
                COUNT(DISTINCT ua.artiste_id) AS nb_artistes,
                COUNT(*) OVER() AS total_filtre
         FROM users u
+        LEFT JOIN users p ON p.id = u.parrain_id
         LEFT JOIN user_salles us ON us.user_id = u.id
         LEFT JOIN user_artistes ua ON ua.user_id = u.id
         GROUP BY u.id, u.email, u.role, u.username, u.display_username,
-                 u.must_change_credentials, u.created_at, u.revocation_admin_le, u.verrouille
+                 u.must_change_credentials, u.created_at, u.revocation_admin_le, u.verrouille,
+                 p.username, u.plafond_invitations
         ORDER BY u.created_at
         LIMIT :taille OFFSET :offset
         """,
@@ -115,7 +118,9 @@ class AdminUtilisateursListingService {
         revocationBrute != null ? ((Timestamp) revocationBrute).toInstant() : null,
         nbSallesNum != null ? nbSallesNum.intValue() : 0,
         nbArtistesNum != null ? nbArtistesNum.intValue() : 0,
-        (Boolean) utilisateurBrut.get("verrouille"));
+        (Boolean) utilisateurBrut.get("verrouille"),
+        (String) utilisateurBrut.get("parrain"),
+        (Integer) utilisateurBrut.get("plafond_invitations"));
   }
 
   // page vide (offset au-delà du total, ex. dernier utilisateur supprimé

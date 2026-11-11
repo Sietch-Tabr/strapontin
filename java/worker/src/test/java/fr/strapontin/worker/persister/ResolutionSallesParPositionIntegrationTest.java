@@ -114,6 +114,37 @@ class ResolutionSallesParPositionIntegrationTest extends AbstractWorkerIntegrati
     assertFalse(parPosition.incompatible(vittel, "Palais des Congrès", PositionLieu.INCONNUE));
   }
 
+  @Test
+  void incompatible_codePostalDifferentEtNomsDifferents_vrai() {
+    final UUID dome = creerSalle("Dome de Paris", "75", MONTPARNASSE);
+    jdbc.update(
+        "UPDATE salles SET code_postal = '75015' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", dome.toString()));
+    final PositionLieu vendomeClub = new PositionLieu(null, null, "75002");
+
+    assertTrue(parPosition.incompatible(dome, "Vendôme Club Paris", vendomeClub));
+  }
+
+  @Test
+  void incompatible_codePostalDifferentMaisNomIdentique_neVetoPas() {
+    final UUID dome = creerSalle("dome de paris", "75", MONTPARNASSE);
+    jdbc.update(
+        "UPDATE salles SET code_postal = '75015' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", dome.toString()));
+
+    assertFalse(
+        parPosition.incompatible(dome, "Dome de Paris", new PositionLieu(null, null, "75002")));
+  }
+
+  @Test
+  void incompatible_codePostalInconnuDUnCote_neVetoPas() {
+    final UUID dome = creerSalle("Dome de Paris", "75", MONTPARNASSE);
+
+    assertFalse(
+        parPosition.incompatible(
+            dome, "Vendôme Club Paris", new PositionLieu(null, null, "75002")));
+  }
+
   // Le Minotaure (Vendôme) portait la position Wikidata d'un homonyme normand, sans aucun lieu
   // publié pour la confirmer : le veto créait une seconde salle « Le Minotaure Vendome ».
   @Test
@@ -181,5 +212,57 @@ class ResolutionSallesParPositionIntegrationTest extends AbstractWorkerIntegrati
     assertNotEquals(vittel, salle);
     // Créée sans géocodage du nom : l'enregistrement des positions y posera celle de la source.
     verifyNoInteractions(clientNominatim);
+  }
+
+  private void poserCodePostal(final UUID salle, final String codePostal) {
+    jdbc.update(
+        "UPDATE salles SET code_postal = :cp WHERE id = CAST(:id AS uuid)",
+        Map.of("cp", codePostal, "id", salle.toString()));
+  }
+
+  private UUID resoudreLieuEventim(final String salle, final String lieu, final String cp) {
+    final ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
+    resolveur.setResolutionParPosition(true);
+    final ValeurConcert concert =
+        FabriqueValeurConcert.nouveau()
+            .artiste("Artiste de test")
+            .salle(salle)
+            .dept("75")
+            .source("eventim")
+            .salleSourceId("eventim:internal:" + lieu + "@" + cp)
+            .position(new PositionLieu(null, null, cp))
+            .construire();
+    return resolveur.upsertSalleSource(concert);
+  }
+
+  // Le nom « vendome club paris » contient « dome » : sans le code postal (75002 contre 75015),
+  // la fiche était rattachée au Dôme de Paris.
+  @Test
+  void resolution_lieuDeCodePostalDifferentEtNomContenant_neRattachePasLaSalleExistante() {
+    final UUID dome = creerSalle("Dome de Paris", "75", MONTPARNASSE);
+    poserCodePostal(dome, "75015");
+
+    final UUID salle = resoudreLieuEventim("Vendôme Club Paris", "vendome club paris", "75002");
+
+    assertNotEquals(dome, salle);
+    assertEquals(
+        0,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM salle_sources WHERE salle_id = CAST(:id AS uuid)",
+            Map.of("id", dome.toString()),
+            Integer.class));
+  }
+
+  // Le nom du lieu contient entièrement celui de la salle (« les etoiles »), les codes postaux
+  // diffèrent (75011 contre 75010) : deux théâtres distincts.
+  @Test
+  void resolution_lieuDontLeNomContientCeluiDeLaSalle_etCodePostalDifferent_creeUneSalle() {
+    final UUID etoiles = creerSalle("Les Etoiles", "75", MONTPARNASSE);
+    poserCodePostal(etoiles, "75010");
+
+    final UUID salle =
+        resoudreLieuEventim("Le Passage vers les Etoiles", "le passage vers les etoiles", "75011");
+
+    assertNotEquals(etoiles, salle);
   }
 }

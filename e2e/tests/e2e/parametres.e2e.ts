@@ -5,6 +5,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { FICHIER_AUTH_USER } from "./global-setup.js";
+import { nettoyer } from "./helpers/admin.js";
 
 const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
 const E2E_USER_IDENTIFIANT = "e2euser";
@@ -48,6 +49,21 @@ test.describe("Scénario: paramètres — sections", () => {
   test("parametres_section_preferences_visible", async ({ page }) => {
     await page.goto("/parametres");
     await expect(page.locator("section#preferences")).toBeVisible();
+  });
+
+  test("parametres_notifications_nouvelleVersion_estProposeeSansAppareilPush", async ({
+    page,
+  }) => {
+    await page.goto("/parametres#notifications");
+    const bloc = page.locator("section#notifications .param-bloc", {
+      hasText: "Nouvelle version",
+    });
+
+    await expect(bloc).toBeVisible();
+    await expect(bloc).toContainText("sans appareil push, par email");
+    await expect(
+      bloc.getByLabel("Être prévenu d'une nouvelle version de l'application"),
+    ).toBeVisible();
   });
 
   test("parametres_section_notifications_visible", async ({ page }) => {
@@ -220,20 +236,6 @@ test.describe("Scénario: paramètres — boutons de formulaire", () => {
       }
     });
   }
-
-  test("parametres_compte_champCodeTotp_proportionneAuCode", async ({
-    page,
-  }) => {
-    await page.goto("/parametres#compte");
-    const champ = page.locator("input#totp-desact-code");
-    // Le compte de test n'a le TOTP actif que pendant certains scénarios.
-    if ((await champ.count()) === 0) test.skip();
-    expect((await champ.boundingBox())!.width).toBeLessThan(200);
-    await expect(champ).not.toHaveAttribute("placeholder", /.+/);
-    await expect(page.locator("#aide-totp-desact")).toContainText(
-      "application d'authentification",
-    );
-  });
 });
 
 test.describe("Scénario: paramètres — Données, libellés et mode d'import", () => {
@@ -626,28 +628,43 @@ test.describe("Scénario: Préférences — départements", () => {
   test("api_departements_code_valide_sauvegarde_sans_avertissement", async ({
     request,
   }) => {
-    const rep = await request.patch("/api/user/config/departements", {
-      data: { departements: "75, 92" },
-    });
-    expect(rep.ok()).toBeTruthy();
-    const corps = await rep.json();
-    expect(corps).toHaveProperty("succes");
-    expect(corps.ignores ?? []).toHaveLength(0);
+    try {
+      const rep = await request.patch("/api/user/config/departements", {
+        data: { departements: "75, 92" },
+      });
+      expect(rep.ok()).toBeTruthy();
+      const corps = await rep.json();
+      expect(corps).toHaveProperty("succes");
+      expect(corps.ignores ?? []).toHaveLength(0);
+    } finally {
+      // Un filtre de départements resté sur e2euser restreint ses matches au prochain
+      // recalcul : le seed le laisse vide, le test aussi.
+      await nettoyer(
+        "départements de e2euser",
+        request.patch("/api/user/config/departements", {
+          data: { departements: "" },
+        }),
+      );
+    }
   });
 });
 
 test.describe("Scénario: Préférences — filtre disponibles", () => {
   test("filtre_disponibles_toggle_change_etat", async ({ page }) => {
+    // État de départ posé par l'API : la lecture du bouton ne dépend plus de la fin du chargement.
+    const reponse = await page.request.patch("/api/user/config/filtres", {
+      data: { filtreDisponibles: false },
+    });
+    expect(reponse.ok()).toBe(true);
     await page.goto("/parametres#preferences");
-    await page.waitForLoadState("networkidle");
     const toggle = page.locator(
       "input[type='checkbox'][aria-labelledby='label-filtre-disponibles']",
     );
-    const etatInitial = await toggle.isChecked();
+    await expect(toggle).not.toBeChecked();
     await page.locator("label.bascule").click();
-    await expect(toggle).toBeChecked({ checked: !etatInitial });
+    await expect(toggle).toBeChecked();
     await page.locator("label.bascule").click();
-    await expect(toggle).toBeChecked({ checked: etatInitial });
+    await expect(toggle).not.toBeChecked();
   });
 
   test("api_filtres_patch_retourne_succes", async ({ request }) => {

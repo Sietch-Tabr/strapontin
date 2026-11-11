@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.setup;
 
+import fr.strapontin.core.ReglesCommunes;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.VapidKeyGenerator;
@@ -38,7 +39,6 @@ public class SetupService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SetupService.class);
   private static final int MAX_TENTATIVES = 3;
-  private static final int LONGUEUR_MIN_MOT_DE_PASSE = 12;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ConfigService configService;
@@ -136,9 +136,11 @@ public class SetupService {
     if (email.isEmpty() || !email.contains("@")) {
       throw new ErreurMetier("L'adresse email est invalide.");
     }
-    if (motDePasse.length() < LONGUEUR_MIN_MOT_DE_PASSE) {
+    if (motDePasse.length() < ReglesCommunes.LONGUEUR_MIN_MOT_DE_PASSE) {
       throw new ErreurMetier(
-          "Le mot de passe doit contenir au moins " + LONGUEUR_MIN_MOT_DE_PASSE + " caractères.");
+          "Le mot de passe doit contenir au moins "
+              + ReglesCommunes.LONGUEUR_MIN_MOT_DE_PASSE
+              + " caractères.");
     }
   }
 

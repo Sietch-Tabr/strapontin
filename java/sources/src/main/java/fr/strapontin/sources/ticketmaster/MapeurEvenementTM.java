@@ -77,7 +77,8 @@ final class MapeurEvenementTM {
    */
   /* package-private : appelé par TicketmasterSource (même package). */
   static ConcertBrut mapper(final Map<String, Object> evt, final String artisteFallback) {
-    if (AccesSansSpectacle.estAccesSansSpectacle((String) evt.get(CLE_NAME))) {
+    if (AccesSansSpectacle.estAccesSansSpectacle(
+        (String) evt.get(CLE_NAME), (String) evt.get("url"))) {
       return null;
     }
     try {

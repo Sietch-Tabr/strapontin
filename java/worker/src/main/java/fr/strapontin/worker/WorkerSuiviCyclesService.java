@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 /**
  * Détecte, par type de job planifié, une absence prolongée et
  * inexpliquée d'exécution (détail : CLAUDE.md, table Jobs background,
- * SuiviCyclesJobsJob).
+ * tâche {@code suiviCyclesJobs}, {@code TachesPlanifiees}).
  * @since 2.8.3
  * @author Kwaite
  */

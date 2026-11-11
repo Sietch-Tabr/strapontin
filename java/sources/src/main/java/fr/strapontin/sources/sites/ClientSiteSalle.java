@@ -5,6 +5,7 @@
 package fr.strapontin.sources.sites;
 
 import fr.strapontin.sources.http.ClientHttpFactory;
+import fr.strapontin.sources.http.ConstantesSources;
 import java.net.URI;
 import java.time.Duration;
 import java.util.HashMap;
@@ -27,14 +28,14 @@ public class ClientSiteSalle {
 
   private static final Logger LOG = LoggerFactory.getLogger(ClientSiteSalle.class);
 
-  /** {@code User-Agent} déclaré à chaque site, avec une adresse où nous joindre. */
+  /**
+   * {@code User-Agent} déclaré à chaque site, avec une adresse où nous joindre.
+   */
   /* package-private : vérifié par les tests du même package. */
-  static final String USER_AGENT = "StrapontinBot/1.0 (+https://strapontin.kwaite.fr)";
 
   private static final String AGENT_ROBOTS = "strapontinbot";
+
   private static final Duration DELAI_ENTRE_REQUETES_DEFAUT = Duration.ofSeconds(2);
-  private static final int STATUT_ACCES_REFUSE = 403;
-  private static final int STATUT_LIMITATION = 429;
 
   private final RestClient restClient;
   private final Duration delaiEntreRequetes;
@@ -45,7 +46,7 @@ public class ClientSiteSalle {
   public ClientSiteSalle() {
     this(
         RestClient.builder()
-            .defaultHeader("User-Agent", USER_AGENT)
+            .defaultHeader("User-Agent", ConstantesSources.USER_AGENT_ROBOT)
             .requestFactory(
                 ClientHttpFactory.creerRequestFactory(
                     Duration.ofSeconds(10), Duration.ofSeconds(30)))
@@ -87,8 +88,8 @@ public class ClientSiteSalle {
     try {
       regles = RobotsTxt.analyser(recuperer(URI.create(hote + "/robots.txt")), AGENT_ROBOTS);
     } catch (HttpClientErrorException e) {
-      if (e.getStatusCode().value() == STATUT_ACCES_REFUSE
-          || e.getStatusCode().value() == STATUT_LIMITATION) {
+      if (e.getStatusCode().value() == ConstantesSources.STATUT_ACCES_REFUSE
+          || e.getStatusCode().value() == ConstantesSources.STATUT_LIMITATION) {
         throw e;
       }
       // Pas de robots.txt (404) : aucune restriction déclarée.

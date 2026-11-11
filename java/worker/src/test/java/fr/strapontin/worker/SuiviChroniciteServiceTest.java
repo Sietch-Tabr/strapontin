@@ -12,6 +12,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,17 +36,19 @@ class SuiviChroniciteServiceTest {
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     valeurAppConfig = new AtomicReference<>();
-    when(jdbc.queryForObject(
+    when(jdbc.queryForList(
             anyString(),
             org.mockito.ArgumentMatchers.<Map<String, ?>>any(),
             org.mockito.ArgumentMatchers.eq(String.class)))
-        .thenAnswer(_ -> valeurAppConfig.get());
+        .thenAnswer(
+            _ ->
+                valeurAppConfig.get() == null ? List.<String>of() : List.of(valeurAppConfig.get()));
     when(jdbc.update(
             contains("INSERT INTO app_config"), org.mockito.ArgumentMatchers.<Map<String, ?>>any()))
         .thenAnswer(
             invocation -> {
               final Map<String, ?> params = invocation.getArgument(1);
-              valeurAppConfig.set((String) params.get("json"));
+              valeurAppConfig.set((String) params.get("valeur"));
               return 1;
             });
     service = new SuiviChroniciteService(jdbc, new ObjectMapper());
