@@ -27,9 +27,10 @@ export default defineConfig({
     // En-tête posé par le front (front/src/utils/api.js), exigé par la protection CSRF du
     // serveur sur toute requête modifiante : les appels API directs des tests le portent aussi.
     extraHTTPHeaders: { "X-Requested-With": "strapontin" },
-    // Arbre d'accessibilité et capture à chaque action : lecture des échecs WebKit.
+    // Tracé complet au premier retry seulement : le enregistrer à chaque test coûtait environ
+    // 25 % du temps du run, un échec reste tracé (arbre d'accessibilité, lecture des échecs WebKit).
     trace: {
-      mode: "retain-on-failure",
+      mode: "on-first-retry",
       snapshots: { dom: true, aria: true, screen: true },
     },
   },
