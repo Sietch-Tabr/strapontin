@@ -15,6 +15,7 @@ export const versionsChangelog = [
           "Les spectacles de théâtre et d'humour d'une salle Ticketmaster (Marigny, Gaîté-Montparnasse) restent rafraîchis même quand leurs absences avaient atteint le seuil avant le premier passage du lieu : ils ne glissent plus vers la suppression suggérée alors qu'ils sont à l'affiche.",
           "Les spectacles sportifs et les combats de grandes salles (Horse GP, T-Show, MMA) sont de nouveau rafraîchis comme les autres séances ; les matchs d'équipe restent écartés.",
           "Un produit Eventim dont la date ou l'heure change reste sur sa fiche au lieu d'en créer une seconde chaque nuit (Zimmer90 à l'Élysée Montmartre, Keren Ann, Erella), et un produit rattaché par erreur à la fiche d'un autre n'y reste plus (Le Petit Prince, salle Gaveau).",
+          "Un concert ne se répète plus, et aucun ne manque, à la frontière de deux pages de Découverte et de Mes spectacles quand un artiste joue deux fois le même jour : l'ordre des concerts est désormais le même d'une page à l'autre.",
           "Un même programme publié par Eventim sous plusieurs variantes de titre n'apparaît plus qu'une fois au même créneau (Église de la Madeleine, Saint-Germain-des-Prés), et un produit dont le titre n'est que le nom du lieu prend le nom de l'ensemble qui joue.",
         ],
       },

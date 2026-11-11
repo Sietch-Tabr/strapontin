@@ -82,17 +82,22 @@ class FiltreConcertsBuilderTest {
 
   @Test
   void clauseTri_nouveaute_trieParFirstSeenDesc() {
-    assertEquals("c.first_seen DESC, c.date ASC", FiltreConcertsBuilder.clauseTri("nouveaute"));
+    assertEquals(
+        "c.first_seen DESC, c.date ASC, c.id ASC", FiltreConcertsBuilder.clauseTri("nouveaute"));
   }
 
   @Test
   void clauseTri_date_trieParDateAsc() {
-    assertEquals("c.date ASC, c.artiste ASC", FiltreConcertsBuilder.clauseTri("date"));
+    assertEquals(
+        "c.date ASC, c.artiste ASC, c.heure ASC NULLS LAST, c.id ASC",
+        FiltreConcertsBuilder.clauseTri("date"));
   }
 
   @Test
   void clauseTri_valeurInconnue_replieSurDate() {
-    assertEquals("c.date ASC, c.artiste ASC", FiltreConcertsBuilder.clauseTri("autre-chose"));
+    assertEquals(
+        "c.date ASC, c.artiste ASC, c.heure ASC NULLS LAST, c.id ASC",
+        FiltreConcertsBuilder.clauseTri("autre-chose"));
   }
 
   @Test

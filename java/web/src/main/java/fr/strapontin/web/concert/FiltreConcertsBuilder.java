@@ -34,10 +34,15 @@ public final class FiltreConcertsBuilder {
    *
    * @param tri {@code "nouveaute"} (par date de première détection) ou
    *     {@code "date"} (défaut)
-   * @return la clause ORDER BY (sans le mot-clé)
+   * @return la clause ORDER BY (sans le mot-clé), un ordre total pour que la pagination ne
+   *     répète ni ne saute aucun concert d'une page à l'autre
    */
   public static String clauseTri(final String tri) {
-    return "nouveaute".equals(tri) ? "c.first_seen DESC, c.date ASC" : "c.date ASC, c.artiste ASC";
+    // Identifiant en dernier critère : sans ordre total, deux séances d'un même artiste le même
+    // jour sont départagées différemment d'une page à l'autre (doublon ou séance sautée).
+    return "nouveaute".equals(tri)
+        ? "c.first_seen DESC, c.date ASC, c.id ASC"
+        : "c.date ASC, c.artiste ASC, c.heure ASC NULLS LAST, c.id ASC";
   }
 
   /**
