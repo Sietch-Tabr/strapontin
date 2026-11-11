@@ -4,7 +4,7 @@
 
 [[IgnoredVulns]]
 id = "GHSA-g3hv-75wg-m249"
-ignoreUntil = 2026-11-27
+effectiveUntil = 2026-11-27
 reason = """minimatch 10.2.6 (sous eslint 10.14.0), déni de service par amplification de globparts, avis \
 publié le 30/10/2026, corrigé en 11.0.1 seulement. Dépendance de développement du lint, motifs de glob \
 fixés par le projet, jamais fournis par un utilisateur, absente du JAR livré. Un correctif suppose une \
