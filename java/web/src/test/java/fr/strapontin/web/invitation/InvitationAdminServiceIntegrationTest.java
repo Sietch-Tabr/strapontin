@@ -73,6 +73,17 @@ class InvitationAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   }
 
   @Test
+  void reinitialiserEnvois_apresDesEnvois_viderLeJournalDeCadence() {
+    jdbc.update("INSERT INTO envois_invitations (parrain_id) VALUES ('u1')", Map.of());
+    jdbc.update("INSERT INTO envois_invitations (parrain_id) VALUES ('u1')", Map.of());
+
+    service.reinitialiserEnvois();
+
+    assertEquals(
+        0, jdbc.queryForObject("SELECT count(*) FROM envois_invitations", Map.of(), Integer.class));
+  }
+
+  @Test
   void definirPlafondUtilisateur_valeurEtRetourAuDefaut_sEnregistreEtEstTracee() {
     service.definirPlafondUtilisateur("u1", 0, "admin1");
     assertEquals(0, plafond());

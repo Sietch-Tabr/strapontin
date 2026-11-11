@@ -107,6 +107,14 @@ public class InvitationAdminService {
     logAdminService.logAdmin("info", SOURCE_ADMIN, "plafond d'invitations d'un utilisateur", meta);
   }
 
+  /**
+   * Efface le journal des envois d'invitations pour repartir d'une cadence vide (profil {@code
+   * dev} uniquement, appelé par le global-setup des tests E2E).
+   */
+  public void reinitialiserEnvois() {
+    jdbc.update("DELETE FROM envois_invitations", Map.of());
+  }
+
   private static void verifierBornes(final int valeur) {
     if (valeur < 0 || valeur > ReglagesInvitations.PLAFOND_MAX) {
       throw new ErreurMetier(

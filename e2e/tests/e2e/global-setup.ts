@@ -67,6 +67,10 @@ async function reinitialiserRateLimits(): Promise<void> {
         "[e2e setup] endpoint reset rate-limit absent (profil prod ?)",
       );
     }
+    const repEnvois = await contexte.delete("/api/admin/invitations/envois");
+    if (repEnvois.status() === 204) {
+      console.log("[e2e setup] cadence d'envoi des invitations réinitialisée");
+    }
   } finally {
     await contexte.dispose();
   }

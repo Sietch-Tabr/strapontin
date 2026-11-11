@@ -10,8 +10,10 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import java.util.Map;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -92,5 +94,18 @@ public class InvitationAdminController {
     service.definirPlafondUtilisateur(
         userId, requete.plafond(), ((UtilisateurDetails) auth.getPrincipal()).id());
     return ResponseEntity.ok(Map.of("succes", true));
+  }
+
+  /**
+   * Réinitialise la cadence d'envoi des invitations (profil {@code dev} uniquement) : appelé par
+   * le global-setup E2E, comme le quota de signalement, pour repartir d'une cadence vide.
+   *
+   * @return 204
+   */
+  @Profile("dev")
+  @DeleteMapping("/invitations/envois")
+  public ResponseEntity<Void> reinitialiserEnvois() {
+    service.reinitialiserEnvois();
+    return ResponseEntity.noContent().build();
   }
 }

@@ -3,6 +3,7 @@ import { FICHIER_AUTH_ADMIN, FICHIER_AUTH_USER } from "./global-setup.js";
 import {
   creerContexteAdmin,
   naviguerVersUtilisateurs,
+  supprimerUtilisateurParEmail,
 } from "./helpers/admin.js";
 
 // Adresse de test de Resend : la livraison réussit sans rebond ni boîte réelle.
@@ -98,6 +99,37 @@ test.describe("Scénario: invitations par un utilisateur", () => {
       await expect(champ).toBeEnabled();
     });
 
+    test("inviter_renvoyer_confirmeEtGardeLInvitationEnAttente", async ({
+      page,
+    }) => {
+      await page.goto("/parametres#inviter");
+      const section = page.locator("section#inviter");
+
+      await section.getByLabel("Adresse email").fill(EMAIL_INVITE);
+      await section
+        .getByRole("button", { name: "Envoyer l'invitation" })
+        .click();
+      await expect(section).toContainText(EMAIL_INVITE);
+
+      await section
+        .getByRole("button", {
+          name: `Renvoyer l'invitation à ${EMAIL_INVITE}`,
+        })
+        .click();
+
+      await expect(
+        page
+          .locator(".alerte-succes")
+          .filter({ hasText: "Invitation renvoyée" }),
+      ).toBeVisible();
+      await expect(section).toContainText("En attente");
+      await expect(
+        section.getByRole("button", {
+          name: `Annuler l'invitation à ${EMAIL_INVITE}`,
+        }),
+      ).toBeVisible();
+    });
+
     test("inviter_adresseInvalide_neSoumetPasLeFormulaire", async ({
       page,
     }) => {
@@ -149,6 +181,50 @@ test.describe("Scénario: invitations par un utilisateur", () => {
       await expect(page.locator(".alerte-succes").first()).toContainText(
         "Plafond par défaut enregistré",
       );
+    });
+
+    test("admin_plafondDUnCompte_enregistrePuisRevientAuDefaut", async ({
+      page,
+      isMobile,
+    }) => {
+      const email = `e2e-plafond-${Date.now()}@example.com`;
+      try {
+        await page.goto("/admin");
+        await naviguerVersUtilisateurs(page, isMobile);
+        await page.fill('.form-creer-utilisateur input[type="email"]', email);
+        await page.click('.form-creer-utilisateur button[type="submit"]');
+        const dialogInvitation = page.locator("dialog#dialog-invitation");
+        await expect(dialogInvitation).toBeVisible({ timeout: 5000 });
+        await page.click("button#btn-fermer-invitation");
+        await expect(dialogInvitation).not.toBeVisible();
+
+        const carte = page.locator(".user-carte").filter({ hasText: email });
+        const champ = carte.getByLabel(/Invitations en attente/);
+        const revenir = carte.getByRole("button", {
+          name: "Revenir au défaut",
+        });
+        await expect(champ).toHaveValue("");
+        await expect(revenir).toHaveCount(0);
+
+        await champ.fill("4");
+        await carte
+          .getByRole("button", { name: "Enregistrer le plafond" })
+          .click();
+        await expect(
+          page
+            .locator(".alerte-succes")
+            .filter({ hasText: "Plafond d'invitations enregistré" })
+            .first(),
+        ).toBeVisible();
+        await expect(champ).toHaveValue("4");
+        await expect(revenir).toBeVisible();
+
+        await revenir.click();
+        await expect(revenir).toHaveCount(0);
+        await expect(champ).toHaveValue("");
+      } finally {
+        await supprimerUtilisateurParEmail(email);
+      }
     });
   });
 });
