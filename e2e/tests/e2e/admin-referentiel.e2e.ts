@@ -5,7 +5,11 @@ import {
   type Page,
 } from "@playwright/test";
 import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
-import { creerContexteAdmin, creerSalleReferentiel } from "./helpers/admin.js";
+import {
+  creerContexteAdmin,
+  creerSalleReferentiel,
+  nettoyer,
+} from "./helpers/admin.js";
 
 test.use({ storageState: FICHIER_AUTH_ADMIN });
 
@@ -713,9 +717,15 @@ test.describe("Scénario: admin — API référentiel salles", () => {
       expect(finale?.nomAffiche).toBe("Nom Canonique Artiste Test");
     } finally {
       if (artisteA)
-        await ctx.delete(`/api/artistes/${artisteA}`).catch(() => {});
+        await nettoyer(
+          "suppression artisteA",
+          ctx.delete(`/api/artistes/${artisteA}`),
+        );
       if (artisteB)
-        await ctx.delete(`/api/artistes/${artisteB}`).catch(() => {});
+        await nettoyer(
+          "suppression artisteB",
+          ctx.delete(`/api/artistes/${artisteB}`),
+        );
       await ctx.dispose();
     }
   });
@@ -759,7 +769,10 @@ test.describe("Scénario: admin — API référentiel salles", () => {
       expect(mesSallesApres[0].id).toBe(salleA);
     } finally {
       if (salleA) {
-        await ctx.delete(`/api/salles/${salleA}`).catch(() => {});
+        await nettoyer(
+          "suppression salleA",
+          ctx.delete(`/api/salles/${salleA}`),
+        );
       }
       await ctx.dispose();
     }

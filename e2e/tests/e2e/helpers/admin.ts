@@ -2,6 +2,7 @@ import {
   request as playwrightRequest,
   expect,
   type APIRequestContext,
+  type APIResponse,
   type Browser,
   type BrowserContext,
   type Page,
@@ -115,4 +116,22 @@ export async function creerCompteJetableEtSeConnecter(
   await page.click('button[type="submit"]');
   await page.waitForURL((url) => !url.pathname.startsWith("/reset"));
   return { page, ctx, email };
+}
+
+/**
+ * Nettoyage de fin de test : un échec (panne réseau ou réponse en erreur, hors 404 d'une donnée
+ * déjà supprimée) est journalisé sans masquer le résultat du test.
+ */
+export async function nettoyer(
+  libelle: string,
+  action: Promise<APIResponse>,
+): Promise<void> {
+  try {
+    const reponse = await action;
+    if (!reponse.ok() && reponse.status() !== 404) {
+      console.warn(`[e2e nettoyage] ${libelle} : HTTP ${reponse.status()}`);
+    }
+  } catch (erreur) {
+    console.warn(`[e2e nettoyage] ${libelle} : ${(erreur as Error).message}`);
+  }
 }
