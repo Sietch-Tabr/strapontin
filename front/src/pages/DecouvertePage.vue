@@ -225,45 +225,10 @@
             <tr v-for="concert in donnees.concerts" :key="concert.id">
               <td data-label="Artiste">
                 <span class="concert-artiste">{{ concert.artiste }}</span>
-                <span
-                  v-if="concert.statut === 'cancelled'"
-                  class="badge badge-annule"
-                  >Annulé</span
-                >
-                <span
-                  v-if="
-                    concert.statut === 'rescheduled' ||
-                    concert.statut === 'postponed'
-                  "
-                  class="badge badge-reporte"
-                  >Reporté</span
-                >
-                <span
-                  v-if="concert.statut === 'offsale'"
-                  class="badge badge-complet"
-                  >Complet</span
-                >
+                <BadgesStatutConcert :statut="concert.statut" />
               </td>
-              <td data-label="Date">
-                <time class="concert-date" :datetime="concert.date">{{
-                  formaterAvecHeure(concert.date, concert.heure)
-                }}</time>
-              </td>
-              <td
-                data-label="Où"
-                :class="{ 'cel-vide': !concert.salle && !concert.ville }"
-              >
-                <span v-if="concert.salle">{{ concert.salle }}</span>
-                <span
-                  v-if="concert.salle && concert.ville"
-                  class="concert-separateur"
-                >
-                  ·
-                </span>
-                <span v-if="concert.ville" class="concert-ville">{{
-                  concert.ville
-                }}</span>
-              </td>
+              <CelluleDateConcert :date="concert.date" :heure="concert.heure" />
+              <CelluleOuConcert :salle="concert.salle" :ville="concert.ville" />
               <td data-label="Genre" :class="{ 'cel-vide': !concert.genre }">
                 {{ concert.genre }}
               </td>
@@ -298,13 +263,16 @@
 
 <script setup>
 import PaginationListe from "../components/PaginationListe.vue";
+import BadgesStatutConcert from "../components/concert/BadgesStatutConcert.vue";
+import CelluleDateConcert from "../components/concert/CelluleDateConcert.vue";
+import CelluleOuConcert from "../components/concert/CelluleOuConcert.vue";
 import { appelApi } from "../utils/api.js";
 import { useDepartementsSansConcert } from "../composables/useDepartementsSansConcert.js";
 defineOptions({ name: "DecouvertePage" });
 
 import { computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { formaterAvecHeure, formaterInstant } from "../composables/useDates.js";
+import { formaterInstant } from "../composables/useDates.js";
 import { useToasts } from "../composables/useToasts.js";
 import { sessionRef } from "../composables/useSession.js";
 import EtatChargement from "../components/EtatChargement.vue";
