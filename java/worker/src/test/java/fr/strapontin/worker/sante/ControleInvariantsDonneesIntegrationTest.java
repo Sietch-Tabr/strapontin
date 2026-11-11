@@ -810,4 +810,42 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
 
     assertEquals(List.of(), actifs());
   }
+
+  @Test
+  void verifier_troisFichesEnAbsenceDansUneSalle_signaleLaSallePuisSeReferme() {
+    final UUID salle = creerSalle();
+    for (int i = 0; i < 3; i++) {
+      evenement(salle, "artiste " + i, "75");
+    }
+    jdbc.update("UPDATE evenements SET absences_consecutives = 6", Map.of());
+
+    controle.verifier();
+    assertEquals(List.of("salle_fiches_en_absence"), actifs());
+
+    jdbc.update("UPDATE evenements SET absences_consecutives = 0", Map.of());
+    controle.verifier();
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
+  void verifier_deuxFichesEnAbsenceOuFichesMaintenues_neSignaleRien() {
+    final UUID salle = creerSalle();
+    for (int i = 0; i < 3; i++) {
+      evenement(salle, "artiste " + i, "75");
+    }
+    jdbc.update(
+        "UPDATE evenements SET absences_consecutives = 6 WHERE artiste_norm <> 'artiste 2'",
+        Map.of());
+    controle.verifier();
+    assertEquals(List.of(), actifs());
+
+    jdbc.update(
+        "UPDATE evenements SET absences_consecutives = 6, maintenu_le = now()"
+            + " WHERE artiste_norm = 'artiste 2'",
+        Map.of());
+    jdbc.update(
+        "UPDATE evenements SET maintenu_le = now() WHERE artiste_norm = 'artiste 0'", Map.of());
+    controle.verifier();
+    assertEquals(List.of(), actifs());
+  }
 }

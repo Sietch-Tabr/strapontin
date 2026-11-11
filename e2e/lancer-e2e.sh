@@ -25,6 +25,27 @@ dossier="$(cd "$(dirname "$0")" && pwd)"
 journal=/tmp/e2e-run.log
 fin=/tmp/e2e-run.fin
 verrou=/tmp/e2e-run.pid
+charge=/tmp/e2e-charge.log
+
+# Relevé de la charge (moyenne sur 1 minute) du poste et du dev, toutes les minutes tant que le run
+# dure : un run anormalement lent (40 minutes et 1 heure constatés sans cause établie) peut ainsi
+# se rapporter à la charge de l'un ou de l'autre.
+releve_charge() {
+  : > "$charge"
+  while [ ! -f "$fin" ]; do
+    poste=$(uptime | sed -E 's/.*load averages?: *//' | awk '{gsub(",", ".", $1); print $1}')
+    dev=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "root@$IP" "cut -d' ' -f1 /proc/loadavg" 2>/dev/null || echo "?")
+    echo "$(date +%H:%M) poste=${poste:-?} dev=${dev:-?}" >> "$charge"
+    sleep "${INTERVALLE_CHARGE_S:-60}"
+  done
+}
+
+# Charge maximale relevée pendant le run (poste et dev).
+resume_charge() {
+  [ -s "$charge" ] || return 0
+  LC_ALL=C awk '{ split($2, a, "="); split($3, b, "="); if (a[2] + 0 > p) p = a[2] + 0; if (b[2] + 0 > d) d = b[2] + 0 }
+       END { printf "Charge maximale relevée : poste %.1f, dev %.1f (journal %s)\n", p, d, FILENAME }' "$charge"
+}
 
 # Durée cumulée des tests de chaque projet (lignes « ✓/✘ N [projet] … (durée) » du journal) ; un
 # projet qui dépasse deux fois la médiane des projets signale un run anormal (poste ou dev).
@@ -66,6 +87,7 @@ bilan() {
   echo "E2E : $passes réussis, $echecs échecs, $instables instables, $ignores ignorés (code $code)"
   echo "Durée cumulée par projet :"
   durees_par_projet
+  resume_charge
   [ "${echecs:-0}" = "0" ] && [ "${instables:-0}" = "0" ] && [ "$code" = "0" ]
 }
 
@@ -115,6 +137,7 @@ fi
 rm -f "$fin"
 nohup bash -c 'echo $$ > "$1"; cd "$2" && caffeinate -dis npx playwright test > "$3" 2>&1; echo $? > "$4"' \
   _ "$verrou" "$dossier" "$journal" "$fin" >/dev/null 2>&1 &
+nohup bash -c "$(declare -f releve_charge); IP=\"$IP\" fin=\"$fin\" charge=\"$charge\" releve_charge" >/dev/null 2>&1 &
 echo "run E2E lancé (détaché) ; journal : $journal"
 sleep 2
 suivre

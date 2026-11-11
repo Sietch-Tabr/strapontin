@@ -73,100 +73,20 @@
       </button>
     </div>
 
-    <form
-      id="filtres-decouverte"
-      class="filtres-form"
-      :class="{ visible: filtresVisibles }"
-      @submit.prevent="appliquerFiltres"
-    >
-      <div class="filtres-ligne">
-        <div class="filtres-recherche" role="search">
-          <input
-            v-model="qLocal"
-            type="search"
-            placeholder="Rechercher un artiste ou une salle…"
-            aria-label="Rechercher un artiste ou une salle"
-            autocomplete="off"
-          />
-          <button type="submit" class="bouton bouton-secondaire">
-            <svg class="icone" aria-hidden="true">
-              <use href="/icons/lucide-sprite.svg#icon-search" />
-            </svg>
-            <span>Rechercher</span>
-          </button>
-        </div>
-
-        <label for="filtre-mois-dec" class="lecteur-ecran"
-          >Filtrer par mois</label
-        >
-        <select
-          id="filtre-mois-dec"
-          v-model="moisLocal"
-          @change="appliquerFiltres"
-        >
-          <option value="">Tous les mois</option>
-          <option
-            v-for="m in donnees?.moisDisponibles ?? []"
-            :key="m"
-            :value="m"
-          >
-            {{ m }}
-          </option>
-        </select>
-
-        <label for="filtre-genre-dec" class="lecteur-ecran"
-          >Filtrer par genre</label
-        >
-        <select
-          id="filtre-genre-dec"
-          v-model="genreLocal"
-          @change="appliquerFiltres"
-        >
-          <option value="">Tous les genres</option>
-          <option
-            v-for="g in donnees?.genresDisponibles ?? []"
-            :key="g"
-            :value="g"
-          >
-            {{ g }}
-          </option>
-        </select>
-
-        <label for="filtre-classification-dec" class="lecteur-ecran"
-          >Filtrer par classification</label
-        >
-        <select
-          id="filtre-classification-dec"
-          v-model="classificationLocal"
-          @change="appliquerFiltres"
-        >
-          <option value="">Toutes classifications</option>
-          <option
-            v-for="c in donnees?.classificationsDisponibles ?? []"
-            :key="c"
-            :value="c"
-          >
-            {{ c }}
-          </option>
-        </select>
-
-        <label for="filtre-tri-dec" class="lecteur-ecran"
-          >Trier les résultats</label
-        >
-        <select
-          id="filtre-tri-dec"
-          v-model="triLocal"
-          @change="appliquerFiltres"
-        >
-          <option value="date">Par date</option>
-          <option value="nouveaute">Par nouveauté</option>
-        </select>
-
-        <RouterLink to="/decouverte" class="bouton bouton-texte"
-          >Réinitialiser</RouterLink
-        >
-      </div>
-    </form>
+    <FormulaireFiltresConcerts
+      v-model:q="qLocal"
+      v-model:mois="moisLocal"
+      v-model:genre="genreLocal"
+      v-model:classification="classificationLocal"
+      v-model:tri="triLocal"
+      id-formulaire="filtres-decouverte"
+      suffixe-ids="-dec"
+      libelle-recherche="Rechercher un artiste ou une salle"
+      lien-reinitialiser="/decouverte"
+      :visible="filtresVisibles"
+      :donnees="donnees"
+      @appliquer="appliquerFiltres"
+    />
 
     <p
       v-if="donnees"
@@ -233,18 +153,7 @@
                 {{ concert.genre }}
               </td>
               <td data-label="" :class="{ 'cel-vide': !concert.url }">
-                <a
-                  v-if="concert.url"
-                  :href="concert.url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="bouton bouton-secondaire bouton-petit"
-                  aria-label="Acheter des billets (ouvre dans un nouvel onglet)"
-                >
-                  <svg class="icone" aria-hidden="true">
-                    <use href="/icons/lucide-sprite.svg#icon-ticket" />
-                  </svg>
-                </a>
+                <LienBilletsConcert :url="concert.url" />
               </td>
             </tr>
           </tbody>
@@ -263,9 +172,11 @@
 
 <script setup>
 import PaginationListe from "../components/PaginationListe.vue";
+import FormulaireFiltresConcerts from "../components/concert/FormulaireFiltresConcerts.vue";
 import BadgesStatutConcert from "../components/concert/BadgesStatutConcert.vue";
 import CelluleDateConcert from "../components/concert/CelluleDateConcert.vue";
 import CelluleOuConcert from "../components/concert/CelluleOuConcert.vue";
+import LienBilletsConcert from "../components/concert/LienBilletsConcert.vue";
 import { appelApi } from "../utils/api.js";
 import { useDepartementsSansConcert } from "../composables/useDepartementsSansConcert.js";
 defineOptions({ name: "DecouvertePage" });

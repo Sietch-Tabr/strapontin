@@ -35,16 +35,28 @@ class ReglesDefiniesUneFoisTest {
 
   // Valeur littérale -> seul fichier autorisé à la porter.
   private static final Map<String, String> VALEURS_UNIQUES =
-      Map.of(
-          "StrapontinBot/1.0", "ConstantesSources.java",
-          "https://app.ticketmaster.com/discovery/v2", "ConstantesSources.java",
-          "https://api.deezer.com", "ConstantesSources.java",
-          "LONGUEUR_MIN_MOT_DE_PASSE = ", "ReglesCommunes.java",
-          "TOLERANCE_HEURE_MINUTES = ", "ReglesCommunes.java",
-          "ECART_MAX_HEURE_SECONDES = ", "ReglesCommunes.java",
-          "RAYON_MEME_LIEU_METRES = ", "ReglesCommunes.java",
-          "e1.salle_id = CAST(:source AS uuid) AND e2.salle_id", "FusionEvenementsSql.java",
-          "e1.artiste_id = CAST(:source AS uuid) AND e2.artiste_id", "FusionEvenementsSql.java");
+      Map.ofEntries(
+          Map.entry("StrapontinBot/1.0", "ConstantesSources.java"),
+          Map.entry("https://app.ticketmaster.com/discovery/v2", "ConstantesSources.java"),
+          Map.entry("https://api.deezer.com", "ConstantesSources.java"),
+          Map.entry("LONGUEUR_MIN_MOT_DE_PASSE = ", "ReglesCommunes.java"),
+          Map.entry("TOLERANCE_HEURE_MINUTES = ", "ReglesCommunes.java"),
+          Map.entry("ECART_MAX_HEURE_SECONDES = ", "ReglesCommunes.java"),
+          Map.entry("RAYON_MEME_LIEU_METRES = ", "ReglesCommunes.java"),
+          Map.entry(
+              "e1.salle_id = CAST(:source AS uuid) AND e2.salle_id", "FusionEvenementsSql.java"),
+          Map.entry(
+              "e1.artiste_id = CAST(:source AS uuid) AND e2.artiste_id",
+              "FusionEvenementsSql.java"),
+          Map.entry(
+              "UPDATE salle_sources SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source AS",
+              "FusionSallesSql.java"),
+          Map.entry(
+              "(SELECT wikidata_id FROM salles WHERE id = CAST(:source AS uuid))",
+              "FusionSallesSql.java"),
+          Map.entry(
+              "SELECT id FROM salles WHERE salle_parent_id = CAST(:source AS uuid)",
+              "FusionSallesSql.java"));
 
   @Test
   void valeursPartagees_sontDeclareesUneSeuleFois() throws IOException {

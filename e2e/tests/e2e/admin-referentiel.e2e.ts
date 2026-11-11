@@ -314,8 +314,6 @@ test.describe("Scénario: admin — dialogues du référentiel par l'interface",
       page,
       isMobile,
     }) => {
-      if (isMobile) test.skip();
-
       const suffixe = Date.now();
       const nom =
         entite === "salles"
@@ -331,6 +329,7 @@ test.describe("Scénario: admin — dialogues du référentiel par l'interface",
         await ouvrirReferentiel(
           page,
           entite === "salles" ? "Salles" : "Artistes",
+          isMobile,
         );
         await rechercherDansLeReferentiel(
           page,
@@ -375,8 +374,6 @@ test.describe("Scénario: admin — dialogues du référentiel par l'interface",
       page,
       isMobile,
     }) => {
-      if (isMobile) test.skip();
-
       const suffixe = Date.now();
       const nom =
         entite === "salles"
@@ -391,6 +388,7 @@ test.describe("Scénario: admin — dialogues du référentiel par l'interface",
         await ouvrirReferentiel(
           page,
           entite === "salles" ? "Salles" : "Artistes",
+          isMobile,
         );
         await rechercherDansLeReferentiel(
           page,
@@ -431,8 +429,6 @@ test.describe("Scénario: admin — dialogues du référentiel par l'interface",
     page,
     isMobile,
   }) => {
-    if (isMobile) test.skip();
-
     const suffixe = Date.now();
     const nomA = `Zzargonautfusionui${suffixe}`;
     const nomB = `Zzbaobabchinookui${suffixe}`;
@@ -442,7 +438,7 @@ test.describe("Scénario: admin — dialogues du référentiel par l'interface",
       await creerArtisteReferentiel(ctx, nomB);
 
       await page.goto("/admin");
-      await ouvrirReferentiel(page, "Artistes");
+      await ouvrirReferentiel(page, "Artistes", isMobile);
       await rechercherDansLeReferentiel(
         page,
         "artistes",

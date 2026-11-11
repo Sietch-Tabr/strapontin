@@ -1,6 +1,9 @@
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { FICHIER_AUTH_ADMIN, FICHIER_AUTH_USER } from "./global-setup.js";
 import {
+  BASE_URL,
   creerContexteAdmin,
   naviguerVersUtilisateurs,
   supprimerUtilisateurParEmail,
@@ -23,6 +26,36 @@ async function idUtilisateur(
     );
     if (cible) return cible.id;
     if (page >= (totalPages ?? 1) - 1) throw new Error("e2euser introuvable");
+  }
+}
+
+const LXC_DEV_HOTE = "root@192.168.20.78";
+
+// Les jetons ne sont stockés que hachés (SHA-256) : aucun endpoint ne rend le lien d'une invitation
+// d'utilisateur. Sur le dev uniquement, le jeton d'une invitation éphémère est remplacé par un
+// jeton connu, comme le fait invitation.e2e.ts pour antidater une expiration.
+function poserJetonConnu(email: string, jeton: string): void {
+  const hash = createHash("sha256").update(jeton, "utf8").digest("hex");
+  const sql = `UPDATE invitations_utilisateurs SET token_hash = '${hash}' WHERE email = '${email}' AND active_le IS NULL AND annulee_le IS NULL;`;
+  execFileSync("ssh", [LXC_DEV_HOTE, `su postgres -c "psql -d strapontin"`], {
+    input: sql,
+    timeout: 15000,
+  });
+}
+
+async function trouverUtilisateurParEmail(
+  ctx: APIRequestContext,
+  email: string,
+): Promise<{ id: string; parrain: string | null }> {
+  for (let page = 0; ; page++) {
+    const rep = await ctx.get(`/api/admin/utilisateurs?page=${page}`);
+    expect(rep.ok()).toBe(true);
+    const { utilisateurs, totalPages } = await rep.json();
+    const cible = utilisateurs.find(
+      (u: { email: string }) => u.email === email,
+    );
+    if (cible) return cible;
+    if (page >= (totalPages ?? 1) - 1) throw new Error(`${email} introuvable`);
   }
 }
 
@@ -128,6 +161,51 @@ test.describe("Scénario: invitations par un utilisateur", () => {
           name: `Annuler l'invitation à ${EMAIL_INVITE}`,
         }),
       ).toBeVisible();
+    });
+
+    test("invite_activerLeLien_creeLeCompteAvecSonParrainEtLiberelaPlace", async ({
+      page,
+      browser,
+    }) => {
+      const suffixe = Date.now();
+      const email = `e2e-invite-${suffixe}@test.local`;
+      const jeton = `jeton-e2e-invite-${suffixe}-abcdefghijklmnopqrstuvwxyz`;
+      try {
+        await page.goto("/parametres#inviter");
+        const section = page.locator("section#inviter");
+        await section.getByLabel("Adresse email").fill(email);
+        await section
+          .getByRole("button", { name: "Envoyer l'invitation" })
+          .click();
+        await expect(section).toContainText(email);
+        await expect(section).toContainText("En attente");
+
+        poserJetonConnu(email, jeton);
+        const ctxInvite = await browser.newContext({ storageState: undefined });
+        const pageInvite = await ctxInvite.newPage();
+        await pageInvite.goto(`${BASE_URL}/reset-password?token=${jeton}`);
+        await pageInvite.fill(
+          'input[name="identifiant"]',
+          `e2einv${suffixe}`.slice(0, 30),
+        );
+        await pageInvite.fill('input[name="motDePasse"]', "TestE2E!2026invite");
+        await pageInvite.click('button[type="submit"]');
+        await pageInvite.waitForURL(
+          (url) => !url.pathname.startsWith("/reset"),
+        );
+        await ctxInvite.close();
+
+        // Côté parrain : l'invitation est activée et sa place est libérée.
+        await page.reload();
+        await expect(section).toContainText("Activée");
+        await expect(section.getByLabel("Adresse email")).toBeEnabled();
+
+        // Côté administration : le compte porte son parrain.
+        const compte = await trouverUtilisateurParEmail(admin, email);
+        expect(compte.parrain).toBe(E2E_USER_IDENTIFIANT);
+      } finally {
+        await supprimerUtilisateurParEmail(email);
+      }
     });
 
     test("inviter_adresseInvalide_neSoumetPasLeFormulaire", async ({

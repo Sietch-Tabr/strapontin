@@ -128,4 +128,23 @@ class ClientSparqlWikidataTest {
     assertTrue(resultat.isEmpty());
     serveur.verify();
   }
+
+  @Test
+  void consommationRecente_apresDeuxRequetes_compteLesRequetesDeLaDerniereMinute() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final String reponse = "{\"head\":{\"vars\":[]},\"results\":{\"bindings\":[]}}";
+    for (int i = 0; i < 2; i++) {
+      serveur
+          .expect(requestTo(ClientSparqlWikidata.BASE_URL))
+          .andRespond(
+              withSuccess(reponse, MediaType.parseMediaType("application/sparql-results+json")));
+    }
+    final ClientSparqlWikidata client = new ClientSparqlWikidata(builder.build());
+
+    client.executer("SELECT * WHERE {}");
+    client.executer("SELECT * WHERE {}");
+
+    assertTrue(client.consommationRecente().startsWith("2 requête(s), "));
+  }
 }

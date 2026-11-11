@@ -237,7 +237,7 @@ final class WikidataSalleDecouverte {
     }
 
     if (ValidationCoordonneesSalle.incompatibles(salle, coordLat, coordLon, communeLabel)) {
-      LOG.warn(
+      LOG.info(
           "Wikidata découverte salle — rejet coordonnées divergentes nom={} salleId={}",
           nomRecherche,
           salle.id());

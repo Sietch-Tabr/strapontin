@@ -142,38 +142,12 @@
       </section>
     </template>
 
-    <dialog
-      id="dialog-confirmer-suppr-artiste"
-      ref="dialogRef"
-      aria-labelledby="titre-confirmer-suppr-artiste"
-      aria-modal="true"
-    >
-      <div class="dialog-entete">
-        <h2 id="titre-confirmer-suppr-artiste" class="dialog-titre">
-          Supprimer l'artiste
-        </h2>
-      </div>
-      <p>
-        Arrêter de suivre «
-        <strong>{{ artisteASupprimer?.artisteAffiche }}</strong> » ?
-      </p>
-      <div class="dialog-pied">
-        <button
-          type="button"
-          class="bouton bouton-danger"
-          @click="confirmerSuppression"
-        >
-          Supprimer
-        </button>
-        <button
-          type="button"
-          class="bouton bouton-texte"
-          @click="dialogRef.close()"
-        >
-          Annuler
-        </button>
-      </div>
-    </dialog>
+    <DialogueSuppressionSuivi
+      ref="dialogueSuppression"
+      titre="Supprimer l'artiste"
+      :nom="artisteASupprimer?.artisteAffiche"
+      @confirmer="confirmerSuppression"
+    />
   </div>
 </template>
 
@@ -187,9 +161,9 @@ import {
   CONSIGNE_RECHERCHE,
   etatRecherche,
 } from "../utils/consigneRecherche.js";
-import { useDialog } from "../composables/useDialog.js";
 import { useToasts } from "../composables/useToasts.js";
 import EtatChargement from "../components/EtatChargement.vue";
+import DialogueSuppressionSuivi from "../components/DialogueSuppressionSuivi.vue";
 import {
   detailSuggestion,
   libelleSourceSuggestion,
@@ -203,7 +177,7 @@ const q = ref("");
 const qSoumis = ref("");
 const erreur = ref("");
 const artisteASupprimer = ref(null);
-const { dialogRef, ouvrir: ouvrirDialog, fermer: fermerDialog } = useDialog();
+const dialogueSuppression = ref(null);
 const etat = computed(() => etatRecherche(q.value));
 const controleur = new AbortController();
 
@@ -280,11 +254,11 @@ async function ajouter(nom, wikidataId = null) {
 
 function demanderSuppression(artiste) {
   artisteASupprimer.value = artiste;
-  ouvrirDialog();
+  dialogueSuppression.value.ouvrir();
 }
 
 async function confirmerSuppression() {
-  fermerDialog();
+  dialogueSuppression.value.fermer();
   if (!artisteASupprimer.value) return;
   try {
     const rep = await appelApi("/api/artistes/" + artisteASupprimer.value.id, {

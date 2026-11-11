@@ -76,12 +76,27 @@ for route in routes_wiki:
 chemins_code = set()
 for fichier in glob.glob(f"{racine}/java/web/src/main/java/**/*Controller.java", recursive=True):
     contenu = lire(fichier)
-    for m in re.finditer(r'@(?:Get|Post|Put|Patch|Delete)Mapping\(\s*(?:value\s*=\s*)?"([^"]+)"', contenu):
-        chemins_code.add(m.group(1))
-non_decrites = sorted(
-    c for c in chemins_code
-    if c.split("/")[-1] not in texte_wiki.get("Routes", "") and c not in texte_wiki.get("Routes", "")
-)
+    base = re.search(r'@RequestMapping\(\s*(?:value\s*=\s*)?"([^"]*)"', contenu)
+    prefixe = base.group(1) if base else ""
+    for m in re.finditer(r'@(?:Get|Post|Put|Patch|Delete)Mapping(?:\(\s*(?:value\s*=\s*)?"([^"]*)")?', contenu):
+        chemins_code.add((prefixe + (m.group(1) or "")).rstrip("/") or "/")
+
+
+def sans_variables(chemin):
+    return re.sub(r"\{[^}]*\}", "{}", chemin)
+
+
+# Un chemin est décrit quand Routes.md le cite en entier, ou, pour une ligne qui regroupe
+# plusieurs routes voisines (`/reset-mdp`, `/reset-totp`), par ses deux derniers segments.
+texte_routes = sans_variables(texte_wiki.get("Routes", ""))
+def est_decrit(chemin):
+    complet = sans_variables(chemin)
+    segments = [x for x in complet.split("/") if x]
+    relatif = "`/" + segments[-1] + "`" if segments else ""
+    return complet in texte_routes or "/".join(segments[-2:]) in texte_routes or relatif in texte_routes
+
+
+non_decrites = sorted(c for c in chemins_code if not est_decrit(c))
 rapport(
     "routes du wiki présentes dans le code",
     [f"{r} (citée par Routes.md, introuvable dans le code)" for r in absentes_du_code],
