@@ -10,6 +10,8 @@ import fr.strapontin.sources.http.ClientHttpFactory;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -91,6 +93,8 @@ final class ClientSparqlWikidata {
   private final fr.strapontin.core.CompteurBilanFetch compteurBilan =
       new fr.strapontin.core.CompteurBilanFetch();
   private final CadenceurAppels cadenceur = new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS);
+  // Fin et durée des requêtes de la dernière minute, pour situer un 429 dans le budget de calcul.
+  private final Deque<long[]> requetesRecentes = new ArrayDeque<>();
 
   /**
    * Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture
@@ -152,13 +156,16 @@ final class ClientSparqlWikidata {
     while (tentative < RETRY_TOTAL_MAX) {
       tentative++;
       try {
-        final Map<String, Object> resultat = effectuerRequete(sparql);
+        final Map<String, Object> resultat = effectuerEtMesurer(sparql);
         cadenceur.apaiser();
         return resultat != null ? resultat : Map.of();
       } catch (HttpClientErrorException.TooManyRequests e) {
         final long attenteMs =
             extraireRetryAfterMs(e.getResponseHeaders()).orElse(1000L << tentative);
-        LOG.warn("Wikidata 429 — attente {} ms avant retry", attenteMs);
+        LOG.warn(
+            "Wikidata 429 — attente {} ms avant retry ; dernière minute : {}",
+            attenteMs,
+            consommationRecente());
         cadenceur.ralentir();
         dormir(attenteMs);
       } catch (HttpServerErrorException.ServiceUnavailable
@@ -224,6 +231,42 @@ final class ClientSparqlWikidata {
       return Optional.of(Long.parseLong(valeur) * 1000);
     } catch (NumberFormatException e) {
       return Optional.empty();
+    }
+  }
+
+  private Map<String, Object> effectuerEtMesurer(final String sparql) {
+    final long debut = System.currentTimeMillis();
+    try {
+      return effectuerRequete(sparql);
+    } finally {
+      final long fin = System.currentTimeMillis();
+      synchronized (requetesRecentes) {
+        requetesRecentes.addLast(new long[] {fin, fin - debut});
+        purgerAnciennes(fin);
+      }
+    }
+  }
+
+  private void purgerAnciennes(final long maintenant) {
+    while (!requetesRecentes.isEmpty() && maintenant - requetesRecentes.peekFirst()[0] > 60_000) {
+      requetesRecentes.removeFirst();
+    }
+  }
+
+  /**
+   * Requêtes envoyées et durée cumulée de traitement sur la dernière minute : le service accorde
+   * 60 s de calcul par minute à chaque client, un cumul proche de 60 s désigne notre propre
+   * consommation, un cumul faible un budget partagé avec un autre client.
+   */
+  /* package-private : testé directement (même package). */
+  String consommationRecente() {
+    synchronized (requetesRecentes) {
+      purgerAnciennes(System.currentTimeMillis());
+      long cumul = 0;
+      for (final long[] requete : requetesRecentes) {
+        cumul += requete[1];
+      }
+      return requetesRecentes.size() + " requête(s), " + cumul + " ms de traitement";
     }
   }
 
