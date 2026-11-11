@@ -97,8 +97,7 @@ test.describe("Scénario: API auth — endpoints Vue", () => {
       ),
       page.click("button[type='submit']"),
     ]);
-    // 401=identifiants invalides, 429=rate-limiter (X-Real-IP ignoré depuis #564)
-    expect([401, 429]).toContain(reponse.status());
+    expect(reponse.status()).toBe(401);
     await expect(page.locator("form")).toBeVisible();
     await ctx.close();
   });
@@ -108,8 +107,7 @@ test.describe("Scénario: API auth — endpoints Vue", () => {
     const rep = await ctx.request.post("/api/auth/login", {
       data: { identifiant: "inexistant", motDePasse: "motdepassefaux12" },
     });
-    // 401=identifiants invalides, 429=rate-limiter (X-Real-IP ignoré depuis #564)
-    expect([401, 429]).toContain(rep.status());
+    expect(rep.status()).toBe(401);
     await ctx.close();
   });
 
@@ -120,8 +118,7 @@ test.describe("Scénario: API auth — endpoints Vue", () => {
     const rep = await ctx.request.post("/api/auth/forgot-password", {
       data: { email: "inconnu@inexistant.fr" },
     });
-    // 200=succès, 429=rate-limiter (X-Real-IP ignoré depuis #564)
-    expect([200, 429]).toContain(rep.status());
+    expect(rep.status()).toBe(200);
     await ctx.close();
   });
 
@@ -254,6 +251,7 @@ test.describe("Scénario: API auth", () => {
         if (rep.status() === 401) reponses401.push(rep.url());
       });
       await page.goto(chemin);
+      // Toutes les réponses du chargement doivent avoir été observées : l'attente est le but ici.
       await page.waitForLoadState("networkidle");
       expect(reponses401).toEqual([]);
       await ctx.close();

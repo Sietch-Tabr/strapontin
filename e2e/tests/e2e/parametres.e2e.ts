@@ -653,16 +653,20 @@ test.describe("Scénario: Préférences — départements", () => {
 
 test.describe("Scénario: Préférences — filtre disponibles", () => {
   test("filtre_disponibles_toggle_change_etat", async ({ page }) => {
+    // État de départ posé par l'API : la lecture du bouton ne dépend plus de la fin du chargement.
+    const reponse = await page.request.patch("/api/user/config/filtres", {
+      data: { filtreDisponibles: false },
+    });
+    expect(reponse.ok()).toBe(true);
     await page.goto("/parametres#preferences");
-    await page.waitForLoadState("networkidle");
     const toggle = page.locator(
       "input[type='checkbox'][aria-labelledby='label-filtre-disponibles']",
     );
-    const etatInitial = await toggle.isChecked();
+    await expect(toggle).not.toBeChecked();
     await page.locator("label.bascule").click();
-    await expect(toggle).toBeChecked({ checked: !etatInitial });
+    await expect(toggle).toBeChecked();
     await page.locator("label.bascule").click();
-    await expect(toggle).toBeChecked({ checked: etatInitial });
+    await expect(toggle).not.toBeChecked();
   });
 
   test("api_filtres_patch_retourne_succes", async ({ request }) => {
