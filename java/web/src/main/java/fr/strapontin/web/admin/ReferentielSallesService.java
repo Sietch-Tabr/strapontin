@@ -5,7 +5,7 @@
 package fr.strapontin.web.admin;
 
 import fr.strapontin.core.FusionEvenementsSql;
-import fr.strapontin.core.SalleHierarchie;
+import fr.strapontin.core.FusionSallesSql;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -300,8 +300,10 @@ public class ReferentielSallesService {
         Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString());
 
     FusionEvenementsSql.fusionner(jdbc, FusionEvenementsSql.SALLE, ids);
-    fusionnerAbonnementsEtSources(ids, cibleId);
-    fusionnerMetadonneesEtSousSalles(ids, cibleId, sourceId);
+    reporterAbonnementsEtLieux(ids, cibleId);
+    FusionSallesSql.reporterMetadonnees(jdbc, ids);
+    detacherSousSallesEnCycle(
+        FusionSallesSql.reassignerSousSallesSansCycle(jdbc, cibleId, sourceId), cibleId);
 
     // 7. Suppression de la salle source
     jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
@@ -311,36 +313,8 @@ public class ReferentielSallesService {
     return true;
   }
 
-  // 3. Abonnements en double supprimés, le reste réassigné. 4. Lieux des
-  // sources tous réassignés (clé indépendante de salle_id, aucun conflit).
-  private void fusionnerAbonnementsEtSources(final Map<String, Object> ids, final UUID cibleId) {
-    jdbc.update(
-        """
-        DELETE FROM user_salles
-        WHERE salle_id = CAST(:source AS uuid)
-          AND EXISTS (
-            SELECT 1 FROM user_salles u2
-            WHERE u2.user_id = user_salles.user_id AND u2.salle_id = CAST(:cible AS uuid)
-          )
-        """,
-        ids);
-    jdbc.update(
-        "UPDATE user_salles SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source"
-            + " AS uuid)",
-        ids);
-
-    // Tous les lieux sont gardés : une salle a souvent plusieurs lieux d'une même
-    // source pour un même bâtiment, et la clé (source, identifiant) n'en dépend pas.
-    final List<String> lieuxReportes =
-        jdbc.queryForList(
-            "SELECT source || ':' || identifiant_externe FROM salle_sources"
-                + " WHERE salle_id = CAST(:source AS uuid) ORDER BY 1",
-            ids,
-            String.class);
-    jdbc.update(
-        "UPDATE salle_sources SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source AS"
-            + " uuid)",
-        ids);
+  private void reporterAbonnementsEtLieux(final Map<String, Object> ids, final UUID cibleId) {
+    final List<String> lieuxReportes = FusionSallesSql.reporterAbonnementsEtLieux(jdbc, ids);
     if (!lieuxReportes.isEmpty()) {
       logAdminService.logAdmin(
           "info",
@@ -350,77 +324,15 @@ public class ReferentielSallesService {
     }
   }
 
-  // 5. Métadonnées récupérées si la cible ne les a pas déjà. 6. Sous-salles de
-  // la source réassignées à la cible — sinon la suppression de la source
-  // orpheline leurs salle_parent_id (violation de contrainte FK). Si la cible
-  // était elle-même une sous-salle de la source, elle hérite du parent de la
-  // source plutôt que de rester rattachée à une salle sur le point d'être
-  // supprimée.
-  private void fusionnerMetadonneesEtSousSalles(
-      final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
-    jdbc.update(
-        """
-        UPDATE salles SET
-          wikidata_id = COALESCE(wikidata_id, (SELECT wikidata_id FROM salles WHERE id = CAST(:source AS uuid))),
-          nom_affiche = COALESCE(nom_affiche, (SELECT nom_affiche FROM salles WHERE id = CAST(:source AS uuid)))
-        WHERE id = CAST(:cible AS uuid)
-        """,
-        ids);
-
-    jdbc.update(
-        "UPDATE salles SET salle_parent_id ="
-            + " (SELECT salle_parent_id FROM salles WHERE id = CAST(:source AS uuid))"
-            + " WHERE id = CAST(:cible AS uuid) AND salle_parent_id = CAST(:source AS uuid)",
-        ids);
-    reassignerSousSallesSansCycle(cibleId, sourceId);
-  }
-
-  /**
-   * Réassigne à la cible chaque sous-salle de la source (hors cible elle-même,
-   * déjà traitée), sauf celle dont la cible est déjà un descendant — la
-   * réassigner créerait un cycle {@code enfant → cible → ... → enfant} (#1201).
-   * Une telle sous-salle est détachée (parent à {@code NULL} ) plutôt que
-   * laissée pointer vers la source sur le point d'être supprimée, et signalée
-   * pour revue manuelle.
-   */
-  private void reassignerSousSallesSansCycle(final UUID cibleId, final UUID sourceId) {
-    final List<UUID> enfants =
-        jdbc.query(
-            "SELECT id FROM salles WHERE salle_parent_id = CAST(:source AS uuid) AND id !="
-                + " CAST(:cible AS uuid)",
-            Map.of(CLE_SOURCE, sourceId.toString(), CLE_CIBLE, cibleId.toString()),
-            (rs, _) -> rs.getObject("id", UUID.class));
-
-    for (final UUID enfant : enfants) {
-      if (SalleHierarchie.creeraitCycle(cibleId, enfant, this::lireSalleParentId)) {
-        jdbc.update(
-            "UPDATE salles SET salle_parent_id = NULL WHERE id = CAST(:id AS uuid)",
-            Map.of("id", enfant.toString()));
-        logAdminService.logAdmin(
-            "warn",
-            SOURCE_ADMIN,
-            "cycle salle_parent_id évité lors d'une fusion — sous-salle détachée enfant="
-                + enfant
-                + " cible="
-                + cibleId);
-      } else {
-        jdbc.update(
-            "UPDATE salles SET salle_parent_id = CAST(:cible AS uuid) WHERE id = CAST(:id AS"
-                + " uuid)",
-            Map.of(CLE_CIBLE, cibleId.toString(), "id", enfant.toString()));
-      }
+  private void detacherSousSallesEnCycle(final List<UUID> detachees, final UUID cibleId) {
+    for (final UUID enfant : detachees) {
+      logAdminService.logAdmin(
+          "warn",
+          SOURCE_ADMIN,
+          "cycle salle_parent_id évité lors d'une fusion — sous-salle détachée enfant="
+              + enfant
+              + " cible="
+              + cibleId);
     }
-  }
-
-  // findFirst() sur un flux contenant un unique élément null lève une
-  // NullPointerException (Optional.of appelé en interne) — un accès direct à la
-  // liste évite ce piège pour une salle racine sans parent.
-  private UUID lireSalleParentId(final UUID salleId) {
-    final List<UUID> resultat =
-        jdbc.query(
-            "SELECT salle_parent_id FROM salles WHERE id = CAST(:id AS uuid)",
-            Map.of("id", salleId.toString()),
-            (rs, _) -> (UUID) rs.getObject("salle_parent_id"));
-    return resultat.isEmpty() ? null : resultat.get(0);
   }
 }

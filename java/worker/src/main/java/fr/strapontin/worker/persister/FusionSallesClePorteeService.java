@@ -7,6 +7,7 @@ package fr.strapontin.worker.persister;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.core.FusionEvenementsSql;
+import fr.strapontin.core.FusionSallesSql;
 import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.core.QualificatifSalle;
 import fr.strapontin.core.ReglesCommunes;
@@ -295,8 +296,10 @@ public class FusionSallesClePorteeService {
     final String nomSource = decrireSalle(sourceId);
 
     FusionEvenementsSql.fusionner(jdbc, FusionEvenementsSql.SALLE, ids);
-    fusionnerAbonnementsEtSources(ids, cibleId);
-    fusionnerMetadonneesEtSousSalles(ids, cibleId, sourceId);
+    reporterAbonnementsEtLieux(ids, cibleId);
+    FusionSallesSql.reporterMetadonnees(jdbc, ids);
+    detacherSousSallesEnCycle(
+        FusionSallesSql.reassignerSousSallesSansCycle(jdbc, cibleId, sourceId), cibleId);
 
     // 7. Suppression de la salle source
     jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
@@ -343,36 +346,8 @@ public class FusionSallesClePorteeService {
         .orElse(id.toString());
   }
 
-  // 3. Abonnements en double supprimés, le reste réassigné. 4. Sources externes
-  // réassignées, toutes gardées.
-  private void fusionnerAbonnementsEtSources(final Map<String, Object> ids, final UUID cibleId) {
-    jdbc.update(
-        """
-        DELETE FROM user_salles
-        WHERE salle_id = CAST(:source AS uuid)
-          AND EXISTS (
-            SELECT 1 FROM user_salles u2
-            WHERE u2.user_id = user_salles.user_id AND u2.salle_id = CAST(:cible AS uuid)
-          )
-        """,
-        ids);
-    jdbc.update(
-        "UPDATE user_salles SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source"
-            + " AS uuid)",
-        ids);
-
-    // Tous les lieux sont gardés : une salle a souvent plusieurs lieux d'une même
-    // source pour un même bâtiment, et la clé (source, identifiant) n'en dépend pas.
-    final List<String> lieuxReportes =
-        jdbc.queryForList(
-            "SELECT source || ':' || identifiant_externe FROM salle_sources"
-                + " WHERE salle_id = CAST(:source AS uuid) ORDER BY 1",
-            ids,
-            String.class);
-    jdbc.update(
-        "UPDATE salle_sources SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source"
-            + " AS uuid)",
-        ids);
+  private void reporterAbonnementsEtLieux(final Map<String, Object> ids, final UUID cibleId) {
+    final List<String> lieuxReportes = FusionSallesSql.reporterAbonnementsEtLieux(jdbc, ids);
     if (!lieuxReportes.isEmpty()) {
       logsAdminWorker.inserer(
           "info",
@@ -382,29 +357,16 @@ public class FusionSallesClePorteeService {
     }
   }
 
-  // 5. Métadonnées récupérées si la cible ne les a pas déjà. 6. Sous-salles de
-  // la source réassignées à la cible — sinon la suppression de la source
-  // orpheline leurs salle_parent_id (violation de contrainte FK). Si la cible
-  // était elle-même une sous-salle de la source (cas limite : un enfant
-  // l'emporte sur son propre complexe par nombre de concerts), elle hérite du
-  // parent de la source plutôt que de rester rattachée à une salle sur le point
-  // d'être supprimée.
-  private void fusionnerMetadonneesEtSousSalles(
-      final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
-    jdbc.update(
-        """
-        UPDATE salles SET
-          wikidata_id = COALESCE(wikidata_id, (SELECT wikidata_id FROM salles WHERE id = CAST(:source AS uuid))),
-          nom_affiche = COALESCE(nom_affiche, (SELECT nom_affiche FROM salles WHERE id = CAST(:source AS uuid)))
-        WHERE id = CAST(:cible AS uuid)
-        """,
-        ids);
-
-    jdbc.update(
-        "UPDATE salles SET salle_parent_id ="
-            + " (SELECT salle_parent_id FROM salles WHERE id = CAST(:source AS uuid))"
-            + " WHERE id = CAST(:cible AS uuid) AND salle_parent_id = CAST(:source AS uuid)",
-        ids);
-    new ReassignationSousSalles(jdbc, logsAdminWorker).reassignerSansCycle(cibleId, sourceId);
+  private void detacherSousSallesEnCycle(final List<UUID> detachees, final UUID cibleId) {
+    for (final UUID enfant : detachees) {
+      logsAdminWorker.inserer(
+          "warn",
+          "reconciliation-nocturne",
+          "cycle salle_parent_id évité lors d'une fusion — sous-salle détachée enfant="
+              + enfant
+              + " cible="
+              + cibleId,
+          Map.of("enfant", enfant.toString(), "cible", cibleId.toString()));
+    }
   }
 }
