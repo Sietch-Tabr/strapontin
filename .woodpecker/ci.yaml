@@ -52,6 +52,10 @@ steps:
       - >-
         mvn -f java/pom.xml -pl core,sources,web,worker -am
         compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests
+      # Scripts d'exploitation déployés en production : leurs tests (substituts des commandes
+      # système) tournent avant le déploiement.
+      - bash scripts/tester-update.sh
+      - bash scripts/tester-sauvegardes.sh
     when:
       - event: push
         branch: main
