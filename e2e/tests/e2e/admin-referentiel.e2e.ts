@@ -736,9 +736,10 @@ test.describe("Scénario: admin — API référentiel salles", () => {
     const nomA = `Ornithorynque${suffixe}`;
     const nomB = `Kangourou${suffixe}`;
     let salleA: string | null = null;
+    let salleB: string | null = null;
     try {
       salleA = await creerSalleReferentiel(ctx, nomA);
-      const salleB = await creerSalleReferentiel(ctx, nomB);
+      salleB = await creerSalleReferentiel(ctx, nomB);
 
       // L'admin (utilisateur) suit les deux salles avant la fusion — chevauchement réel.
       const repSuiviA = await ctx.post("/api/salles", { data: { nom: nomA } });
@@ -764,6 +765,13 @@ test.describe("Scénario: admin — API référentiel salles", () => {
       expect(mesSallesApres.length).toBe(1);
       expect(mesSallesApres[0].id).toBe(salleA);
     } finally {
+      // Un échec avant la fusion laisserait la salle B suivie et fausserait les tests suivants.
+      if (salleB) {
+        await nettoyer(
+          "suppression salleB",
+          ctx.delete(`/api/salles/${salleB}`),
+        );
+      }
       if (salleA) {
         await nettoyer(
           "suppression salleA",
