@@ -12,9 +12,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.CadenceurAppels;
+import fr.strapontin.sources.http.IdentiteHttp;
 import fr.strapontin.web.BudgetRecherchesExternes;
 import fr.strapontin.web.admin.LogAdminService;
-import fr.strapontin.web.config.ConfigService;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,13 +33,16 @@ import tools.jackson.databind.ObjectMapper;
  */
 class SalleRechercheNominatimServiceTest {
 
+  private static final IdentiteHttp IDENTITE =
+      new IdentiteHttp("test", "https://exemple.test/projet", () -> "");
+
   private SalleRechercheNominatimService service;
 
   @BeforeEach
   void setUp() {
     service =
         new SalleRechercheNominatimService(
-            mock(ConfigService.class),
+            IDENTITE,
             mock(RestClient.class),
             new ObjectMapper(),
             new BudgetRecherchesExternes(mock(LogAdminService.class)),
@@ -119,7 +122,7 @@ class SalleRechercheNominatimServiceTest {
     final RestClient restClient = mock(RestClient.class);
     final SalleRechercheNominatimService limite =
         new SalleRechercheNominatimService(
-            mock(ConfigService.class), restClient, new ObjectMapper(), budget, cadenceur);
+            IDENTITE, restClient, new ObjectMapper(), budget, cadenceur);
 
     assertTrue(limite.rechercher("olympia").isEmpty());
 
@@ -131,7 +134,7 @@ class SalleRechercheNominatimServiceTest {
     final CadenceurAppels cadenceur = mock(CadenceurAppels.class);
     final SalleRechercheNominatimService avecCadence =
         new SalleRechercheNominatimService(
-            mock(ConfigService.class),
+            IDENTITE,
             mock(RestClient.class),
             new ObjectMapper(),
             new BudgetRecherchesExternes(mock(LogAdminService.class)),
@@ -146,16 +149,17 @@ class SalleRechercheNominatimServiceTest {
   void rechercher_accentEtVirgule_encodeUneSeuleFois() {
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    final ConfigService configService = mock(ConfigService.class);
-    when(configService.lireConfig("CONTACT_EMAIL")).thenReturn(java.util.Optional.empty());
     serveur
         .expect(
             MockRestRequestMatchers.requestTo(
                 org.hamcrest.Matchers.containsString("q=Th%C3%A9%C3%A2tre%2C%20Paris&")))
+        .andExpect(
+            MockRestRequestMatchers.header(
+                "User-Agent", "Strapontin/test (https://exemple.test/projet)"))
         .andRespond(MockRestResponseCreators.withSuccess("[]", MediaType.APPLICATION_JSON));
 
     new SalleRechercheNominatimService(
-            configService,
+            IDENTITE,
             builder.build(),
             new ObjectMapper(),
             new BudgetRecherchesExternes(mock(LogAdminService.class)),

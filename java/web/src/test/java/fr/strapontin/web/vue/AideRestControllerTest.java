@@ -7,6 +7,7 @@ package fr.strapontin.web.vue;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.sources.http.IdentiteHttp;
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
@@ -30,6 +31,9 @@ import org.springframework.security.core.Authentication;
 @ExtendWith(MockitoExtension.class)
 class AideRestControllerTest {
 
+  private static final IdentiteHttp IDENTITE =
+      new IdentiteHttp("test", "https://exemple.test/projet", () -> "");
+
   @Mock private EmailService emailService;
   @Mock private ConfigService configService;
   @Mock private Authentication auth;
@@ -38,7 +42,7 @@ class AideRestControllerTest {
 
   @BeforeEach
   void setUp() {
-    controller = new AideRestController(emailService, configService);
+    controller = new AideRestController(emailService, configService, IDENTITE);
     final UtilisateurDetails utilisateur =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false, false);
     lenient().when(auth.getPrincipal()).thenReturn(utilisateur);
@@ -56,6 +60,7 @@ class AideRestControllerTest {
     assertEquals(true, rep.getBody().get("resendDisponible"));
     assertEquals("contact@test.fr", rep.getBody().get("contactEmail"));
     assertEquals("https://signal.me/x", rep.getBody().get("signalLien"));
+    assertEquals("https://exemple.test/projet", rep.getBody().get("urlProjet"));
   }
 
   @Test

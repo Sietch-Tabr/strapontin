@@ -15,6 +15,12 @@ export const versionsChangelog = [
         ],
       },
       {
+        categorie: "Application",
+        items: [
+          "L'application se présente aux services externes (Nominatim, Wikidata) avec sa version réelle et le contact que l'administrateur renseigne dans la configuration, et non plus avec une version périmée et une adresse écrite dans le code ; le lien du code source de la page d'aide suit la même configuration.",
+        ],
+      },
+      {
         categorie: "Accueil",
         items: [
           "L'accueil affiche aussitôt la liste de vos prochains concerts, ou une roue de chargement, même quand la connexion est lente : le marquage « vu » ne retarde plus rien, et le badge « Nouveau » est visible lors de la visite où il apparaît.",

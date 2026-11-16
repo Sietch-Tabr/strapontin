@@ -9,6 +9,7 @@ import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.FiltreArtiste;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.http.ConstantesSources;
+import fr.strapontin.sources.http.IdentiteHttp;
 import fr.strapontin.web.BudgetRecherchesExternes;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
@@ -46,8 +47,6 @@ public class ArtisteService {
   private static final Logger LOG = LoggerFactory.getLogger(ArtisteService.class);
   private static final String DEEZER_URL = ConstantesSources.DEEZER_BASE_URL + "/search/artist";
   private static final String WIKIDATA_API_URL = "https://www.wikidata.org/w/api.php";
-  private static final String WIKIDATA_USER_AGENT =
-      "Strapontin/2.6.3 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
   private static final int CAP_ARTISTES = 500;
   private static final int LONGUEUR_MIN_RECHERCHE_EXTERNE = 2;
   private static final int NB_MIN_SUGGESTIONS_BASE_AVANT_EXTERNE = 3;
@@ -57,6 +56,7 @@ public class ArtisteService {
   private final RestClient restClient;
   private final LogAdminService logAdminService;
   private final BudgetRecherchesExternes budgetRecherches;
+  private final IdentiteHttp identite;
 
   /**
    * @param artisteRepository accès aux données artistes
@@ -65,18 +65,21 @@ public class ArtisteService {
    *     fr.strapontin.web.WebConfiguration})
    * @param logAdminService journalisation des actions admin
    * @param budgetRecherches plafonds globaux des recherches vers Wikidata et Deezer
+   * @param identite identité déclarée à Wikidata
    */
   public ArtisteService(
       final ArtisteRepository artisteRepository,
       final ObjectMapper objectMapper,
       final RestClient restClient,
       final LogAdminService logAdminService,
-      final BudgetRecherchesExternes budgetRecherches) {
+      final BudgetRecherchesExternes budgetRecherches,
+      final IdentiteHttp identite) {
     this.artisteRepository = artisteRepository;
     this.objectMapper = objectMapper;
     this.restClient = restClient;
     this.logAdminService = logAdminService;
     this.budgetRecherches = budgetRecherches;
+    this.identite = identite;
   }
 
   /**
@@ -311,7 +314,7 @@ public class ArtisteService {
           restClient
               .get()
               .uri(gabarit, terme)
-              .header("User-Agent", WIKIDATA_USER_AGENT)
+              .header("User-Agent", identite.userAgent())
               .exchange(
                   (_, resp) ->
                       new WorkerTriggerUtils.ReponseHttp(
@@ -347,7 +350,7 @@ public class ArtisteService {
           restClient
               .get()
               .uri(gabarit, wikidataId)
-              .header("User-Agent", WIKIDATA_USER_AGENT)
+              .header("User-Agent", identite.userAgent())
               .exchange(
                   (_, resp) ->
                       new WorkerTriggerUtils.ReponseHttp(

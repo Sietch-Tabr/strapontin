@@ -7,9 +7,9 @@ package fr.strapontin.web.salle;
 import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.core.CadenceurAppelsPartage;
 import fr.strapontin.sources.enrichissement.ClientNominatim;
+import fr.strapontin.sources.http.IdentiteHttp;
 import fr.strapontin.web.BudgetRecherchesExternes;
 import fr.strapontin.web.WorkerTriggerUtils;
-import fr.strapontin.web.config.ConfigService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -50,14 +50,14 @@ class SalleRechercheNominatimService {
           "concert_hall",
           "community_centre");
 
-  private final ConfigService configService;
+  private final IdentiteHttp identite;
   private final RestClient restClient;
   private final ObjectMapper objectMapper;
   private final BudgetRecherchesExternes budgetRecherches;
   private final CadenceurAppels cadenceur;
 
   /**
-   * @param configService lecture de l'email de contact (User-Agent Nominatim)
+   * @param identite identité déclarée à Nominatim
    * @param restClient client HTTP partagé
    * @param objectMapper désérialiseur JSON
    * @param budgetRecherches plafond global des recherches vers Nominatim
@@ -67,13 +67,13 @@ class SalleRechercheNominatimService {
   /* package-private : instancié uniquement par SalleService (même package). */
   @Autowired
   SalleRechercheNominatimService(
-      final ConfigService configService,
+      final IdentiteHttp identite,
       final RestClient restClient,
       final ObjectMapper objectMapper,
       final BudgetRecherchesExternes budgetRecherches,
       final NamedParameterJdbcTemplate jdbc) {
     this(
-        configService,
+        identite,
         restClient,
         objectMapper,
         budgetRecherches,
@@ -82,12 +82,12 @@ class SalleRechercheNominatimService {
 
   /* package-private : injection d'un cadenceur de test. */
   SalleRechercheNominatimService(
-      final ConfigService configService,
+      final IdentiteHttp identite,
       final RestClient restClient,
       final ObjectMapper objectMapper,
       final BudgetRecherchesExternes budgetRecherches,
       final CadenceurAppels cadenceur) {
-    this.configService = configService;
+    this.identite = identite;
     this.restClient = restClient;
     this.objectMapper = objectMapper;
     this.budgetRecherches = budgetRecherches;
@@ -109,8 +109,6 @@ class SalleRechercheNominatimService {
     }
     try {
       cadenceur.attendre();
-      final String contact =
-          configService.lireConfig("CONTACT_EMAIL").orElse("contact@strapontin.fr");
       final String gabarit =
           NOMINATIM_URL
               + "?q={terme}&format=json&limit=6&extratags=1&addressdetails=1&countrycodes=fr";
@@ -118,7 +116,7 @@ class SalleRechercheNominatimService {
           restClient
               .get()
               .uri(gabarit, terme)
-              .header("User-Agent", "Strapontin/2.6.3 (contact: " + contact + ")")
+              .header("User-Agent", identite.userAgent())
               .exchange(
                   (_, resp) ->
                       new WorkerTriggerUtils.ReponseHttp(

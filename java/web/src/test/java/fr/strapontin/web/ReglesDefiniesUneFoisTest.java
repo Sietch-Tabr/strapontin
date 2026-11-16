@@ -37,6 +37,7 @@ class ReglesDefiniesUneFoisTest {
   private static final Map<String, String> VALEURS_UNIQUES =
       Map.ofEntries(
           Map.entry("StrapontinBot/1.0", "ConstantesSources.java"),
+          Map.entry("https://codeberg.org/Kwaite/strapontin", "IdentiteHttp.java"),
           Map.entry("https://app.ticketmaster.com/discovery/v2", "ConstantesSources.java"),
           Map.entry("https://api.deezer.com", "ConstantesSources.java"),
           Map.entry("LONGUEUR_MIN_MOT_DE_PASSE = ", "ReglesCommunes.java"),

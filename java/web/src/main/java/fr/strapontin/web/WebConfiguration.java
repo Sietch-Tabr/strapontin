@@ -9,7 +9,9 @@ import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.core.CadenceurAppelsPartage;
 import fr.strapontin.core.JetonInterneWorker;
 import fr.strapontin.sources.eventim.EventimSource;
+import fr.strapontin.sources.http.IdentiteHttp;
 import fr.strapontin.sources.ticketmaster.TicketmasterSource;
+import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.securite.ActiviteUtilisateurInterceptor;
 import fr.strapontin.web.securite.AppareilEnregistrementInterceptor;
 import java.net.InetAddress;
@@ -19,6 +21,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -69,6 +72,29 @@ public class WebConfiguration implements WebMvcConfigurer {
   @Bean
   static Clock horloge() {
     return Clock.systemDefaultZone();
+  }
+
+  /**
+   * Identité déclarée aux services externes : version de l'application, adresse du projet et
+   * contact lu dans la configuration.
+   *
+   * @param buildProperties informations de build (version courante)
+   * @param configService configuration applicative (clé {@code CONTACT_EMAIL})
+   * @param urlProjet adresse publique du projet
+   * @return identité partagée par tous les appels sortants
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  static IdentiteHttp identiteHttp(
+      final BuildProperties buildProperties,
+      final ConfigService configService,
+      @Value("${strapontin.projet.url:" + IdentiteHttp.URL_PROJET_PAR_DEFAUT + "}")
+          final String urlProjet) {
+    return new IdentiteHttp(
+        buildProperties.getVersion(),
+        urlProjet,
+        () -> configService.lireConfig("CONTACT_EMAIL").orElse(""));
   }
 
   /**

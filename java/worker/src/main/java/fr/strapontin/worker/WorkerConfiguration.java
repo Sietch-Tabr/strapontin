@@ -10,6 +10,7 @@ import fr.strapontin.sources.enrichissement.ClientNominatim;
 import fr.strapontin.sources.enrichissement.ResolveurNomCanonique;
 import fr.strapontin.sources.eventim.EventimSource;
 import fr.strapontin.sources.eventim.ProduitsEcartes;
+import fr.strapontin.sources.http.IdentiteHttp;
 import fr.strapontin.sources.sites.ClientSiteSalle;
 import fr.strapontin.sources.sites.SiteAllmol;
 import fr.strapontin.sources.sites.SiteEmbSannois;
@@ -18,6 +19,7 @@ import fr.strapontin.sources.sites.SiteUsineAChapeaux;
 import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.boot.quartz.autoconfigure.SchedulerFactoryBeanCustomizer;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -226,8 +228,33 @@ public class WorkerConfiguration {
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  ClientNominatim clientNominatim(final NamedParameterJdbcTemplate jdbc) {
+  ClientNominatim clientNominatim(
+      final NamedParameterJdbcTemplate jdbc, final IdentiteHttp identiteHttp) {
     return new ClientNominatim(
-        new CadenceurAppelsPartage(jdbc, "nominatim", ClientNominatim.DELAI_MIN_ENTRE_APPELS_MS));
+        new CadenceurAppelsPartage(jdbc, "nominatim", ClientNominatim.DELAI_MIN_ENTRE_APPELS_MS),
+        identiteHttp);
+  }
+
+  /**
+   * Identité déclarée aux services externes : version de l'application, adresse du projet et
+   * contact lu dans la configuration.
+   *
+   * @param buildProperties informations de build (version courante)
+   * @param configService configuration applicative (clé {@code CONTACT_EMAIL})
+   * @param urlProjet adresse publique du projet
+   * @return identité partagée par tous les appels sortants
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  IdentiteHttp identiteHttp(
+      final BuildProperties buildProperties,
+      final ConfigServiceWorker configService,
+      @Value("${strapontin.projet.url:" + IdentiteHttp.URL_PROJET_PAR_DEFAUT + "}")
+          final String urlProjet) {
+    return new IdentiteHttp(
+        buildProperties.getVersion(),
+        urlProjet,
+        () -> configService.lireConfig("CONTACT_EMAIL").orElse(""));
   }
 }

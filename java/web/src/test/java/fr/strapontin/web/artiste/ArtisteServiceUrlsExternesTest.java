@@ -6,6 +6,7 @@ package fr.strapontin.web.artiste;
 
 import static org.mockito.Mockito.mock;
 
+import fr.strapontin.sources.http.IdentiteHttp;
 import fr.strapontin.web.BudgetRecherchesExternes;
 import fr.strapontin.web.admin.LogAdminService;
 import org.hamcrest.Matchers;
@@ -24,6 +25,9 @@ import tools.jackson.databind.ObjectMapper;
  */
 class ArtisteServiceUrlsExternesTest {
 
+  private static final IdentiteHttp IDENTITE =
+      new IdentiteHttp("test", "https://exemple.test/projet", () -> "");
+
   private MockRestServiceServer serveur;
   private ArtisteService service;
 
@@ -38,7 +42,8 @@ class ArtisteServiceUrlsExternesTest {
             new ObjectMapper(),
             builder.build(),
             logAdminService,
-            new BudgetRecherchesExternes(logAdminService));
+            new BudgetRecherchesExternes(logAdminService),
+            IDENTITE);
   }
 
   @Test

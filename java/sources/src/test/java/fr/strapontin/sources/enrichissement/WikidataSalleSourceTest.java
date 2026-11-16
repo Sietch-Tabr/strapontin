@@ -10,6 +10,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import fr.strapontin.sources.http.IdentiteHttp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,14 +25,17 @@ import org.springframework.web.client.RestClient;
 
 class WikidataSalleSourceTest {
 
+  private static final IdentiteHttp IDENTITE =
+      new IdentiteHttp("test", "https://exemple.test/projet", () -> "");
+
   private static WikidataSalleSource source(
       final RestClient restClient, final Cache<String, EnrichissementSalle> cache) {
-    return new WikidataSalleSource(restClient, cache);
+    return new WikidataSalleSource(restClient, cache, IDENTITE);
   }
 
   @Test
   void nom_retourneWikidata() {
-    assertEquals("wikidata", new WikidataSalleSource().nom());
+    assertEquals("wikidata", new WikidataSalleSource(IDENTITE).nom());
   }
 
   // Régression : la découverte par OpenStreetMap n'est pas un passage obligé pour les salles

@@ -5,8 +5,8 @@
 package fr.strapontin.sources.enrichissement;
 
 import fr.strapontin.core.CadenceurAppels;
-import fr.strapontin.sources.http.CadenceurAppelsMemoire;
 import fr.strapontin.sources.http.ClientHttpFactory;
+import fr.strapontin.sources.http.IdentiteHttp;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,8 +39,6 @@ public final class ClientNominatim {
   private static final List<String> CLES_COMMUNE = List.of("city", "town", "village");
   // Département : « FR-51 », « FR-75C » (Paris), « FR-2A », « FR-971 ».
   private static final Pattern DEPARTEMENT_ISO = Pattern.compile("^FR-(2[AB]|\\d{2,3})[A-Z]?$");
-  private static final String USER_AGENT =
-      "Strapontin/2.9.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
 
   /** Écart minimal entre deux appels, à respecter par tous les processus. */
   public static final long DELAI_MIN_ENTRE_APPELS_MS = 1000;
@@ -52,23 +50,18 @@ public final class ClientNominatim {
 
   private final RestClient restClient;
   private final CadenceurAppels cadenceur;
-
-  /**
-   * Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture
-   * 10s).
-   */
-  public ClientNominatim() {
-    this(construireRestClientParDefaut(), new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS));
-  }
+  private final IdentiteHttp identite;
 
   /**
    * Crée un client dont le cadencement est confié à l'appelant (cadenceur
-   * partagé entre processus).
+   * partagé entre processus), avec un RestClient par défaut (timeout connexion
+   * 5s, lecture 10s).
    *
    * @param cadenceur limiteur de débit à utiliser
+   * @param identite identité déclarée à Nominatim
    */
-  public ClientNominatim(final CadenceurAppels cadenceur) {
-    this(construireRestClientParDefaut(), cadenceur);
+  public ClientNominatim(final CadenceurAppels cadenceur, final IdentiteHttp identite) {
+    this(construireRestClientParDefaut(), cadenceur, identite);
   }
 
   /**
@@ -77,12 +70,15 @@ public final class ClientNominatim {
    *
    * @param restClient client HTTP à utiliser
    * @param cadenceur limiteur de débit à utiliser
+   * @param identite identité déclarée à Nominatim
    */
   /* package-private : injection de test (RestClient/CadenceurAppels
    * personnalisés). */
-  ClientNominatim(final RestClient restClient, final CadenceurAppels cadenceur) {
+  ClientNominatim(
+      final RestClient restClient, final CadenceurAppels cadenceur, final IdentiteHttp identite) {
     this.restClient = restClient;
     this.cadenceur = cadenceur;
+    this.identite = identite;
   }
 
   private static RestClient construireRestClientParDefaut() {
@@ -111,7 +107,7 @@ public final class ClientNominatim {
           restClient
               .get()
               .uri(gabarit, nom)
-              .header("User-Agent", USER_AGENT)
+              .header("User-Agent", identite.userAgent())
               .retrieve()
               .body(List.class);
       return extraireCoordonnees(resultats);
@@ -168,7 +164,7 @@ public final class ClientNominatim {
           restClient
               .get()
               .uri(url.toString(), requete)
-              .header("User-Agent", USER_AGENT)
+              .header("User-Agent", identite.userAgent())
               .retrieve()
               .body(List.class);
       final List<LieuOsm> lieux = new ArrayList<>();
@@ -233,7 +229,7 @@ public final class ClientNominatim {
                   URL_INVERSE,
                   String.format(Locale.ROOT, "%.6f", position.latitude()),
                   String.format(Locale.ROOT, "%.6f", position.longitude()))
-              .header("User-Agent", USER_AGENT)
+              .header("User-Agent", identite.userAgent())
               .retrieve()
               .body(Map.class);
       if (reponse == null || !(reponse.get("address") instanceof Map<?, ?> adresse)) {
