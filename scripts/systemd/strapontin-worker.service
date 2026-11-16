@@ -1,0 +1,25 @@
+[Unit]
+Description=Strapontin — worker Quartz
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=strapontin
+WorkingDirectory=/opt/strapontin
+EnvironmentFile=/etc/opt/strapontin/strapontin.env
+ExecStart=/usr/bin/java -Xms64m -Xmx384m -jar /opt/strapontin/application/worker.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+# Laisse le temps à wait-for-jobs-to-complete-on-shutdown (application.properties) de terminer un
+# cycle fetch en cours plutôt que de le tuer silencieusement lors d'un déploiement.
+TimeoutStopSec=90
+LimitNOFILE=65536
+# Aucun écrit hors /tmp, privé au service.
+NoNewPrivileges=yes
+ProtectSystem=strict
+PrivateTmp=yes
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target

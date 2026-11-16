@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.sources.http.IdentiteHttp;
 import fr.strapontin.web.BudgetRecherchesExternes;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
@@ -38,6 +39,9 @@ import tools.jackson.databind.ObjectMapper;
 @ExtendWith(MockitoExtension.class)
 class ArtisteServiceTest {
 
+  private static final IdentiteHttp IDENTITE =
+      new IdentiteHttp("test", "https://exemple.test/projet", () -> "");
+
   @Mock private ArtisteRepository artisteRepository;
   @Mock private ObjectMapper objectMapper;
   @Mock private RestClient restClient;
@@ -53,7 +57,8 @@ class ArtisteServiceTest {
             objectMapper,
             restClient,
             logAdminService,
-            new BudgetRecherchesExternes(logAdminService));
+            new BudgetRecherchesExternes(logAdminService),
+            IDENTITE);
   }
 
   @Test

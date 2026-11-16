@@ -10,12 +10,11 @@ SSH="ssh -i /tmp/key -o StrictHostKeyChecking=no"
 SCP="scp -i /tmp/key -o StrictHostKeyChecking=no"
 HOST="root@${LXC_JAVA_HOST}"
 
-$SSH "$HOST" "mkdir -p /opt/strapontin/scripts"
-$SCP scripts/backup.sh scripts/restore.sh scripts/update.sh scripts/rotation-secrets.sh scripts/declencher-job.sh "$HOST":/opt/strapontin/scripts/
-$SSH "$HOST" "chmod +x /opt/strapontin/scripts/backup.sh /opt/strapontin/scripts/restore.sh /opt/strapontin/scripts/update.sh /opt/strapontin/scripts/rotation-secrets.sh /opt/strapontin/scripts/declencher-job.sh"
+. scripts/deposer-exploitation.sh
+deposer_exploitation
 
 echo "[deploy] Backup NAS avant deploiement..."
-$SSH "$HOST" /opt/strapontin/scripts/backup.sh || echo "[deploy] Backup NAS ignoré (NAS non monté)"
+$SSH "$HOST" /opt/strapontin/exploitation/backup.sh || echo "[deploy] Backup NAS ignoré (NAS non monté)"
 echo "[deploy] Backup NAS OK"
 
 WEB_JAR=$(find java/web/target -maxdepth 1 -name "web-*.jar" -not -name "*.original" -type f)
@@ -33,6 +32,6 @@ if [[ -z "$WORKER_JAR" || ! -f "$WORKER_JAR" ]]; then
   exit 1
 fi
 
-$SCP "$WEB_JAR"    "$HOST":/opt/strapontin/web.jar.new
-$SCP "$WORKER_JAR" "$HOST":/opt/strapontin/worker.jar.new
-$SSH "$HOST" /opt/strapontin/scripts/update.sh
+$SCP "$WEB_JAR"    "$HOST":/opt/strapontin/application/web.jar.new
+$SCP "$WORKER_JAR" "$HOST":/opt/strapontin/application/worker.jar.new
+$SSH "$HOST" /opt/strapontin/exploitation/update.sh

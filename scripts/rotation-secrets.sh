@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# rotation-secrets.sh — régénère un ou plusieurs secrets de /opt/strapontin/.env sur une instance
+# rotation-secrets.sh — régénère un ou plusieurs secrets du fichier d'environnement
+# (/etc/opt/strapontin/strapontin.env) sur une instance
 # déjà en service (après une fuite du fichier), sans recréer le LXC.
 # Usage : rotation-secrets.sh [--db] [--app-config] [--backup] [--integrite] | --tous
 # À exécuter en tant que root depuis le LXC. Procédure complète et checklist : wiki Sécurité.
 
-APP_DIR="/opt/strapontin"
-ENV_FICHIER="$APP_DIR/.env"
+. "$(dirname "$0")/chemins.sh"
 
 ROTATION_DB=false
 ROTATION_APP_CONFIG=false
@@ -63,16 +63,16 @@ attendre_services() {
 
 # Une modification non authentifiée des fichiers surveillés doit être examinée avant : la
 # baseline AIDE est régénérée en fin de rotation et l'absorberait sinon.
-if command -v aide >/dev/null 2>&1 && [ -f /etc/aide/aide.conf ]; then
+if command -v aide >/dev/null 2>&1 && [ -f "$AIDE_CONF" ]; then
     echo "[rotation] Contrôle d'intégrité préalable..."
-    if ! aide --config=/etc/aide/aide.conf --check >/dev/null 2>&1; then
+    if ! aide --config="$AIDE_CONF" --check >/dev/null 2>&1; then
         echo "ERREUR : AIDE détecte des modifications non authentifiées — à examiner avant toute" \
-            "rotation (aide --config=/etc/aide/aide.conf --check)" >&2
+            "rotation (aide --config="$AIDE_CONF" --check)" >&2
         exit 1
     fi
 fi
 
-# Hors de /opt/strapontin : la règle AIDE sur .env couvre tout fichier .env* (préfixe), et
+# Hors des dossiers surveillés : la règle AIDE sur /etc/opt/strapontin couvre tout fichier voisin, et
 # la suppression recommandée de cette sauvegarde passerait pour un changement externe.
 SAUVEGARDE="/root/strapontin-env-avant-rotation-$(date +%Y%m%d_%H%M%S)"
 cp -p "$ENV_FICHIER" "$SAUVEGARDE"
@@ -147,9 +147,9 @@ if [ "$ROTATION_APP_CONFIG" = true ]; then
     attendre_services || { echo "ERREUR : services non repartis sans APP_CONFIG_SECRET_PRECEDENT" >&2; exit 1; }
 fi
 
-if command -v aide >/dev/null 2>&1 && [ -f /etc/aide/aide.conf ]; then
-    aide --config=/etc/aide/aide.conf --init >/dev/null 2>&1 || true
-    [ -f /var/lib/aide/aide.db.new ] && mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+if command -v aide >/dev/null 2>&1 && [ -f "$AIDE_CONF" ]; then
+    aide --config="$AIDE_CONF" --init >/dev/null 2>&1 || true
+    [ -f "$AIDE_BASE/aide.db.new" ] && mv "$AIDE_BASE/aide.db.new" "$AIDE_BASE/aide.db"
     echo "[rotation] Baseline AIDE régénérée (.env modifié par cette rotation)"
 fi
 

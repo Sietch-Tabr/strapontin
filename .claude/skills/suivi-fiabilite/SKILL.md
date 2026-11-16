@@ -1,6 +1,7 @@
 ---
 name: Suivi Fiabilité Prod
 description: Exécute un check delta complet ("360°") de la fiabilité des données de production Strapontin — déploiements, logs système LXC/hôte, cadence Quartz, intégrité BDD, correspondance floue TM/Eventim/Deezer, couverture exhaustive par rotation + tirage aléatoire complémentaire, vérification adversariale par subagent avant conclusion, revue de l'algorithme (correction automatique, parcours utilisateur) et plan de réparation des données exécuté après accord. À invoquer à chaque commande `date` de l'utilisateur dans ce projet, ou explicitement via /suivi-fiabilite.
+when_to_use: Dès que l'utilisateur lance la commande `date` dans ce projet, qu'elle soit écrite comme prompt ou exécutée en mode shell avec le préfixe `!` (bloc bash-input / bash-stdout). Lancer le check complet sans demander confirmation.
 ---
 
 Audit continu démarré le 2026-07-06 : chaque exécution compare l'état actuel au dernier point de contrôle enregistré dans `project_suivi_fiabilite_prod.md`, jamais un état des lieux isolé. Contexte, incidents passés et justification de chaque règle ci-dessous : [HISTORIQUE.md](HISTORIQUE.md).

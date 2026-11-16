@@ -1,11 +1,3 @@
 # Exceptions à l'analyse des vulnérabilités (scripts/analyse-dependances.sh, étape CI
 # analyse-dependances). Chaque exception porte une échéance courte et sa raison ; elle se réexamine
 # à chaque jalon (check-deps) et se retire dès que la cause disparaît.
-
-[[IgnoredVulns]]
-id = "GHSA-g3hv-75wg-m249"
-effectiveUntil = 2026-11-27
-reason = """minimatch 10.2.6 (sous eslint 10.14.0), déni de service par amplification de globparts, avis \
-publié le 30/10/2026, corrigé en 11.0.1 seulement. Dépendance de développement du lint, motifs de glob \
-fixés par le projet, jamais fournis par un utilisateur, absente du JAR livré. Un correctif suppose une \
-version d'eslint qui adopte minimatch 11 : à reprendre quand l'amont publie."""

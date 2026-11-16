@@ -162,7 +162,23 @@ class ResolveurSalleParConcert {
     if (salleId == null) {
       salleId = retenir(sousSalles.resoudre(nomSansVille, concert.dept()), concert);
     }
-    return salleId != null ? salleId : retenir(chercherSalleParCleForte(concert), concert);
+    return salleId != null
+        ? salleId
+        : retenirParCleForte(chercherSalleParCleForte(concert), concert);
+  }
+
+  // Artiste, date, heure et département identiques : même lieu. Un code postal
+  // différent entre billetteries ne l'écarte pas, seule la distance le fait.
+  private UUID retenirParCleForte(final UUID candidat, final ValeurConcert concert) {
+    if (resolutionParPosition
+        && parPosition.tropEloignee(candidat, concert.salle(), concert.position())) {
+      LOG.warn(
+          "salle candidate écartée : trop éloignée du lieu salle={} candidat={}",
+          concert.salle(),
+          candidat);
+      return null;
+    }
+    return candidat;
   }
 
   // Écarte une salle trouvée par son nom mais loin du lieu publié (homonyme).

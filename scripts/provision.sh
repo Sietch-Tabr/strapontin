@@ -4,12 +4,12 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 
 # provision.sh — provisionnement LXC (stack Java/Spring Boot)
 # Usage :
-#   bash /tmp/provision.sh dev   → LXC dev (SPRING_PROFILES_ACTIVE=dev, IP 192.168.20.78)
-#   bash /tmp/provision.sh prod  → LXC prod (IP 192.168.20.79)
+#   bash /tmp/scripts/provision.sh dev   → LXC dev (SPRING_PROFILES_ACTIVE=dev, IP 192.168.20.78)
+#   bash /tmp/scripts/provision.sh prod  → LXC prod (IP 192.168.20.79)
 #
 # À exécuter depuis le HOST Proxmox en tant que root :
-#   scp scripts/provision.sh scripts/update.sh root@192.168.1.99:/tmp/
-#   ssh root@192.168.1.99 "bash /tmp/provision.sh dev|prod"
+#   scp -r scripts root@192.168.1.99:/tmp/
+#   ssh root@192.168.1.99 "bash /tmp/scripts/provision.sh dev|prod"
 #
 # Pour redéployer proprement : détruire l'ancien LXC d'abord :
 #   pct set <VMID> --protection 0
@@ -42,10 +42,14 @@ VLAN_TAG="20"
 TEMPLATE_STORAGE="local"
 DISK_STORAGE="local-lvm"
 DISK="20"
-MEMORY="2048"
+MEMORY="3072"
 SWAP="512"
 CORES="2"
 APP_DIR="/opt/strapontin"
+ENV_DIR="/etc/opt/strapontin"
+ENV_FILE="$ENV_DIR/strapontin.env"
+SAUVEGARDES_DIR="/var/opt/strapontin/sauvegardes"
+DEPOT_SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
 APP_USER="strapontin"
 DB_NAME="strapontin"
 JAVA_VERSION="27"
@@ -128,10 +132,10 @@ pct create "$VMID" "$TEMPLATE_PATH" \
     --onboot "$([ "$PROFIL" = "prod" ] && echo 1 || echo 0)" \
     --start 0
 
-if [ "$PROFIL" = "prod" ]; then
-    echo "[2] Montage NAS /mnt/backup..."
-    pct set "$VMID" --mp0 "$NAS_MOUNT_PATH,mp=/mnt/backup"
-fi
+# Les deux environnements montent le NAS : leurs sauvegardes portent un préfixe distinct
+# (strapontin-dev_, strapontin-prod_) ; le dev ne lance la sienne qu'à la demande.
+echo "[2] Montage NAS /mnt/backup..."
+pct set "$VMID" --mp0 "$NAS_MOUNT_PATH,mp=/mnt/backup"
 
 echo "[2] Protection contre la suppression accidentelle..."
 pct set "$VMID" --protection 1
@@ -267,211 +271,75 @@ pct exec "$VMID" -- bash -c "
 "
 
 # ---------------------------------------------------------------
-# 7. Utilisateur applicatif + répertoires
+# 7. Utilisateur applicatif + arborescence (FHS, voir scripts/chemins.sh)
 # ---------------------------------------------------------------
 
 echo "[7] Utilisateur '$APP_USER' et répertoires..."
 pct exec "$VMID" -- bash -c "
-    id $APP_USER &>/dev/null || useradd -m -s /bin/bash $APP_USER
-    mkdir -p $APP_DIR/logs
-    chown -R $APP_USER:$APP_USER $APP_DIR
+    id $APP_USER &>/dev/null || useradd --system --no-create-home --shell /usr/sbin/nologin $APP_USER
+    mkdir -p $APP_DIR/application $APP_DIR/exploitation/systemd $ENV_DIR $SAUVEGARDES_DIR
+    chown -R root:root $APP_DIR $ENV_DIR /var/opt/strapontin
+    chmod 755 $APP_DIR $APP_DIR/application $APP_DIR/exploitation $ENV_DIR
+    chmod 700 $SAUVEGARDES_DIR
 "
 
-echo "[7] Scripts d'exploitation..."
-pct exec "$VMID" -- mkdir -p "$APP_DIR/scripts"
-pct push "$VMID" "$(dirname "$0")/update.sh"        "$APP_DIR/scripts/update.sh"
-pct push "$VMID" "$(dirname "$0")/backup.sh"        "$APP_DIR/scripts/backup.sh"
-pct push "$VMID" "$(dirname "$0")/backup-local.sh"  "$APP_DIR/scripts/backup-local.sh"
-pct push "$VMID" "$(dirname "$0")/restore.sh"       "$APP_DIR/scripts/restore.sh"
-pct push "$VMID" "$(dirname "$0")/aide-check.sh"    "$APP_DIR/scripts/aide-check.sh"
-pct push "$VMID" "$(dirname "$0")/declencher-job.sh" "$APP_DIR/scripts/declencher-job.sh"
-pct exec "$VMID" -- chmod +x \
-    "$APP_DIR/scripts/update.sh" \
-    "$APP_DIR/scripts/backup.sh" \
-    "$APP_DIR/scripts/backup-local.sh" \
-    "$APP_DIR/scripts/restore.sh" \
-    "$APP_DIR/scripts/aide-check.sh" \
-    "$APP_DIR/scripts/declencher-job.sh"
+echo "[7] Scripts d'exploitation, unités systemd et configuration AIDE (liste : liste-exploitation.txt)..."
+LISTE_EXPLOITATION=$(grep -v '^[[:space:]]*#' "$DEPOT_SCRIPTS/liste-exploitation.txt" | grep -v '^[[:space:]]*$')
+MANIFESTE_TMP=$(mktemp)
+(
+    cd "$DEPOT_SCRIPTS"
+    for fichier in $LISTE_EXPLOITATION aide.conf systemd/*; do sha256sum "$fichier"; done
+) > "$MANIFESTE_TMP"
+for fichier in $LISTE_EXPLOITATION aide.conf; do
+    pct push "$VMID" "$DEPOT_SCRIPTS/$fichier" "$APP_DIR/exploitation/$fichier"
+done
+for unite in "$DEPOT_SCRIPTS"/systemd/*; do
+    pct push "$VMID" "$unite" "$APP_DIR/exploitation/systemd/$(basename "$unite")"
+done
+pct push "$VMID" "$MANIFESTE_TMP" "$APP_DIR/exploitation/MANIFESTE.sha256"
+rm -f "$MANIFESTE_TMP"
+pct exec "$VMID" -- bash -c "
+    chmod 755 $APP_DIR/exploitation/*.sh
+    cd $APP_DIR/exploitation && sha256sum -c --quiet MANIFESTE.sha256
+    cp $APP_DIR/exploitation/systemd/* /etc/systemd/system/
+"
 
-echo "[7] Fichier de configuration .env..."
-if [ "$PROFIL" = "dev" ]; then
-pct exec "$VMID" -- bash -c "cat > $APP_DIR/.env << 'ENVFILE'
+echo "[7] Fichier d'environnement $ENV_FILE..."
+pct exec "$VMID" -- bash -c "cat > $ENV_FILE << 'ENVFILE'
 SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/$DB_NAME
 SPRING_DATASOURCE_USERNAME=$APP_USER
 SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD
 APP_CONFIG_SECRET=$APP_CONFIG_SECRET
 BACKUP_INTERNAL_SECRET=$BACKUP_INTERNAL_SECRET
 INTEGRITY_INTERNAL_SECRET=$INTEGRITY_INTERNAL_SECRET
-SPRING_PROFILES_ACTIVE=dev
+SPRING_PROFILES_ACTIVE=$PROFIL
 ENVFILE
-chown $APP_USER:$APP_USER $APP_DIR/.env
-chmod 600 $APP_DIR/.env
+chown root:root $ENV_FILE
+chmod 600 $ENV_FILE
 "
-else
-pct exec "$VMID" -- bash -c "cat > $APP_DIR/.env << 'ENVFILE'
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/$DB_NAME
-SPRING_DATASOURCE_USERNAME=$APP_USER
-SPRING_DATASOURCE_PASSWORD=$DB_PASSWORD
-APP_CONFIG_SECRET=$APP_CONFIG_SECRET
-BACKUP_INTERNAL_SECRET=$BACKUP_INTERNAL_SECRET
-INTEGRITY_INTERNAL_SECRET=$INTEGRITY_INTERNAL_SECRET
-SPRING_PROFILES_ACTIVE=prod
-ENVFILE
-chown $APP_USER:$APP_USER $APP_DIR/.env
-chmod 600 $APP_DIR/.env
-"
-fi
-
-echo "[7] Services systemd..."
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-worker.service << 'UNIT'
-[Unit]
-Description=Strapontin — worker Quartz
-After=network.target postgresql.service
-
-[Service]
-Type=simple
-User=$APP_USER
-WorkingDirectory=$APP_DIR
-EnvironmentFile=$APP_DIR/.env
-ExecStart=/usr/bin/java -Xms64m -Xmx384m -jar $APP_DIR/worker.jar
-SuccessExitStatus=143
-Restart=on-failure
-RestartSec=5
-# #886 : laisse le temps à wait-for-jobs-to-complete-on-shutdown (application.properties) de
-# terminer un cycle fetch en cours plutôt que de le tuer silencieusement lors d'un déploiement.
-TimeoutStopSec=90
-LimitNOFILE=65536
-
-[Install]
-WantedBy=multi-user.target
-UNIT"
-
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-web.service << 'UNIT'
-[Unit]
-Description=Strapontin — API REST
-After=network.target postgresql.service
-
-[Service]
-Type=simple
-User=$APP_USER
-WorkingDirectory=$APP_DIR
-EnvironmentFile=$APP_DIR/.env
-ExecStart=/usr/bin/java -Xms128m -Xmx768m -jar $APP_DIR/web.jar
-SuccessExitStatus=143
-Restart=on-failure
-RestartSec=5
-TimeoutStopSec=30
-LimitNOFILE=65536
-
-[Install]
-WantedBy=multi-user.target
-UNIT"
-
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-backup.service << 'UNIT'
-[Unit]
-Description=Strapontin — backup PostgreSQL vers NAS
-After=network.target postgresql.service
-
-[Service]
-Type=oneshot
-User=root
-ExecStart=/opt/strapontin/scripts/backup.sh
-UNIT"
-
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-backup.timer << 'UNIT'
-[Unit]
-Description=Backup quotidien Strapontin
-After=network.target
-
-[Timer]
-OnCalendar=daily
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-UNIT"
-
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-backup-local.service << 'UNIT'
-[Unit]
-Description=Strapontin — backup local (dump + .env + logs)
-After=network.target postgresql.service
-
-[Service]
-Type=oneshot
-User=root
-ExecStart=/opt/strapontin/scripts/backup-local.sh
-UNIT"
-
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-backup-local.timer << 'UNIT'
-[Unit]
-Description=Backup local quotidien Strapontin
-After=network.target
-
-[Timer]
-OnCalendar=*-*-* 01:00:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-UNIT"
 
 echo "[7] Contrôle d'intégrité AIDE (#976)..."
 # Le paquet Debian aide embarque son propre timer (dailyaidecheck.timer, scan complet de l'OS +
 # alerte par mail local root, jamais lu sur cette infra) et l'active automatiquement à
-# l'installation — désactivé au profit du timer/périmètre dédiés ci-dessous (redondant sinon,
-# deux mécanismes de contrôle d'intégrité indépendants sur la même base AIDE).
+# l'installation — désactivé au profit du timer/périmètre dédiés (aide.conf du dépôt, redondant
+# sinon : deux mécanismes de contrôle d'intégrité indépendants sur la même base AIDE).
 pct exec "$VMID" -- bash -c "
     export LC_ALL=C LANG=C DEBIAN_FRONTEND=noninteractive
     apt-get install -y -qq aide
     systemctl disable --now dailyaidecheck.timer
     systemctl mask dailyaidecheck.timer
-"
-pct exec "$VMID" -- bash -c "mkdir -p /etc/aide /var/lib/aide
-cat > /etc/aide/aide.conf << 'UNIT'
-# Strapontin — périmètre restreint (pas de scan complet de l'OS, cf. #976) :
-# JARs, .env, scripts d'exploitation, units systemd web/worker (vecteur de persistance classique).
-# database (sans suffixe) supprimé en AIDE v0.19 — database_in/database_out obligatoires.
-database_in=file:/var/lib/aide/aide.db
-database_out=file:/var/lib/aide/aide.db.new
-gzip_dbout=no
-
-Checksums = p+i+n+u+g+s+m+c+sha256
-
-/opt/strapontin/web.jar Checksums
-/opt/strapontin/worker.jar Checksums
-/opt/strapontin/.env Checksums
-/opt/strapontin/scripts Checksums
-/etc/systemd/system/strapontin-web.service Checksums
-/etc/systemd/system/strapontin-worker.service Checksums
-UNIT
-aide --config=/etc/aide/aide.conf --init
-mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+    mkdir -p /etc/aide /var/lib/aide
+    cp $APP_DIR/exploitation/aide.conf /etc/aide/aide.conf
+    aide --config=/etc/aide/aide.conf --init
+    mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
 "
 
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-integrity.service << 'UNIT'
-[Unit]
-Description=Strapontin — contrôle d'intégrité AIDE
-After=network.target strapontin-web.service
-
-[Service]
-Type=oneshot
-User=root
-ExecStart=/opt/strapontin/scripts/aide-check.sh
-UNIT"
-
-pct exec "$VMID" -- bash -c "cat > /etc/systemd/system/strapontin-integrity.timer << 'UNIT'
-[Unit]
-Description=Contrôle d'intégrité AIDE quotidien Strapontin
-
-[Timer]
-OnCalendar=*-*-* 04:00:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-UNIT"
-
-pct exec "$VMID" -- bash -c "systemctl daemon-reload && systemctl enable strapontin-web strapontin-worker strapontin-backup.timer strapontin-backup-local.timer strapontin-integrity.timer && systemctl start strapontin-backup.timer strapontin-backup-local.timer strapontin-integrity.timer"
+# La sauvegarde NAS quotidienne n'est planifiée qu'en prod : sur le dev, ses minuteries
+# rattrapent un passage manqué à chaque démarrage (Persistent=true) ; elle se lance à la
+# demande (systemctl start strapontin-backup.service).
+MINUTERIES="strapontin-backup-local.timer strapontin-integrity.timer"
+[ "$PROFIL" = "prod" ] && MINUTERIES="strapontin-backup.timer $MINUTERIES"
+pct exec "$VMID" -- bash -c "systemctl daemon-reload && systemctl enable strapontin-web strapontin-worker $MINUTERIES && systemctl start $MINUTERIES"
 
 # ---------------------------------------------------------------
 # 8. SSH développeur
@@ -523,13 +391,11 @@ else
     echo "  [OK]    Espace disque : ${LIBRE} Mo"
 fi
 
-if [ "$PROFIL" = "prod" ]; then
-    if pct exec "$VMID" -- mountpoint -q /mnt/backup 2>/dev/null; then
-        echo "  [OK]    NAS /mnt/backup monté"
-    else
-        echo "  [ECHEC] NAS /mnt/backup non monté" >&2
-        exit 1
-    fi
+if pct exec "$VMID" -- mountpoint -q /mnt/backup 2>/dev/null; then
+    echo "  [OK]    NAS /mnt/backup monté"
+else
+    echo "  [ECHEC] NAS /mnt/backup non monté" >&2
+    exit 1
 fi
 
 echo ""
@@ -537,14 +403,14 @@ echo "================================================================"
 echo "  LXC $VMID ($PROFIL) provisionné avec succès."
 echo ""
 echo "  DB_PASSWORD  : $DB_PASSWORD"
-echo "  .env         : $APP_DIR/.env (chmod 600)"
+echo "  environnement : $ENV_FILE (root, 600)"
 echo ""
 echo "  Étapes suivantes :"
 echo "  1. cd front && npm run build && cd .."
 echo "     mvn -f java/pom.xml -pl web,worker -am package"
-echo "  2. scp \"\$(ls -t java/web/target/web-*.jar | grep -v '.original' | head -1)\" root@${IP%%/*}:$APP_DIR/web.jar"
-echo "     scp \"\$(ls -t java/worker/target/worker-*.jar | grep -v '.original' | head -1)\" root@${IP%%/*}:$APP_DIR/worker.jar"
-echo "  3. ssh root@${IP%%/*} '$APP_DIR/scripts/update.sh'"
+echo "  2. scp \"\$(ls -t java/web/target/web-*.jar | grep -v '.original' | head -1)\" root@${IP%%/*}:$APP_DIR/application/web.jar.new"
+echo "     scp \"\$(ls -t java/worker/target/worker-*.jar | grep -v '.original' | head -1)\" root@${IP%%/*}:$APP_DIR/application/worker.jar.new"
+echo "  3. ssh root@${IP%%/*} '$APP_DIR/exploitation/update.sh'"
 echo "  4. Ouvrir http://${IP%%/*}:8080/setup"
 if [ "$PROFIL" = "prod" ]; then
 echo ""

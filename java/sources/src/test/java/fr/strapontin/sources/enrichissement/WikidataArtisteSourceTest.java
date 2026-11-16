@@ -9,6 +9,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import fr.strapontin.sources.http.IdentiteHttp;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,13 +22,16 @@ import org.springframework.web.client.RestClient;
 
 class WikidataArtisteSourceTest {
 
+  private static final IdentiteHttp IDENTITE =
+      new IdentiteHttp("test", "https://exemple.test/projet", () -> "");
+
   private static WikidataArtisteSource source(final RestClient restClient) {
-    return new WikidataArtisteSource(restClient, Caffeine.newBuilder().build());
+    return new WikidataArtisteSource(restClient, Caffeine.newBuilder().build(), IDENTITE);
   }
 
   @Test
   void nom_retourneWikidata() {
-    assertEquals("wikidata", new WikidataArtisteSource().nom());
+    assertEquals("wikidata", new WikidataArtisteSource(IDENTITE).nom());
   }
 
   @Test

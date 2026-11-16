@@ -15,6 +15,8 @@ import fr.strapontin.core.PositionLieu;
 import fr.strapontin.sources.enrichissement.ClientNominatim;
 import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -264,5 +266,63 @@ class ResolutionSallesParPositionIntegrationTest extends AbstractWorkerIntegrati
         resoudreLieuEventim("Le Passage vers les Etoiles", "le passage vers les etoiles", "75011");
 
     assertNotEquals(etoiles, salle);
+  }
+
+  @Test
+  void tropEloignee_codePostalDifferentSansDistance_faux() {
+    final UUID dome = creerSalle("Dome de Paris", "75", MONTPARNASSE);
+    poserCodePostal(dome, "75015");
+    final PositionLieu autreCodePostal = new PositionLieu(null, null, "75002");
+
+    assertTrue(parPosition.incompatible(dome, "Vendôme Club Paris", autreCodePostal));
+    assertFalse(parPosition.tropEloignee(dome, "Vendôme Club Paris", autreCodePostal));
+  }
+
+  @Test
+  void tropEloignee_salleGeolocaliseeLoinDuLieu_vrai() {
+    final UUID vittel = creerSalle("Palais des Congres", "88", VITTEL);
+
+    assertTrue(parPosition.tropEloignee(vittel, "Palais des Congrès", PERPIGNAN));
+  }
+
+  // Une salle retenue sur artiste, date, heure et département reste retenue quand le lieu de la
+  // billetterie, sans coordonnées, porte un autre code postal : aucune salle intermédiaire.
+  @Test
+  void resolution_cleForteEtCodePostalDifferent_rattacheLaSalleExistanteSansEnCreerUne() {
+    final UUID salle = creerSalle("Centre des Congres - St Etienne", "42", MONTPARNASSE);
+    poserCodePostal(salle, "42100");
+    final LocalDate date = LocalDate.now().plusMonths(2);
+    final UUID evenement =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, dept, salle_id)"
+                + " VALUES ('artiste de test', :date, :heure, 'salle', '42', CAST(:salle AS uuid))"
+                + " RETURNING id",
+            new MapSqlParameterSource()
+                .addValue("date", java.sql.Date.valueOf(date))
+                .addValue("heure", java.sql.Time.valueOf(LocalTime.of(20, 30)))
+                .addValue("salle", salle.toString()),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST('ticketmaster' AS source_concert), 'x', 'y')",
+        Map.of("id", evenement.toString()));
+
+    final ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
+    resolveur.setResolutionParPosition(true);
+    final UUID resolue =
+        resolveur.upsertSalleSource(
+            FabriqueValeurConcert.nouveau()
+                .artiste("Artiste de test")
+                .date(date)
+                .heure(LocalTime.of(20, 30))
+                .salle("Palais municipal")
+                .dept("42")
+                .source("eventim")
+                .salleSourceId("eventim:internal:palais municipal@42000")
+                .position(new PositionLieu(null, null, "42000"))
+                .construire());
+
+    assertEquals(salle, resolue);
+    assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM salles", Map.of(), Integer.class));
   }
 }

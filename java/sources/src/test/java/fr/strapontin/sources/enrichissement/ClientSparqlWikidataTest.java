@@ -11,6 +11,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import fr.strapontin.sources.http.IdentiteHttp;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -23,6 +24,9 @@ import org.springframework.web.client.RestClient;
  * ClientSparqlWikidata#executer} — retry sur erreurs transitoires (502, content-type inattendu).
  */
 class ClientSparqlWikidataTest {
+
+  private static final IdentiteHttp IDENTITE =
+      new IdentiteHttp("test", "https://exemple.test/projet", () -> "");
 
   @Test
   void echapperLitteral_chaineSansCaractereSpecial_retourneInchangee() {
@@ -74,7 +78,7 @@ class ClientSparqlWikidataTest {
                 "{\"head\":{\"vars\":[]},\"results\":{\"bindings\":[]}}",
                 MediaType.parseMediaType("application/sparql-results+json")));
 
-    final ClientSparqlWikidata client = new ClientSparqlWikidata(restClient);
+    final ClientSparqlWikidata client = new ClientSparqlWikidata(restClient, IDENTITE);
     final var resultat = client.executer("SELECT * WHERE {}");
 
     assertNotNull(resultat);
@@ -103,7 +107,7 @@ class ClientSparqlWikidataTest {
                 "{\"head\":{\"vars\":[]},\"results\":{\"bindings\":[]}}",
                 MediaType.parseMediaType("application/sparql-results+json")));
 
-    final ClientSparqlWikidata client = new ClientSparqlWikidata(restClient);
+    final ClientSparqlWikidata client = new ClientSparqlWikidata(restClient, IDENTITE);
     final var resultat = client.executer("SELECT * WHERE {}");
 
     assertNotNull(resultat);
@@ -122,7 +126,7 @@ class ClientSparqlWikidataTest {
           .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
     }
 
-    final ClientSparqlWikidata client = new ClientSparqlWikidata(restClient);
+    final ClientSparqlWikidata client = new ClientSparqlWikidata(restClient, IDENTITE);
     final var resultat = client.executer("SELECT * WHERE {}");
 
     assertTrue(resultat.isEmpty());
@@ -140,7 +144,7 @@ class ClientSparqlWikidataTest {
           .andRespond(
               withSuccess(reponse, MediaType.parseMediaType("application/sparql-results+json")));
     }
-    final ClientSparqlWikidata client = new ClientSparqlWikidata(builder.build());
+    final ClientSparqlWikidata client = new ClientSparqlWikidata(builder.build(), IDENTITE);
 
     client.executer("SELECT * WHERE {}");
     client.executer("SELECT * WHERE {}");

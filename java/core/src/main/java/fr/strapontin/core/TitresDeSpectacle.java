@@ -18,7 +18,7 @@ public final class TitresDeSpectacle {
 
   private static final int LONGUEUR_MIN_MOT = 4;
   private static final int MOTS_COMMUNS_MIN = 2;
-  private static final double COUVERTURE_MIN = 0.5;
+  private static final double COUVERTURE_MIN = 0.75;
   // Mots qui reviennent dans des programmes sans rapport.
   private static final Set<String> MOTS_BANALS = Set.of("concert", "live", "paris", "avec", "tour");
 
@@ -28,7 +28,7 @@ public final class TitresDeSpectacle {
    * @param titreA premier intitulé
    * @param titreB second intitulé
    * @return {@code true} si les deux intitulés partagent au moins deux mots
-   *     significatifs, qui     couvrent la moitié des mots du plus court
+   *     significatifs, qui couvrent les trois quarts des mots du plus court
    */
   public static boolean sontVariantes(final String titreA, final String titreB) {
     final Set<String> motsA = mots(titreA);

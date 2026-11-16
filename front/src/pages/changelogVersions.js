@@ -4,6 +4,32 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.1.5 — 16 novembre 2026",
+    categories: [
+      {
+        categorie: "Concerts et salles",
+        items: [
+          "Les spectacles de la catégorie Eventim « Sports mécaniques » (show de freestyle moto, Blackliner à Reims et à Bordeaux) sont rafraîchis comme les autres spectacles sportifs et ne glissent plus vers la suppression suggérée.",
+          "Une séance rattachée à une salle déjà connue (même artiste, même date, même heure, même département) ne crée plus de salle provisoire quand les billetteries indiquent des codes postaux différents pour le même lieu (Centre de Congrès de Saint-Étienne).",
+          "Deux spectacles distincts au même créneau d'un théâtre à plusieurs scènes ne sont plus réunis sur une même fiche (trois spectacles de Noël de l'Essaïon, Marlaguette et La flûte enchantée) : seuls des titres qui se ressemblent vraiment sont regroupés.",
+        ],
+      },
+      {
+        categorie: "Application",
+        items: [
+          "Un compte sans droits d'administration qui ouvre l'adresse /admin est ramené à l'accueil, sans appel refusé en arrière-plan.",
+          "L'application se présente aux services externes (Nominatim, Wikidata) avec sa version réelle et le contact que l'administrateur renseigne dans la configuration, et non plus avec une version périmée et une adresse écrite dans le code ; le lien du code source de la page d'aide suit la même configuration.",
+        ],
+      },
+      {
+        categorie: "Accueil",
+        items: [
+          "L'accueil affiche aussitôt la liste de vos prochains concerts, ou une roue de chargement, même quand la connexion est lente : le marquage « vu » ne retarde plus rien, et le badge « Nouveau » est visible lors de la visite où il apparaît.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.1.4 — 10 novembre 2026",
     categories: [
       {

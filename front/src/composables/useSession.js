@@ -1,5 +1,6 @@
 import { appelApi, lireJson } from "../utils/api.js";
 import { ref, readonly } from "vue";
+import { repliSansDroitAdmin } from "../utils/gardeAdmin.js";
 import { useRouter, useRoute } from "vue-router";
 
 export const sessionRef = ref(null);
@@ -31,6 +32,10 @@ export function useSession() {
       }
       session.value = await lireJson(rep);
       sessionErreurReseau.value = false;
+      // Accès direct à /admin avant que la session soit connue : la garde du routeur n'a pas pu
+      // trancher.
+      const repli = repliSansDroitAdmin(route, session.value);
+      if (repli) router.replace(repli);
     } catch (_) {
       // une exception ici (réseau coupé, DNS, etc.) ne signifie pas que la session est
       // invalide côté serveur — contrairement à un 401 confirmé ci-dessus. Réinitialiser

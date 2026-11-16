@@ -7,6 +7,7 @@ package fr.strapontin.sources.enrichissement;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.sources.SourceAvecBilanFetch;
+import fr.strapontin.sources.http.IdentiteHttp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -51,10 +52,14 @@ public class WikidataSalleSource
     return client.preleverBilan();
   }
 
-  /** Crée une instance avec un client SPARQL par défaut et un cache 24h. */
-  public WikidataSalleSource() {
+  /**
+   * Crée une instance avec un client SPARQL par défaut et un cache 24h.
+   *
+   * @param identite identité déclarée à Wikidata
+   */
+  public WikidataSalleSource(final IdentiteHttp identite) {
     this(
-        new ClientSparqlWikidata(),
+        new ClientSparqlWikidata(identite),
         Caffeine.newBuilder().expireAfterWrite(24, TimeUnit.HOURS).maximumSize(10_000).build());
   }
 
@@ -64,10 +69,13 @@ public class WikidataSalleSource
    *
    * @param restClient client HTTP à utiliser
    * @param cache cache Caffeine à utiliser
+   * @param identite identité déclarée à Wikidata
    */
   public WikidataSalleSource(
-      final RestClient restClient, final Cache<String, EnrichissementSalle> cache) {
-    this(new ClientSparqlWikidata(restClient), cache);
+      final RestClient restClient,
+      final Cache<String, EnrichissementSalle> cache,
+      final IdentiteHttp identite) {
+    this(new ClientSparqlWikidata(restClient, identite), cache);
   }
 
   private WikidataSalleSource(

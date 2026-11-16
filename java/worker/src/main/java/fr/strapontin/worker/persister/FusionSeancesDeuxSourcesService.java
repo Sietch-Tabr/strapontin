@@ -7,7 +7,10 @@ package fr.strapontin.worker.persister;
 import fr.strapontin.core.TitresDeSpectacle;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +22,12 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class FusionSeancesDeuxSourcesService {
+
+  /**
+   * Créneaux à deux fiches à partir desquels une salle est un théâtre à
+   * plusieurs scènes : deux fiches au même créneau y sont deux spectacles.
+   */
+  public static final int SEUIL_CRENEAUX_SALLE_MULTIPLE = 4;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final FusionEvenementsArtisteService fusionEvenements;
@@ -79,7 +88,8 @@ public class FusionSeancesDeuxSourcesService {
   /**
    * Même spectacle sous deux intitulés (« of Mtsensk » / « de Mzensk ») : seuls
    * événements de leur salle au créneau, Ticketmaster seul et Eventim seul, sans
-   * artiste reconnu ni fiche annulée. À appeler après les contrôles d'intégrité.
+   * artiste reconnu ni fiche annulée ; dans un théâtre à plusieurs scènes, les
+   * intitulés doivent aussi se ressembler. À appeler après les contrôles.
    * @return nombre de fusions effectuées
    */
   public int fusionnerMemeCreneauDeuxSources() {
@@ -87,7 +97,7 @@ public class FusionSeancesDeuxSourcesService {
         jdbc.queryForList(
             """
             WITH ev AS (
-              SELECT e.id, e.salle_id, e.date, e.heure, e.artiste_id,
+              SELECT e.id, e.salle_id, e.date, e.heure, e.artiste_id, e.artiste_norm,
                      bool_or(o.source = 'ticketmaster') AS tm, bool_or(o.source = 'eventim') AS evt
               FROM evenements e JOIN observations o ON o.evenement_id = e.id
               WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
@@ -99,7 +109,8 @@ public class FusionSeancesDeuxSourcesService {
                  AND count(*) FILTER (WHERE tm AND NOT evt) = 1
                  AND count(*) FILTER (WHERE evt AND NOT tm) = 1
                  AND count(*) FILTER (WHERE artiste_id IS NOT NULL) = 0)
-            SELECT t.id AS cible, v.id AS source
+            SELECT t.id AS cible, v.id AS source, c.salle_id,
+                   t.artiste_norm AS titre_cible, v.artiste_norm AS titre_source
             FROM creneaux c
             JOIN salles s ON s.id = c.salle_id
             JOIN ev t ON t.salle_id = c.salle_id AND t.date = c.date AND t.heure = c.heure
@@ -110,11 +121,42 @@ public class FusionSeancesDeuxSourcesService {
             """
                 + SalleFiable.condition("s"),
             Map.of());
+    final Set<UUID> sallesAPlusieursScenes = paires.isEmpty() ? Set.of() : sallesAPlusieursScenes();
+    int fusions = 0;
     for (final Map<String, Object> paire : paires) {
+      // Théâtre à plusieurs scènes : deux fiches au même créneau sont deux
+      // spectacles, seule une ressemblance de titres prouve la même séance.
+      if (sallesAPlusieursScenes.contains((UUID) paire.get("salle_id"))
+          && !TitresDeSpectacle.sontVariantes(
+              (String) paire.get("titre_cible"), (String) paire.get("titre_source"))) {
+        continue;
+      }
       fusionEvenements.fusionnerDansFicheVivante(
           (UUID) paire.get("cible"), (UUID) paire.get("source"), "même créneau, deux sources");
+      fusions++;
     }
-    return paires.size();
+    return fusions;
+  }
+
+  // Décompte en Java : en SQL (fonction de fenêtre), bien plus lent sur la prod.
+  private Set<UUID> sallesAPlusieursScenes() {
+    final List<UUID> creneauxDoubles =
+        jdbc.query(
+            """
+            SELECT salle_id FROM evenements
+            WHERE date >= CURRENT_DATE AND salle_id IS NOT NULL AND heure IS NOT NULL
+              AND statut IS DISTINCT FROM 'cancelled'
+            GROUP BY salle_id, date, heure HAVING count(*) >= 2
+            """,
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_id", UUID.class));
+    return creneauxDoubles.stream()
+        .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+        .entrySet()
+        .stream()
+        .filter(e -> e.getValue() >= SEUIL_CRENEAUX_SALLE_MULTIPLE)
+        .map(Map.Entry::getKey)
+        .collect(Collectors.toSet());
   }
 
   /**

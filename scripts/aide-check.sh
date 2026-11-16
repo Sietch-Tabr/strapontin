@@ -2,17 +2,14 @@
 set -euo pipefail
 
 # aide-check.sh — contrôle d'intégrité quotidien (AIDE) des fichiers déployés (#976)
-# Usage : bash /opt/strapontin/scripts/aide-check.sh
+# Usage : bash /opt/strapontin/exploitation/aide-check.sh
 # À exécuter en tant que root depuis le LXC (timer strapontin-integrity.timer).
-# Périmètre surveillé : /opt/strapontin/{web.jar,worker.jar,.env,scripts/} + units systemd
-# strapontin-web.service/strapontin-worker.service (voir /etc/aide/aide.conf).
+# Périmètre surveillé : voir aide.conf (application/, exploitation/, /etc/opt/strapontin et unités
+# systemd de l'application).
 
-APP_DIR="/opt/strapontin"
+. "$(dirname "$0")/chemins.sh"
 
-INTEGRITY_SECRET=""
-if [ -f "$APP_DIR/.env" ]; then
-    INTEGRITY_SECRET=$(grep '^INTEGRITY_INTERNAL_SECRET=' "$APP_DIR/.env" | cut -d'=' -f2- || true)
-fi
+INTEGRITY_SECRET="$(lire_env INTEGRITY_INTERNAL_SECRET)"
 
 _appel_statut() {
     curl -sf -X POST \
@@ -23,7 +20,7 @@ _appel_statut() {
         >/dev/null 2>&1 || true
 }
 
-SORTIE=$(aide --config=/etc/aide/aide.conf --check 2>&1) || CODE=$?
+SORTIE=$(aide --config="$AIDE_CONF" --check 2>&1) || CODE=$?
 CODE="${CODE:-0}"
 
 # Codes de sortie AIDE : 0 = aucun changement, 1 = fichiers ajoutés, 2 = supprimés, 4 = modifiés
@@ -36,7 +33,7 @@ else
     # (en-têtes de section capitalisés "Added entries:", lignes de fichier au format
     # "f++++++++++++++++++: /chemin", jamais en minuscule en début de ligne) — DETAIL restait
     # toujours vide, l'email d'alerte n'indiquait jamais quel fichier était concerné.
-    DETAIL=$(echo "$SORTIE" | grep -E "entries:|: /opt/strapontin|: /etc/systemd" | head -30 || true)
+    DETAIL=$(echo "$SORTIE" | grep -E "entries:|: /opt/strapontin|: /etc/opt/strapontin|: /etc/systemd" | head -30 || true)
     _appel_statut "modifie" "$DETAIL"
     echo "aide-check : modification détectée (code $CODE)" >&2
     echo "$SORTIE" >&2

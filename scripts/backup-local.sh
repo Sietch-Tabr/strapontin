@@ -2,23 +2,22 @@
 set -euo pipefail
 
 # backup-local.sh — dump PostgreSQL compressé à la volée + .env, en local (voir backup.sh)
-# Usage : bash /opt/strapontin/scripts/backup-local.sh
+# Usage : bash /opt/strapontin/exploitation/backup-local.sh
 # À exécuter en tant que root depuis le LXC.
 
-# Surchargeables par l'environnement pour le test (tester-sauvegardes.sh).
-APP_DIR="${APP_DIR:-/opt/strapontin}"
-BACKUP_DIR="${BACKUP_DIR:-$APP_DIR/backup}"
+# Emplacements surchargeables par l'environnement pour le test (tester-sauvegardes.sh).
+. "$(dirname "$0")/chemins.sh"
+BACKUP_DIR="$SAUVEGARDES_LOCALES"
+ENV_NOM="$(environnement)"
 
 mkdir -p "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR"
 
-BACKUP_SECRET=""
-if [ -f "$APP_DIR/.env" ]; then
-    BACKUP_SECRET=$(grep '^BACKUP_INTERNAL_SECRET=' "$APP_DIR/.env" | cut -d'=' -f2- || true)
-fi
+BACKUP_SECRET="$(lire_env BACKUP_INTERNAL_SECRET)"
 
 HORODATAGE=$(date +%Y%m%d_%H%M%S)
-ARCHIVE="$BACKUP_DIR/strapontin_${HORODATAGE}.sql.gz"
-ENV_SAUVEGARDE="$BACKUP_DIR/strapontin_${HORODATAGE}.env"
+ARCHIVE="$BACKUP_DIR/strapontin-${ENV_NOM}_${HORODATAGE}.sql.gz"
+ENV_SAUVEGARDE="$BACKUP_DIR/strapontin-${ENV_NOM}_${HORODATAGE}.env"
 PARTIEL="${ARCHIVE}.partiel"
 
 _appel_statut() {
@@ -49,12 +48,13 @@ gzip -t "$PARTIEL"
 mv "$PARTIEL" "$ARCHIVE"
 echo "  dump DB : OK ($ARCHIVE)"
 
-if [ -f "$APP_DIR/.env" ]; then
-    install -m 600 "$APP_DIR/.env" "$ENV_SAUVEGARDE"
+if [ -f "$ENV_FICHIER" ]; then
+    install -m 600 "$ENV_FICHIER" "$ENV_SAUVEGARDE"
     echo "  .env    : OK ($ENV_SAUVEGARDE)"
 fi
 
-find "$BACKUP_DIR" -type f -name "strapontin_*" -mtime +7 -delete
+# Rétention de 7 jours : sauvegardes de cet environnement et anciennes, sans préfixe.
+find "$BACKUP_DIR" -type f \( -name "strapontin-${ENV_NOM}_*" -o -name "strapontin_*" \) -mtime +7 -delete
 echo "  purge   : OK (rétention 7 jours)"
 
 echo "Sauvegarde locale terminée"

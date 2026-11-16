@@ -58,7 +58,7 @@ Grep des versions épinglées dans `scripts/provision.sh` (PostgreSQL, template 
 
 ## 5. Analyser le changelog de chaque dépendance obsolète
 
-Pour chaque ligne remontée aux étapes 2-4 : WebFetch/WebSearch vers le changelog réel (GitHub releases, page Maven Central, changelog npm/GitHub du paquet). Classer :
+Pour chaque ligne remontée aux étapes 2-4 : WebFetch/WebSearch vers le changelog réel (GitHub releases, page Maven Central, changelog npm/GitHub du paquet). Cette lecture se termine **avant toute synthèse ou analyse présentée à l'utilisateur** (y compris celle qui attend son accord en mode jalon) : un rapport « changelogs à lire après le go » est une étape sautée. Une dépendance dont le changelog n'a pas pu être lu n'est ni bumpée ni reportée : relancer la lecture par une autre source (notes du dépôt au tag, archive du tag décompressée dans un dossier vide, registre du paquet, page du site officiel) jusqu'à l'obtenir, et ne demander à l'utilisateur que si toutes échouent. Classer :
 
 - **Sûr** (patch/mineur, pas de breaking change identifié dans le changelog) → applicable directement en mode jalon.
 - **À risque** (majeur, ou changelog mentionnant explicitement un breaking change) → jamais appliqué automatiquement, remonté comme point de décision.

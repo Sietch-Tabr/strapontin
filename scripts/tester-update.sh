@@ -35,15 +35,24 @@ echecs=0
 verifier() { if ! "$@"; then echo "ECHEC : $*" >&2; echecs=$((echecs + 1)); fi; }
 nombre_init() { if [ -f "$TMP_JOURNAL" ]; then wc -l < "$TMP_JOURNAL" | tr -d ' '; else echo 0; fi; }
 
-# Prépare un LXC factice : JARs actifs (v1), JARs précédents (v0), nouveaux JARs (v2), baseline.
+somme() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+
+# Prépare un LXC factice : JARs actifs (v1), JARs précédents (v0), nouveaux JARs (v2), baseline, et
+# les fichiers livrés (unité, configuration AIDE) avec leur manifeste.
 preparer() {
-    export APP_DIR="$TMP/app" AIDE_BASE="$TMP/aide" AIDE_CONF="$TMP/aide.conf" TMP_JOURNAL="$TMP/journal"
-    rm -rf "$APP_DIR" "$AIDE_BASE" "$TMP_JOURNAL"
-    mkdir -p "$APP_DIR/scripts" "$AIDE_BASE"
-    : > "$AIDE_CONF"
-    : > "$APP_DIR/.env"
+    export APP_RACINE="$TMP/app" AIDE_BASE="$TMP/aide" AIDE_CONF="$TMP/aide.conf" TMP_JOURNAL="$TMP/journal"
+    export APP_JARS="$APP_RACINE/application" APP_EXPLOITATION="$APP_RACINE/exploitation"
+    export UNITES_DIR="$TMP/unites" ENV_FICHIER="$TMP/strapontin.env"
+    rm -rf "$APP_RACINE" "$AIDE_BASE" "$TMP_JOURNAL" "$UNITES_DIR"
+    mkdir -p "$APP_JARS" "$APP_EXPLOITATION/systemd" "$AIDE_BASE" "$UNITES_DIR"
+    echo "# configuration livrée" > "$APP_EXPLOITATION/aide.conf"
+    echo "[Service]" > "$APP_EXPLOITATION/systemd/strapontin-web.service"
+    cp "$APP_EXPLOITATION/aide.conf" "$AIDE_CONF"
+    cp "$APP_EXPLOITATION/systemd/strapontin-web.service" "$UNITES_DIR/"
+    (cd "$APP_EXPLOITATION" && somme aide.conf systemd/strapontin-web.service > MANIFESTE.sha256)
+    : > "$ENV_FICHIER"
     for jar in web worker; do
-        echo v1 > "$APP_DIR/$jar.jar"; echo v0 > "$APP_DIR/$jar.jar.prev"; echo v2 > "$APP_DIR/$jar.jar.new"
+        echo v1 > "$APP_JARS/$jar.jar"; echo v0 > "$APP_JARS/$jar.jar.prev"; echo v2 > "$APP_JARS/$jar.jar.new"
     done
     echo base-initiale > "$AIDE_BASE/aide.db"
     unset AIDE_RAPPORT AIDE_CODE SANTE
@@ -54,7 +63,7 @@ lancer() { bash "$RACINE/update.sh" > "$TMP/sortie" 2>&1 && CODE=0 || CODE=$?; }
 preparer
 lancer
 verifier test "$CODE" = 0
-verifier test "$(cat "$APP_DIR/web.jar")" = v2
+verifier test "$(cat "$APP_JARS/web.jar")" = v2
 verifier test "$(nombre_init)" = 1
 verifier test "$(cat "$AIDE_BASE/aide.db")" = base-1
 
@@ -63,8 +72,8 @@ verifier test "$(cat "$AIDE_BASE/aide.db")" = base-1
 preparer
 SANTE=down lancer
 verifier test "$CODE" = 1
-verifier test "$(cat "$APP_DIR/web.jar")" = v1
-verifier test ! -e "$APP_DIR/web.jar.prev"
+verifier test "$(cat "$APP_JARS/web.jar")" = v1
+verifier test ! -e "$APP_JARS/web.jar.prev"
 verifier test "$(nombre_init)" = 1
 verifier test "$(cat "$AIDE_BASE/aide.db")" = base-1
 
@@ -73,13 +82,32 @@ preparer
 AIDE_CODE=4 AIDE_RAPPORT="$(printf 'Added entries:\t1\n\nAdded entries:\n---\nf++++++++++++++++: /opt/strapontin/intrus')" \
     SANTE=down lancer
 verifier test "$CODE" = 1
-verifier test "$(cat "$APP_DIR/web.jar")" = v1
+verifier test "$(cat "$APP_JARS/web.jar")" = v1
 verifier test "$(nombre_init)" = 0
 verifier test "$(cat "$AIDE_BASE/aide.db")" = base-initiale
 verifier grep -q "NON régénérée" "$TMP/sortie"
+
+# 4. Livraison dérivée du dépôt (fichier modifié après le dépôt du manifeste) : le déploiement
+# s'arrête avant tout remplacement, les JARs restent ceux d'avant.
+preparer
+echo "modification locale" >> "$APP_EXPLOITATION/aide.conf"
+lancer
+verifier test "$CODE" = 1
+verifier test "$(cat "$APP_JARS/web.jar")" = v1
+verifier test -e "$APP_JARS/web.jar.new"
+verifier grep -q "aide.conf" "$TMP/sortie"
+verifier grep -q "différents du dépôt" "$TMP/sortie"
+
+# 5. Unité installée différente de celle livrée : écart signalé puis corrigé, déploiement réussi.
+preparer
+echo "[Service] modifiée à la main" > "$UNITES_DIR/strapontin-web.service"
+lancer
+verifier test "$CODE" = 0
+verifier grep -q "DÉRIVE corrigée" "$TMP/sortie"
+verifier cmp -s "$APP_EXPLOITATION/systemd/strapontin-web.service" "$UNITES_DIR/strapontin-web.service"
 
 if [ "$echecs" -ne 0 ]; then
     echo "$echecs contrôle(s) en échec" >&2
     exit 1
 fi
-echo "update.sh : baseline AIDE régénérée au déploiement et au rollback, conservée sur changement externe"
+echo "update.sh : baseline AIDE (déploiement, rollback, changement externe), livraison contrôlée, dérive d'unité corrigée"

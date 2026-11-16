@@ -579,12 +579,17 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
   // --- fusionnerMemeCreneauDeuxSources ---
 
   private UUID evenementSource(final UUID salleId, final String titre, final String source) {
+    return evenementSource(salleId, titre, source, DATE_FUTURE);
+  }
+
+  private UUID evenementSource(
+      final UUID salleId, final String titre, final String source, final String date) {
     final UUID id =
         jdbc.queryForObject(
             "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id) VALUES"
                 + " (:titre, CAST(:date AS date), CAST('19:30' AS time), 'opera bastille',"
                 + " CAST(:salleId AS uuid)) RETURNING id",
-            Map.of("titre", titre, "date", DATE_FUTURE, "salleId", salleId.toString()),
+            Map.of("titre", titre, "date", date, "salleId", salleId.toString()),
             UUID.class);
     jdbc.update(
         "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut) VALUES"
@@ -740,6 +745,39 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     evenementSource(madeleine, "gospel et negro spirituals", "eventim");
 
     assertEquals(0, fusionSeancesDeuxSources.fusionnerVariantesDeTitreEventim());
+  }
+
+  // Essaïon : trois spectacles distincts partagent « père » et « noël ».
+  @Test
+  void fusionnerVariantesDeTitreEventim_spectaclesDeNoelDistincts_neFusionnePas() {
+    final UUID essaion = creerSalle("Essaion");
+    final UUID charlotte =
+        evenementSource(essaion, "charlotte et le costume du pere noel", "eventim");
+    final UUID lumiere = evenementSource(essaion, "le pere noel aime la lumiere", "eventim");
+
+    assertEquals(0, fusionSeancesDeuxSources.fusionnerVariantesDeTitreEventim());
+    assertTrue(existe(charlotte));
+    assertTrue(existe(lumiere));
+  }
+
+  // Un théâtre à plusieurs scènes cumule les créneaux à deux fiches : ni une adaptation de titre
+  // sans ressemblance (Marlaguette / La flûte enchantée), ni rien d'autre ne les réunit.
+  @Test
+  void fusionnerMemeCreneauDeuxSources_salleAPlusieursScenesTitresSansRessemblance_neFusionnePas() {
+    final UUID essaion = creerSalle("Essaion");
+    for (int jour = 1;
+        jour <= FusionSeancesDeuxSourcesService.SEUIL_CRENEAUX_SALLE_MULTIPLE - 1;
+        jour++) {
+      final String date = LocalDate.parse(DATE_FUTURE).plusDays(jour).toString();
+      evenementSource(essaion, "spectacle un " + jour, "eventim", date);
+      evenementSource(essaion, "spectacle deux " + jour, "eventim", date);
+    }
+    final UUID tm = evenementSource(essaion, "la flute enchantee", "ticketmaster");
+    final UUID ev = evenementSource(essaion, "marlaguette", "eventim");
+
+    assertEquals(0, fusionSeancesDeuxSources.fusionnerMemeCreneauDeuxSources());
+    assertTrue(existe(tm));
+    assertTrue(existe(ev));
   }
 
   // Zénith Paris - La Villette : le spectacle annulé n'absorbe pas son remplaçant du même soir.

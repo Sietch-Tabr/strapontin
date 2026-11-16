@@ -7,6 +7,7 @@ package fr.strapontin.sources.enrichissement;
 import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.sources.http.CadenceurAppelsMemoire;
 import fr.strapontin.sources.http.ClientHttpFactory;
+import fr.strapontin.sources.http.IdentiteHttp;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -67,8 +68,6 @@ final class ClientSparqlWikidata {
             BIND(COALESCE(?cpDirect, ?cpAncetre) AS ?cp)
       """;
 
-  private static final String USER_AGENT =
-      "Strapontin/2.6.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr) SpringBoot/4.1";
   // 502 (nginx en amont de l'endpoint SPARQL) et un content-type inattendu
   // (application/octet- stream au lieu de application/sparql-results+json —
   // constaté en production, réponse vraisemblablement tronquée ou mal formée
@@ -91,6 +90,7 @@ final class ClientSparqlWikidata {
       Pattern.compile("Point\\(([-\\d.]+)\\s+([-\\d.]+)\\)");
 
   private final RestClient restClient;
+  private final IdentiteHttp identite;
   private final fr.strapontin.core.CompteurBilanFetch compteurBilan =
       new fr.strapontin.core.CompteurBilanFetch();
   private final CadenceurAppels cadenceur = new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS);
@@ -101,21 +101,24 @@ final class ClientSparqlWikidata {
   /**
    * Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture
    * 60s).
+   *
+   * @param identite identité déclarée à Wikidata
    */
-  /* package-private : constructeur par défaut réservé aux tests du même
-   * package. */
-  ClientSparqlWikidata() {
-    this(construireRestClientParDefaut());
+  /* package-private : instancié par les sources Wikidata (même package). */
+  ClientSparqlWikidata(final IdentiteHttp identite) {
+    this(construireRestClientParDefaut(), identite);
   }
 
   /**
    * Crée un client avec un RestClient personnalisé (injection de test).
    *
    * @param restClient client HTTP à utiliser
+   * @param identite identité déclarée à Wikidata
    */
   /* package-private : injection de test (RestClient personnalisé). */
-  ClientSparqlWikidata(final RestClient restClient) {
+  ClientSparqlWikidata(final RestClient restClient, final IdentiteHttp identite) {
     this.restClient = restClient;
+    this.identite = identite;
   }
 
   private static RestClient construireRestClientParDefaut() {
@@ -130,7 +133,7 @@ final class ClientSparqlWikidata {
     return restClient
         .post()
         .uri(BASE_URL)
-        .header("User-Agent", USER_AGENT)
+        .header("User-Agent", identite.userAgent())
         .header("Accept", "application/sparql-results+json")
         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
         .body("query=" + URLEncoder.encode(sparql, StandardCharsets.UTF_8))

@@ -9,6 +9,7 @@ import fr.strapontin.sources.enrichissement.DeezerArtisteSource;
 import fr.strapontin.sources.enrichissement.NominatimSalleSource;
 import fr.strapontin.sources.enrichissement.WikidataArtisteSource;
 import fr.strapontin.sources.enrichissement.WikidataSalleSource;
+import fr.strapontin.sources.http.IdentiteHttp;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -43,25 +44,27 @@ public class EnrichissementConfiguration {
   /**
    * Client SPARQL Wikidata pour l'enrichissement des salles par Q-ID.
    *
+   * @param identiteHttp identité déclarée à Wikidata
    * @return instance avec cache 24h
    */
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  WikidataSalleSource wikidataSalleSource() {
-    return new WikidataSalleSource();
+  WikidataSalleSource wikidataSalleSource(final IdentiteHttp identiteHttp) {
+    return new WikidataSalleSource(identiteHttp);
   }
 
   /**
    * Client SPARQL Wikidata pour l'enrichissement et la découverte des artistes.
    *
+   * @param identiteHttp identité déclarée à Wikidata
    * @return instance avec cache 24h
    */
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  WikidataArtisteSource wikidataArtisteSource() {
-    return new WikidataArtisteSource();
+  WikidataArtisteSource wikidataArtisteSource(final IdentiteHttp identiteHttp) {
+    return new WikidataArtisteSource(identiteHttp);
   }
 
   /**

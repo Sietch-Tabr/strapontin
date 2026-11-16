@@ -389,6 +389,31 @@ test.describe("Scénario: indicateur de chargement (#644)", () => {
   }
 });
 
+test.describe("Scénario: accueil — marquage « vu » suspendu", () => {
+  test.use({ storageState: FICHIER_AUTH_USER });
+
+  test("accueil_marquerVusSuspendu_afficheLaListeSansAttendre", async ({
+    page,
+    isMobile,
+  }) => {
+    await page.goto("/");
+    await expect(page.locator(".chips")).toBeVisible({ timeout: 10000 });
+    await naviguerEnInterne(page, "/spectacles", isMobile);
+
+    let marquageIntercepte: () => void = () => {};
+    const marquage = new Promise<void>((resolve) => {
+      marquageIntercepte = resolve;
+    });
+    // Un POST qui ne répond jamais, comme sur un réseau dégradé.
+    await page.route("**/api/accueil/marquer-vus", () => marquageIntercepte());
+
+    await naviguerEnInterne(page, "/", isMobile);
+    await expect(page.locator(".chips")).toBeVisible({ timeout: 10000 });
+    await marquage;
+    await expect(page.locator(".etat-chargement")).toHaveCount(0);
+  });
+});
+
 test.describe("Scénario: indicateur de chargement admin (#644)", () => {
   test.use({ storageState: FICHIER_AUTH_ADMIN });
 
@@ -474,6 +499,27 @@ test.describe("Scénario: garde de session — coupure réseau transitoire (#823
     await page.goto("/");
 
     await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
+  });
+});
+
+test.describe("Scénario: administration — réservée aux administrateurs", () => {
+  test.use({ storageState: FICHIER_AUTH_USER });
+
+  test("admin_utilisateurSimple_redirigeVersLAccueilSansAppelAdmin", async ({
+    page,
+  }) => {
+    const appelsAdmin: string[] = [];
+    page.on("request", (requete) => {
+      if (requete.url().includes("/api/admin")) appelsAdmin.push(requete.url());
+    });
+
+    await page.goto("/admin");
+
+    await expect(page).toHaveURL(/\/$/);
+    await expect(
+      page.getByRole("heading", { name: "Administration" }),
+    ).toHaveCount(0);
+    expect(appelsAdmin).toEqual([]);
   });
 });
 

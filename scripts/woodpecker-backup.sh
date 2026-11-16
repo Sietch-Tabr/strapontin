@@ -9,10 +9,9 @@ SSH="ssh -i /tmp/key -o StrictHostKeyChecking=no"
 SCP="scp -i /tmp/key -o StrictHostKeyChecking=no"
 HOST="root@${LXC_JAVA_HOST}"
 
-$SSH "$HOST" "mkdir -p /opt/strapontin/scripts"
-$SCP scripts/backup-local.sh "$HOST":/opt/strapontin/scripts/backup-local.sh
-$SSH "$HOST" "chmod +x /opt/strapontin/scripts/backup-local.sh"
+. scripts/deposer-exploitation.sh
+deposer_exploitation
 
 echo "[backup] Backup local avant deploiement..."
-$SSH "$HOST" bash /opt/strapontin/scripts/backup-local.sh
+$SSH "$HOST" bash /opt/strapontin/exploitation/backup-local.sh
 echo "[backup] Backup OK"

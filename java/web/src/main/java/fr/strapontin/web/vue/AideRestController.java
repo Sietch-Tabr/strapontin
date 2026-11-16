@@ -6,6 +6,7 @@ package fr.strapontin.web.vue;
 
 import static fr.strapontin.web.ControllerUtils.erreur;
 
+import fr.strapontin.sources.http.IdentiteHttp;
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.LimiteurDebit;
@@ -37,6 +38,7 @@ public class AideRestController {
 
   private final EmailService emailService;
   private final ConfigService configService;
+  private final IdentiteHttp identite;
 
   private final LimiteurDebit limiteurSignalement =
       new LimiteurDebit(
@@ -48,16 +50,21 @@ public class AideRestController {
   /**
    * @param emailService service d'envoi d'emails
    * @param configService service de configuration applicative
+   * @param identite identité de l'application (adresse publique du projet)
    */
-  public AideRestController(final EmailService emailService, final ConfigService configService) {
+  public AideRestController(
+      final EmailService emailService,
+      final ConfigService configService,
+      final IdentiteHttp identite) {
     this.emailService = emailService;
     this.configService = configService;
+    this.identite = identite;
   }
 
   /**
    * Retourne la configuration nécessaire à la page d'aide.
    *
-   * @return resendDisponible, contactEmail et signalLien
+   * @return resendDisponible, contactEmail, signalLien et urlProjet
    */
   @GetMapping("/config")
   public ResponseEntity<Map<String, Object>> config() {
@@ -65,6 +72,7 @@ public class AideRestController {
     corps.put("resendDisponible", emailService.estDisponible());
     corps.put("contactEmail", configService.lireConfig("CONTACT_EMAIL").orElse(""));
     corps.put("signalLien", configService.lireConfig("SIGNAL_LIEN").orElse(""));
+    corps.put("urlProjet", identite.urlProjet());
     return ResponseEntity.ok(corps);
   }
 

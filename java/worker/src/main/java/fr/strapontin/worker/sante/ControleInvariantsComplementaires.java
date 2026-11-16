@@ -7,6 +7,7 @@ package fr.strapontin.worker.sante;
 import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.TitresDeSpectacle;
 import fr.strapontin.worker.WorkerFetchCommun;
+import fr.strapontin.worker.persister.FusionSeancesDeuxSourcesService;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +31,8 @@ final class ControleInvariantsComplementaires {
   private static final String SALLE = "salle";
   private static final int MIN_FICHES_EN_ABSENCE = 3;
   // Au-delà : théâtre à plusieurs salles internes, créneaux doubles légitimes.
-  private static final int SEUIL_CRENEAUX_SALLE_MULTIPLE = 4;
+  private static final int SEUIL_CRENEAUX_SALLE_MULTIPLE =
+      FusionSeancesDeuxSourcesService.SEUIL_CRENEAUX_SALLE_MULTIPLE;
 
   // Deux salles d'une même ville plus éloignées ne jouent pas la même production.
   private static final int DISTANCE_MAX_SALLES_METRES = 2000;

@@ -36,4 +36,16 @@ class TitresDeSpectacleTest {
     assertFalse(TitresDeSpectacle.sontVariantes(null, "Vivaldi Saisons"));
     assertFalse(TitresDeSpectacle.sontVariantes("", "Vivaldi Saisons"));
   }
+
+  // Trois spectacles distincts d'un même théâtre : « père » et « noël » ne font pas un programme.
+  @Test
+  void sontVariantes_spectaclesDistinctsPartageantDeuxMots_retourneFaux() {
+    final String charlotte = "Charlotte et le costume du Père Noël";
+    final String lumiere = "Le Père Noël aime la lumière";
+    final String veut = "N'est pas Père Noël qui veut";
+
+    assertFalse(TitresDeSpectacle.sontVariantes(charlotte, lumiere));
+    assertFalse(TitresDeSpectacle.sontVariantes(charlotte, veut));
+    assertFalse(TitresDeSpectacle.sontVariantes(lumiere, veut));
+  }
 }

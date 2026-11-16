@@ -10,6 +10,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import fr.strapontin.core.CadenceurAppels;
+import fr.strapontin.sources.http.IdentiteHttp;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -26,9 +27,12 @@ import org.springframework.web.client.RestClient;
  */
 class ClientNominatimTest {
 
+  private static final IdentiteHttp IDENTITE =
+      new IdentiteHttp("test", "https://exemple.test/projet", () -> "");
+
   private static ClientNominatim source(
       final RestClient restClient, final CadenceurAppels cadenceur) {
-    return new ClientNominatim(restClient, cadenceur);
+    return new ClientNominatim(restClient, cadenceur, IDENTITE);
   }
 
   @Test
@@ -42,6 +46,9 @@ class ClientNominatimTest {
         .expect(
             MockRestRequestMatchers.requestTo(
                 org.hamcrest.Matchers.containsString("nominatim.openstreetmap.org")))
+        .andExpect(
+            MockRestRequestMatchers.header(
+                "User-Agent", "Strapontin/test (https://exemple.test/projet)"))
         .andRespond(
             MockRestResponseCreators.withSuccess(
                 """

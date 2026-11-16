@@ -207,11 +207,12 @@
             <p>
               Le code source est disponible sur
               <a
-                href="https://codeberg.org/Kwaite/strapontin"
+                v-if="config && config.urlProjet"
+                :href="config.urlProjet"
                 target="_blank"
                 rel="noopener noreferrer"
                 >Codeberg</a
-              >.
+              ><template v-else>Codeberg</template>.
             </p>
           </div>
 

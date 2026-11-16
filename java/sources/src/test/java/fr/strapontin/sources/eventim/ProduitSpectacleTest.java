@@ -102,11 +102,12 @@ class ProduitSpectacleTest {
     return produit;
   }
 
-  // Horse GP, T-Show, MMA : des spectacles sportifs vendus et annulés comme des séances.
+  // Horse GP, MMA, freestyle moto : des spectacles vendus et annulés comme des séances.
   @Test
   void estSpectacle_spectacleSportifOuCombat_retourneVrai() {
     assertTrue(ProduitSpectacle.estSpectacle(produitSport("Autres sports")));
     assertTrue(ProduitSpectacle.estSpectacle(produitSport("Sports de combat")));
+    assertTrue(ProduitSpectacle.estSpectacle(produitSport("Sports mécaniques")));
   }
 
   @Test
