@@ -46,7 +46,7 @@
         <resend.version>4.30.0</resend.version>
         <!-- resend-java épingle org.json à 20250517 (avis GHSA-ghc9-756g-vrcv) : version corrigée imposée ici -->
         <org-json.version>20260814</org-json.version>
-        <logback.version>1.6.6</logback.version>
+        <logback.version>1.6.7</logback.version>
         <!-- resend-java dépend directement d'okhttp-jvm (variante JVM d'okhttp 5, module Kotlin
              Multiplatform) ; version alignée ici sur la dernière publiée. -->
         <okhttp-jvm.version>5.5.1</okhttp-jvm.version>
