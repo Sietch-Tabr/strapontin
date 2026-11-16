@@ -1,5 +1,5 @@
 <template>
-  <div v-if="administrateur">
+  <div>
     <div class="page-entete">
       <h1>Administration</h1>
     </div>
@@ -32,7 +32,7 @@
       >
     </nav>
 
-    <div class="admin-sections">
+    <div v-if="administrateur" class="admin-sections">
       <KeepAlive><AdminJobs v-if="ongletActif === '#jobs'" /></KeepAlive>
       <KeepAlive><AdminSources v-if="ongletActif === '#sources'" /></KeepAlive>
       <KeepAlive
@@ -74,7 +74,8 @@ import AdminUtilisateurs from "../components/admin/AdminUtilisateurs.vue";
 const route = useRoute();
 const router = useRouter();
 const estMobile = useEstMobile();
-// Aucun onglet n'est monté (donc aucun appel d'administration) avant de connaître le rôle.
+// Aucun onglet n'est monté (donc aucun appel d'administration) avant de connaître le rôle ;
+// la navigation, elle, s'affiche aussitôt.
 const { session } = useSession();
 const administrateur = computed(() => session.value?.role === "admin");
 
