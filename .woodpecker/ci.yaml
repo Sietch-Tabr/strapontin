@@ -56,6 +56,7 @@ steps:
       # système) tournent avant le déploiement.
       - bash scripts/tester-update.sh
       - bash scripts/tester-sauvegardes.sh
+      - bash scripts/tester-exploitation.sh
     when:
       - event: push
         branch: main

@@ -16,7 +16,7 @@ set -euo pipefail
 # Variables : HOTE_DEV (défaut root@192.168.20.78), ATTENTE_MAX_S (défaut 900 par job).
 # Code de sortie : nombre de jobs refusés ou dépassés (0 = tous terminés).
 #
-# S'appuie sur /opt/strapontin/scripts/declencher-job.sh du LXC (déployé par /deploy-dev), qui
+# S'appuie sur /opt/strapontin/exploitation/declencher-job.sh du LXC (déployé par /deploy-dev), qui
 # calcule le jeton interne sans jamais afficher le secret : ce script ne lit pas le `.env`.
 # Le LXC est à l'heure de Paris : journalctl reçoit l'heure locale sans fuseau, SQL l'heure avec
 # fuseau (`journalctl --since` rejette « …+00 »). Fichiers sur le LXC : /tmp/jobs-dev.log (journal
@@ -77,7 +77,7 @@ if [ -f /tmp/jobs-dev.verrou ] && kill -0 "$(cat /tmp/jobs-dev.verrou)" 2>/dev/n
 fi
 
 # Contrôles préalables : mieux vaut échouer ici qu'attendre 15 minutes par job.
-declencheur=/opt/strapontin/scripts/declencher-job.sh
+declencheur=/opt/strapontin/exploitation/declencher-job.sh
 [ -x "$declencheur" ] || { echo "ERREUR : $declencheur absent ou non exécutable" >&2; exit 2; }
 journalctl -u strapontin-worker --since "$(date '+%Y-%m-%d %H:%M:%S')" --no-pager >/dev/null 2>&1 \
   || { echo "ERREUR : journalctl illisible pour strapontin-worker" >&2; exit 2; }
@@ -88,7 +88,7 @@ cat > /tmp/jobs-dev-boucle.sh <<'BOUCLE'
 set -u
 attente_max="$1"
 jobs="$2"
-declencheur=/opt/strapontin/scripts/declencher-job.sh
+declencheur=/opt/strapontin/exploitation/declencher-job.sh
 psql_dev() { su - postgres -c "psql -d strapontin -At -F ' | ' -c \"$1\""; }
 echo "job | statut | durée | warn/error logs_admin | warn/error journal" > /tmp/bilan-jobs.txt
 anomalies=0

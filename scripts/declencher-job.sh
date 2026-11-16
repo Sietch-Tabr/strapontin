@@ -8,11 +8,11 @@ set -euo pipefail
 #   declencher-job.sh <typeJob>              déclenche un job Quartz (ex. purger:concerts)
 #   declencher-job.sh --simulation-salles    simulation de la résolution des salles (lecture seule)
 
-APP_DIR="/opt/strapontin"
+. "$(dirname "$0")/chemins.sh"
 ARGUMENT="${1:?usage : declencher-job.sh <typeJob> | --simulation-salles}"
 
-SECRET=$(grep '^APP_CONFIG_SECRET=' "$APP_DIR/.env" | cut -d'=' -f2-)
-[ -n "$SECRET" ] || { echo "APP_CONFIG_SECRET absent de $APP_DIR/.env" >&2; exit 1; }
+SECRET="$(lire_env APP_CONFIG_SECRET)"
+[ -n "$SECRET" ] || { echo "APP_CONFIG_SECRET absent de $ENV_FICHIER" >&2; exit 1; }
 JETON=$(printf '%s' 'strapontin:api-interne-worker' \
     | openssl dgst -sha256 -hmac "$SECRET" -r | cut -d' ' -f1)
 unset SECRET

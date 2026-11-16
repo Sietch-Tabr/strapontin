@@ -2,14 +2,14 @@
 set -euo pipefail
 
 # restore.sh — restaure la base strapontin depuis une sauvegarde
-# Usage : restore.sh <strapontin_YYYYMMDD_HHMMSS.sql.gz | strapontin_YYYYMMDD_HHMMSS.tar.gz>
+# Usage : restore.sh <strapontin-ENV_YYYYMMDD_HHMMSS.sql.gz | ancienne archive .tar.gz>
 # Une sauvegarde .sql.gz est restaurée avec le .env de même nom (.env) s'il est à côté ; une
 # ancienne archive .tar.gz (dump + .env + journaux) l'est avec son contenu.
 # À exécuter en tant que root depuis le LXC prod/dev.
 
-FICHIER="${1:?Usage: restore.sh <strapontin_YYYYMMDD_HHMMSS.sql.gz|.tar.gz>}"
-# Surchargeable par l'environnement pour le test (tester-sauvegardes.sh).
-APP_DIR="${APP_DIR:-/opt/strapontin}"
+FICHIER="${1:?Usage: restore.sh <strapontin-ENV_YYYYMMDD_HHMMSS.sql.gz|.tar.gz>}"
+# Emplacements surchargeables par l'environnement pour le test (tester-sauvegardes.sh).
+. "$(dirname "$0")/chemins.sh"
 APP_USER_DEFAUT="strapontin"
 
 [ -f "$FICHIER" ] || { echo "ERREUR : fichier introuvable : $FICHIER" >&2; exit 1; }
@@ -120,9 +120,10 @@ if [ "$ENV_PRESENT" = "1" ]; then
     chmod 600 "$MDP_TMP"
     su - postgres -c 'psql -v pass="$(cat '"$MDP_TMP"')" -c "ALTER USER '"$APP_USER"' WITH PASSWORD :'"'"'pass'"'"';"'
     rm -f "$MDP_TMP"
-    mv /tmp/.env "$APP_DIR/.env"
-    chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
-    chmod 600 "$APP_DIR/.env"
+    mkdir -p "$(dirname "$ENV_FICHIER")"
+    mv /tmp/.env "$ENV_FICHIER"
+    chown root:root "$ENV_FICHIER"
+    chmod 600 "$ENV_FICHIER"
     echo "  .env restauré, mot de passe PostgreSQL réaligné"
 fi
 

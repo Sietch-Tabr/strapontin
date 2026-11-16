@@ -47,7 +47,7 @@ Logs : `journalctl -fu strapontin-web`/`strapontin-worker` (depuis le LXC), ou `
 
 ### Build et déploiement LXC dev
 
-Utiliser le skill `/deploy-dev` (build Maven avec tests + scp JARs vers `/opt/strapontin/{web,worker}.jar.new` + `scripts/update.sh` + tail logs) — commandes manuelles dans le skill lui-même si besoin d'un fallback.
+Utiliser le skill `/deploy-dev` (build Maven avec tests + livraison des scripts et JARs + `exploitation/update.sh` + tail logs) — commandes manuelles dans le skill lui-même si besoin d'un fallback.
 
 ### Gestion des issues (Codeberg) et Git
 
@@ -58,11 +58,11 @@ CLI : `tea` (pas `gh` — Codeberg est Gitea, incompatible avec `gh`). `tea issu
 
 ## Sauvegarde et restauration
 
-Scripts `backup.sh`/`restore.sh`/`restore-test.sh` (propriétaire de base, réalignement du mot de passe, LXC temporaire, jamais en CI) : [`scripts/CLAUDE.md`](scripts/CLAUDE.md).
+Arborescence des LXC, livraison des scripts, `backup.sh`/`restore.sh`/`restore-test.sh` : [`scripts/CLAUDE.md`](scripts/CLAUDE.md).
 
-## Variables d'environnement — `/opt/strapontin/.env`
+## Variables d'environnement — `/etc/opt/strapontin/strapontin.env`
 
-Généré par `provision.sh` (commun à web et worker, `chmod 600`) :
+Généré par `provision.sh` (commun à web et worker, root, `chmod 600`, lu par systemd) :
 
 ```
 SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/strapontin
@@ -74,9 +74,9 @@ INTEGRITY_INTERNAL_SECRET=<secret Bearer protégeant POST /api/interne/integrite
 SPRING_PROFILES_ACTIVE=dev|prod
 ```
 
-`BACKUP_INTERNAL_SECRET` : `backup-local.sh` le lit dans `.env` et l'envoie via `Authorization: Bearer`. Absent → l'endpoint répond 403 (notifications de backup perdues, mais le dump continue). `INTEGRITY_INTERNAL_SECRET` : même mécanisme pour `aide-check.sh`/`update.sh` → `IntegriteAlerteController`. `update.sh` vérifie aussi, avant de régénérer la baseline AIDE, qu'aucun script déployé (`backup`/`restore`/`update`/`rotation-secrets.sh`) n'a été modifié hors déploiement — sinon baseline conservée et alerte `modifie`.
+`BACKUP_INTERNAL_SECRET` : `backup-local.sh` le lit dans ce fichier et l'envoie via `Authorization: Bearer`. Absent → l'endpoint répond 403 (notifications de backup perdues, mais le dump continue). `INTEGRITY_INTERNAL_SECRET` : même mécanisme pour `aide-check.sh`/`update.sh` → `IntegriteAlerteController`. `update.sh` vérifie aussi, avant de régénérer la baseline AIDE, qu'aucun fichier hors livraison n'a été modifié — sinon baseline conservée et alerte `modifie`.
 
-**Rotation des secrets** : `scripts/rotation-secrets.sh` (`--db`/`--app-config`/`--backup`/`--integrite`/`--tous`, sur le LXC) sauvegarde `.env`, pose le nouveau secret, redémarre et restaure l'ancien `.env` en cas d'échec. Pour `APP_CONFIG_SECRET`, l'ancien secret passe dans `APP_CONFIG_SECRET_PRECEDENT` : `ConfigCipher` s'y replie au déchiffrement et `RechiffrementSecretConfig` (web, au démarrage) rechiffre `app_config` **et** `users.two_factor_secret` avec le nouveau, puis le script retire la variable. Procédure complète : [wiki Sécurité](https://codeberg.org/Kwaite/strapontin/wiki/S%C3%A9curit%C3%A9).
+**Rotation des secrets** : `scripts/rotation-secrets.sh` (`--db`/`--app-config`/`--backup`/`--integrite`/`--tous`, sur le LXC) sauvegarde le fichier, pose le nouveau secret, redémarre et restaure l'ancien en cas d'échec. Pour `APP_CONFIG_SECRET`, l'ancien secret passe dans `APP_CONFIG_SECRET_PRECEDENT` : `ConfigCipher` s'y replie au déchiffrement et `RechiffrementSecretConfig` (web, au démarrage) rechiffre `app_config` **et** `users.two_factor_secret` avec le nouveau, puis le script retire la variable. Procédure complète : [wiki Sécurité](https://codeberg.org/Kwaite/strapontin/wiki/S%C3%A9curit%C3%A9).
 
 ## Configuration applicative (`app_config`)
 

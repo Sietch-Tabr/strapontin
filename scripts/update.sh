@@ -3,13 +3,12 @@ set -euo pipefail
 trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 
 # update.sh — redémarrage des services Strapontin après déploiement de nouveaux JARs
-# Usage : /opt/strapontin/update.sh
-# Usage : /opt/strapontin/scripts/update.sh
-# Appelé par Woodpecker (prod) ou manuellement (dev) après scp des JARs vers *.jar.new.
+# Usage : /opt/strapontin/exploitation/update.sh
+# Appelé par Woodpecker (prod) ou manuellement (dev) après le dépôt des scripts d'exploitation
+# (deposer-exploitation.sh) et des JARs dans application/*.jar.new.
 
-APP_DIR="${APP_DIR:-/opt/strapontin}"
-AIDE_CONF="${AIDE_CONF:-/etc/aide/aide.conf}"
-AIDE_BASE="${AIDE_BASE:-/var/lib/aide}"
+. "$(dirname "$0")/chemins.sh"
+MANIFESTE="$APP_EXPLOITATION/MANIFESTE.sha256"
 AIDE_ACTIF=false
 CHANGEMENTS_EXTERNES=""
 
@@ -29,8 +28,8 @@ regenerer_baseline() {
 rollback() {
     echo "[update] Rollback en cours..." >&2
     set +e
-    [ -f "$APP_DIR/web.jar.prev" ] && mv "$APP_DIR/web.jar.prev" "$APP_DIR/web.jar"
-    [ -f "$APP_DIR/worker.jar.prev" ] && mv "$APP_DIR/worker.jar.prev" "$APP_DIR/worker.jar"
+    [ -f "$APP_JARS/web.jar.prev" ] && mv "$APP_JARS/web.jar.prev" "$APP_JARS/web.jar"
+    [ -f "$APP_JARS/worker.jar.prev" ] && mv "$APP_JARS/worker.jar.prev" "$APP_JARS/worker.jar"
     systemctl restart strapontin-web strapontin-worker
     # Le rollback retire les .prev que la baseline attend : sans la régénérer, le contrôle
     # suivant alerte à tort. Un changement externe déjà détecté garde la baseline en l'état.
@@ -43,21 +42,64 @@ rollback() {
     set -e
 }
 
-# Fichiers qu'un déploiement légitime a déjà pu modifier avant cet appel (copiés par
-# woodpecker-deploy.sh) — les JARs ne sont remplacés qu'après le pré-contrôle ci-dessous.
-# La règle AIDE sur web.jar couvre aussi web.jar.new (préfixe) ; le dossier scripts change
-# dès qu'un script y est ajouté, chaque fichier ajouté restant listé individuellement.
+# sha256 portable (Linux : sha256sum, macOS : shasum).
+somme_sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasum -a 256 "$1"; fi
+}
+
+# Les fichiers livrés doivent être ceux du dépôt, dont le manifeste est livré avec eux : un
+# fichier absent, différent ou une livraison interrompue arrête le déploiement avant tout
+# remplacement.
+verifier_livraison() {
+    local somme nom ecarts=""
+    if [ ! -f "$MANIFESTE" ]; then
+        echo "[update] ERREUR : manifeste de livraison absent ($MANIFESTE)" >&2
+        return 1
+    fi
+    while read -r somme nom; do
+        if [ ! -f "$APP_EXPLOITATION/$nom" ] \
+            || [ "$(somme_sha256 "$APP_EXPLOITATION/$nom" | cut -d' ' -f1)" != "$somme" ]; then
+            ecarts+="  $nom"$'\n'
+        fi
+    done < "$MANIFESTE"
+    if [ -n "$ecarts" ]; then
+        echo "[update] ERREUR : fichiers livrés différents du dépôt :" >&2
+        printf '%s' "$ecarts" >&2
+        return 1
+    fi
+}
+
+# Unités systemd et configuration AIDE installées = celles livrées. Chaque écart est signalé,
+# puis corrigé ; daemon-reload n'est lancé que si une unité a changé.
+aligner_installation() {
+    local source cible unite_changee=false
+    for source in "$APP_EXPLOITATION"/systemd/*; do
+        cible="$UNITES_DIR/$(basename "$source")"
+        if ! cmp -s "$source" "$cible"; then
+            echo "[update] DÉRIVE corrigée : $cible différait du dépôt"
+            cp "$source" "$cible"
+            unite_changee=true
+        fi
+    done
+    if [ -f "$APP_EXPLOITATION/aide.conf" ] && [ -f "$AIDE_CONF" ] \
+        && ! cmp -s "$APP_EXPLOITATION/aide.conf" "$AIDE_CONF"; then
+        echo "[update] DÉRIVE corrigée : $AIDE_CONF différait du dépôt"
+        cp "$APP_EXPLOITATION/aide.conf" "$AIDE_CONF"
+    fi
+    [ "$unite_changee" = true ] && systemctl daemon-reload
+    return 0
+}
+
+# Chemins qu'un déploiement légitime a déjà pu modifier avant cet appel : les fichiers du
+# manifeste (déposés par deposer-exploitation.sh) et les JARs .new, qui ne sont activés qu'après
+# le pré-contrôle ci-dessous.
 FICHIERS_DEPLOIEMENT=(
-    "$APP_DIR/web.jar.new"
-    "$APP_DIR/worker.jar.new"
-    "$APP_DIR/scripts"
-    "$APP_DIR/scripts/backup.sh"
-    "$APP_DIR/scripts/restore.sh"
-    "$APP_DIR/scripts/update.sh"
-    "$APP_DIR/scripts/rotation-secrets.sh"
-    "$APP_DIR/scripts/backup-local.sh"
-    "$APP_DIR/scripts/declencher-job.sh"
+    "$APP_JARS" "$APP_JARS/web.jar.new" "$APP_JARS/worker.jar.new"
+    "$APP_EXPLOITATION" "$APP_EXPLOITATION/systemd" "$MANIFESTE"
 )
+if [ -f "$MANIFESTE" ]; then
+    while read -r _ nom; do FICHIERS_DEPLOIEMENT+=("$APP_EXPLOITATION/$nom"); done < "$MANIFESTE"
+fi
 # Chemins réellement modifiés selon le rapport AIDE : ajoutés, supprimés, ou changés dans leur
 # contenu ou leurs droits. Un fichier recopié à l'identique (step Woodpecker backup) ne change
 # que de dates (Mtime/Ctime/Atime/Inode) et n'est pas une modification.
@@ -67,18 +109,20 @@ chemins_modifies() {
         /^Changed entries:/ { section = "" ; next }
         /^Detailed information about changes:/ { section = "detail" ; next }
         /^The attributes of the/ { section = "" ; next }
-        section == "ajout" && match($0, /: (\/opt\/strapontin|\/etc\/systemd)[^ ]*/) {
+        section == "ajout" && match($0, /: (\/opt\/strapontin|\/etc\/opt\/strapontin|\/etc\/systemd)[^ ]*/) {
             print substr($0, RSTART + 2, RLENGTH - 2) ; next
         }
         section == "detail" && /^(File|Directory|Link): / { chemin = $2 ; next }
         section == "detail" && chemin != "" && match($0, /^ [A-Za-z0-9\/_-]+ *:/) {
             attribut = substr($0, 2, RLENGTH - 2) ; gsub(/ /, "", attribut)
-            if (attribut !~ /^(Mtime|Ctime|Atime|Inode)$/ && chemin ~ /^(\/opt\/strapontin|\/etc\/systemd)/) {
+            if (attribut !~ /^(Mtime|Ctime|Atime|Inode)$/ && chemin ~ /^(\/opt\/strapontin|\/etc\/opt\/strapontin|\/etc\/systemd)/) {
                 print chemin
             }
         }
     ' | sort -u
 }
+
+verifier_livraison || exit 1
 
 command -v aide >/dev/null 2>&1 && [ -f "$AIDE_CONF" ] && AIDE_ACTIF=true
 
@@ -105,15 +149,17 @@ if [ "$AIDE_ACTIF" = true ]; then
     fi
 fi
 
+aligner_installation
+
 # Sauvegarde des JARs actifs (absent au premier déploiement)
 echo "[update] Sauvegarde des JARs..."
-[ -f "$APP_DIR/web.jar" ] && cp "$APP_DIR/web.jar" "$APP_DIR/web.jar.prev"
-[ -f "$APP_DIR/worker.jar" ] && cp "$APP_DIR/worker.jar" "$APP_DIR/worker.jar.prev"
+[ -f "$APP_JARS/web.jar" ] && cp "$APP_JARS/web.jar" "$APP_JARS/web.jar.prev"
+[ -f "$APP_JARS/worker.jar" ] && cp "$APP_JARS/worker.jar" "$APP_JARS/worker.jar.prev"
 
 # Activation atomique : mv est atomique sur le même filesystem
 echo "[update] Activation des nouveaux JARs..."
-mv "$APP_DIR/web.jar.new" "$APP_DIR/web.jar"
-mv "$APP_DIR/worker.jar.new" "$APP_DIR/worker.jar"
+mv "$APP_JARS/web.jar.new" "$APP_JARS/web.jar"
+mv "$APP_JARS/worker.jar.new" "$APP_JARS/worker.jar"
 
 echo "[update] Redémarrage des services..."
 systemctl restart strapontin-web strapontin-worker
@@ -153,7 +199,7 @@ if [ "$AIDE_ACTIF" = true ] && [ -n "$CHANGEMENTS_EXTERNES" ]; then
     # quotidienne tant qu'un humain n'aura pas authentifié le changement externe puis
     # régénéré la baseline (aide --init, cf. wiki Sécurité).
     echo "[update] Baseline AIDE NON régénérée : changement externe à authentifier" >&2
-    INTEGRITY_SECRET=$(grep '^INTEGRITY_INTERNAL_SECRET=' "$APP_DIR/.env" | cut -d'=' -f2- || true)
+    INTEGRITY_SECRET="$(lire_env INTEGRITY_INTERNAL_SECRET)"
     curl -sf -X POST \
         -H "Authorization: Bearer $INTEGRITY_SECRET" \
         --data-urlencode "statut=modifie" \

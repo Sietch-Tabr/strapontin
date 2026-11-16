@@ -1,0 +1,27 @@
+[Unit]
+Description=Strapontin — API REST
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=strapontin
+WorkingDirectory=/opt/strapontin
+EnvironmentFile=/etc/opt/strapontin/strapontin.env
+ExecStart=/usr/bin/java -Xms128m -Xmx768m -jar /opt/strapontin/application/web.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+LimitNOFILE=65536
+# Seul écrit : le journal d'accès (/var/log/strapontin) et /tmp, privé au service. La variable
+# d'environnement prime sur application.properties : un JAR plus ancien (retour arrière) écrit
+# lui aussi dans ce dossier, le seul inscriptible.
+LogsDirectory=strapontin
+Environment=SERVER_TOMCAT_ACCESSLOG_DIRECTORY=/var/log/strapontin
+NoNewPrivileges=yes
+ProtectSystem=strict
+PrivateTmp=yes
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target

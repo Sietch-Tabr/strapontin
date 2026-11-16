@@ -1,0 +1,9 @@
+[Unit]
+Description=Contrôle d'intégrité AIDE quotidien Strapontin
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

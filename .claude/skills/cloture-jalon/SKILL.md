@@ -54,7 +54,7 @@ Pipeline en échec ou anomalie dans le journal : **s'arrêter**. Ni tag, ni rele
   ```bash
   curl -s --max-time 20 -o /dev/null -w '%{http_code}\n' https://strapontin.kwaite.fr/api/admin/jobs
   ```
-- JAR réellement déployés : `acces prod exec "ls -la --time-style=full-iso /opt/strapontin/"`, date de `web.jar`/`worker.jar` égale à celle du déploiement.
+- JAR réellement déployés : `acces prod exec "ls -la --time-style=full-iso /opt/strapontin/application/"`, date de `web.jar`/`worker.jar` égale à celle du déploiement.
 - Migrations Flyway appliquées sans échec (`flyway_schema_history`, aucune ligne `success = false`).
 - Contrôle d'intégrité AIDE : aucune « modification détectée » liée au déploiement dans `logs_admin`.
 
