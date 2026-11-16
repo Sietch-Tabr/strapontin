@@ -17,6 +17,7 @@ export const versionsChangelog = [
       {
         categorie: "Application",
         items: [
+          "Un compte sans droits d'administration qui ouvre l'adresse /admin est ramené à l'accueil, sans appel refusé en arrière-plan.",
           "L'application se présente aux services externes (Nominatim, Wikidata) avec sa version réelle et le contact que l'administrateur renseigne dans la configuration, et non plus avec une version périmée et une adresse écrite dans le code ; le lien du code source de la page d'aide suit la même configuration.",
         ],
       },

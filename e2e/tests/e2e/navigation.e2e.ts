@@ -502,6 +502,27 @@ test.describe("Scénario: garde de session — coupure réseau transitoire (#823
   });
 });
 
+test.describe("Scénario: administration — réservée aux administrateurs", () => {
+  test.use({ storageState: FICHIER_AUTH_USER });
+
+  test("admin_utilisateurSimple_redirigeVersLAccueilSansAppelAdmin", async ({
+    page,
+  }) => {
+    const appelsAdmin: string[] = [];
+    page.on("request", (requete) => {
+      if (requete.url().includes("/api/admin")) appelsAdmin.push(requete.url());
+    });
+
+    await page.goto("/admin");
+
+    await expect(page).toHaveURL(/\/$/);
+    await expect(
+      page.getByRole("heading", { name: "Administration" }),
+    ).toHaveCount(0);
+    expect(appelsAdmin).toEqual([]);
+  });
+});
+
 test.describe("Scénario: Découverte — actualisation réservée aux admins", () => {
   test.describe("utilisateur", () => {
     test.use({ storageState: FICHIER_AUTH_USER });

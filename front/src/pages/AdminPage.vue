@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-if="administrateur">
     <div class="page-entete">
       <h1>Administration</h1>
     </div>
@@ -58,9 +58,10 @@
 <script setup>
 defineOptions({ name: "AdminPage" });
 
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useEstMobile } from "../composables/useBreakpoint.js";
+import { useSession } from "../composables/useSession.js";
 import AdminJobs from "../components/admin/AdminJobs.vue";
 import AdminSources from "../components/admin/AdminSources.vue";
 import AdminATraiter from "../components/admin/AdminATraiter.vue";
@@ -73,6 +74,9 @@ import AdminUtilisateurs from "../components/admin/AdminUtilisateurs.vue";
 const route = useRoute();
 const router = useRouter();
 const estMobile = useEstMobile();
+// Aucun onglet n'est monté (donc aucun appel d'administration) avant de connaître le rôle.
+const { session } = useSession();
+const administrateur = computed(() => session.value?.role === "admin");
 
 const onglets = [
   { ancre: "#jobs", label: "Tableau de bord" },
