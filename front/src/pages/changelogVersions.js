@@ -7,6 +7,12 @@ export const versionsChangelog = [
     entete: "v 3.1.5 — 16 novembre 2026",
     categories: [
       {
+        categorie: "Concerts et salles",
+        items: [
+          "Les spectacles de la catégorie Eventim « Sports mécaniques » (show de freestyle moto, Blackliner à Reims et à Bordeaux) sont rafraîchis comme les autres spectacles sportifs et ne glissent plus vers la suppression suggérée.",
+        ],
+      },
+      {
         categorie: "Accueil",
         items: [
           "L'accueil affiche aussitôt la liste de vos prochains concerts, ou une roue de chargement, même quand la connexion est lente : le marquage « vu » ne retarde plus rien, et le badge « Nouveau » est visible lors de la visite où il apparaît.",
