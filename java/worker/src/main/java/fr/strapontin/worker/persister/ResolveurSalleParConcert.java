@@ -167,8 +167,8 @@ class ResolveurSalleParConcert {
         : retenirParCleForte(chercherSalleParCleForte(concert), concert);
   }
 
-  // Artiste, date, heure et département identiques désignent le même lieu : un code postal
-  // différent d'une billetterie à l'autre ne l'écarte pas, seule une distance excessive le fait.
+  // Artiste, date, heure et département identiques : même lieu. Un code postal
+  // différent entre billetteries ne l'écarte pas, seule la distance le fait.
   private UUID retenirParCleForte(final UUID candidat, final ValeurConcert concert) {
     if (resolutionParPosition
         && parPosition.tropEloignee(candidat, concert.salle(), concert.position())) {

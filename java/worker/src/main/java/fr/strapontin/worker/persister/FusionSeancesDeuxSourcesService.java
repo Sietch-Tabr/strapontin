@@ -24,8 +24,8 @@ import org.springframework.stereotype.Service;
 public class FusionSeancesDeuxSourcesService {
 
   /**
-   * Nombre de créneaux à deux fiches au-delà duquel une salle est tenue pour un théâtre à
-   * plusieurs scènes, où deux fiches au même créneau sont deux spectacles.
+   * Créneaux à deux fiches à partir desquels une salle est un théâtre à
+   * plusieurs scènes : deux fiches au même créneau y sont deux spectacles.
    */
   public static final int SEUIL_CRENEAUX_SALLE_MULTIPLE = 4;
 
@@ -89,7 +89,7 @@ public class FusionSeancesDeuxSourcesService {
    * Même spectacle sous deux intitulés (« of Mtsensk » / « de Mzensk ») : seuls
    * événements de leur salle au créneau, Ticketmaster seul et Eventim seul, sans
    * artiste reconnu ni fiche annulée ; dans un théâtre à plusieurs scènes, les
-   * intitulés doivent aussi se ressembler. À appeler après les contrôles d'intégrité.
+   * intitulés doivent aussi se ressembler. À appeler après les contrôles.
    * @return nombre de fusions effectuées
    */
   public int fusionnerMemeCreneauDeuxSources() {
@@ -124,8 +124,8 @@ public class FusionSeancesDeuxSourcesService {
     final Set<UUID> sallesAPlusieursScenes = paires.isEmpty() ? Set.of() : sallesAPlusieursScenes();
     int fusions = 0;
     for (final Map<String, Object> paire : paires) {
-      // Dans un théâtre à plusieurs scènes, deux fiches au même créneau sont deux spectacles :
-      // seule une ressemblance de titres prouve la même séance.
+      // Théâtre à plusieurs scènes : deux fiches au même créneau sont deux
+      // spectacles, seule une ressemblance de titres prouve la même séance.
       if (sallesAPlusieursScenes.contains((UUID) paire.get("salle_id"))
           && !TitresDeSpectacle.sontVariantes(
               (String) paire.get("titre_cible"), (String) paire.get("titre_source"))) {
@@ -138,7 +138,7 @@ public class FusionSeancesDeuxSourcesService {
     return fusions;
   }
 
-  // Le décompte se fait ici et non en SQL (fonction de fenêtre), bien plus lent sur la prod.
+  // Décompte en Java : en SQL (fonction de fenêtre), bien plus lent sur la prod.
   private Set<UUID> sallesAPlusieursScenes() {
     final List<UUID> creneauxDoubles =
         jdbc.query(

@@ -23,8 +23,8 @@ final class ProduitSpectacle {
   private static final Set<String> CATEGORIES_SPECTACLE =
       Set.of("Concerts & Festivals", "Classique & Danse", "Théâtre", "Humour", "Spectacles");
 
-  // Le sport est un match, sauf ces sous-catégories : un spectacle sportif (Horse GP,
-  // freestyle moto) ou un combat se vend et s'annule comme une séance.
+  // Le sport est un match, sauf ces sous-catégories : un spectacle sportif
+  // (Horse GP, freestyle moto) ou un combat se vend comme une séance.
   private static final String CATEGORIE_SPORTS = "Sports";
   private static final Set<String> SOUS_CATEGORIES_SPORT_SPECTACLE =
       Set.of("Autres sports", "Sports de combat", "Sports mécaniques");

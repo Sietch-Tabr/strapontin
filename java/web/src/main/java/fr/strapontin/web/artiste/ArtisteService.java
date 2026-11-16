@@ -61,8 +61,7 @@ public class ArtisteService {
   /**
    * @param artisteRepository accès aux données artistes
    * @param objectMapper désérialiseur JSON (pour l'API Deezer)
-   * @param restClient client HTTP partagé (timeout 5s/10s défini dans {@link
-   *     fr.strapontin.web.WebConfiguration})
+   * @param restClient client HTTP partagé (timeouts 5 s et 10 s)
    * @param logAdminService journalisation des actions admin
    * @param budgetRecherches plafonds globaux des recherches vers Wikidata et Deezer
    * @param identite identité déclarée à Wikidata

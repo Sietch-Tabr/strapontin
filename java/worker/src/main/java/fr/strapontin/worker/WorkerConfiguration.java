@@ -236,13 +236,12 @@ public class WorkerConfiguration {
   }
 
   /**
-   * Identité déclarée aux services externes : version de l'application, adresse du projet et
-   * contact lu dans la configuration.
+   * Identité déclarée aux services externes (version, projet, contact).
    *
-   * @param buildProperties informations de build (version courante)
-   * @param configService configuration applicative (clé {@code CONTACT_EMAIL})
+   * @param buildProperties version courante
+   * @param configService clé {@code CONTACT_EMAIL}
    * @param urlProjet adresse publique du projet
-   * @return identité partagée par tous les appels sortants
+   * @return identité partagée par les appels sortants
    */
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
