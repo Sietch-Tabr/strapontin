@@ -21,11 +21,13 @@ salles_suffixe AS (
   SELECT s1.id FROM salles s1
   JOIN salles s2 ON s1.id <> s2.id
     AND s2.nom_norm LIKE '%' || s1.nom_norm || '%' AND s1.nom_norm <> s2.nom_norm
+    AND s2.salle_parent_id IS DISTINCT FROM s1.id AND s1.salle_parent_id IS DISTINCT FROM s2.id
   WHERE s2.wikidata_id IS NULL AND s1.wikidata_id IS NOT NULL AND length(s1.nom_norm) > 4
   UNION
   SELECT s2.id FROM salles s1
   JOIN salles s2 ON s1.id <> s2.id
     AND s2.nom_norm LIKE '%' || s1.nom_norm || '%' AND s1.nom_norm <> s2.nom_norm
+    AND s2.salle_parent_id IS DISTINCT FROM s1.id AND s1.salle_parent_id IS DISTINCT FROM s2.id
   WHERE s2.wikidata_id IS NULL AND s1.wikidata_id IS NOT NULL AND length(s1.nom_norm) > 4
 )
 SELECT DISTINCT us.user_id, s.id AS salle_id, s.nom,
