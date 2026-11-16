@@ -30,7 +30,7 @@
     "eslint-plugin-vue": "^10.12.1",
     "eslint-plugin-vuejs-accessibility": "^2.6.3",
     "globals": "^17.14.0",
-    "lucide-static": "^1.71.0",
+    "lucide-static": "^1.73.0",
     "postcss-html": "^2.0.0",
     "stylelint": "^18.0.0",
     "stylelint-config-html": "^2.0.0",
