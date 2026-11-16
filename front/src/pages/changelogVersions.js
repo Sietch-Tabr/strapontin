@@ -10,6 +10,7 @@ export const versionsChangelog = [
         categorie: "Concerts et salles",
         items: [
           "Les spectacles de la catégorie Eventim « Sports mécaniques » (show de freestyle moto, Blackliner à Reims et à Bordeaux) sont rafraîchis comme les autres spectacles sportifs et ne glissent plus vers la suppression suggérée.",
+          "Une séance rattachée à une salle déjà connue (même artiste, même date, même heure, même département) ne crée plus de salle provisoire quand les billetteries indiquent des codes postaux différents pour le même lieu (Centre de Congrès de Saint-Étienne).",
         ],
       },
       {

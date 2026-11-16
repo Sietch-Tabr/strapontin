@@ -103,9 +103,20 @@ final class ResolveurSallePosition {
    */
   /* package-private : appelé par ResolveurSalleParConcert et la simulation. */
   boolean incompatible(final UUID salleId, final String nom, final PositionLieu position) {
-    if (salleId != null && codePostalDifferent(salleId, nom, position)) {
-      return true;
-    }
+    return salleId != null && codePostalDifferent(salleId, nom, position)
+        || tropEloignee(salleId, nom, position);
+  }
+
+  /**
+   * Veto de distance seul, sans le code postal : pour une salle déjà retenue sur artiste, date,
+   * heure et département, où les billetteries divergent sur le code postal d'un même lieu.
+   * @param salleId salle candidate, peut être null
+   * @param nom nom brut du lieu publié
+   * @param position position publiée du lieu
+   * @return true si salle et lieu, géolocalisés, sont trop éloignés pour être le même lieu
+   */
+  /* package-private : appelé par ResolveurSalleParConcert. */
+  boolean tropEloignee(final UUID salleId, final String nom, final PositionLieu position) {
     if (salleId == null || !position.estGeolocalisee()) {
       return false;
     }
