@@ -389,6 +389,31 @@ test.describe("Scénario: indicateur de chargement (#644)", () => {
   }
 });
 
+test.describe("Scénario: accueil — marquage « vu » suspendu", () => {
+  test.use({ storageState: FICHIER_AUTH_USER });
+
+  test("accueil_marquerVusSuspendu_afficheLaListeSansAttendre", async ({
+    page,
+    isMobile,
+  }) => {
+    await page.goto("/");
+    await expect(page.locator(".chips")).toBeVisible({ timeout: 10000 });
+    await naviguerEnInterne(page, "/spectacles", isMobile);
+
+    let marquageIntercepte: () => void = () => {};
+    const marquage = new Promise<void>((resolve) => {
+      marquageIntercepte = resolve;
+    });
+    // Un POST qui ne répond jamais, comme sur un réseau dégradé.
+    await page.route("**/api/accueil/marquer-vus", () => marquageIntercepte());
+
+    await naviguerEnInterne(page, "/", isMobile);
+    await expect(page.locator(".chips")).toBeVisible({ timeout: 10000 });
+    await marquage;
+    await expect(page.locator(".etat-chargement")).toHaveCount(0);
+  });
+});
+
 test.describe("Scénario: indicateur de chargement admin (#644)", () => {
   test.use({ storageState: FICHIER_AUTH_ADMIN });
 

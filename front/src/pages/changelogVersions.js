@@ -4,6 +4,17 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.1.5 — 16 novembre 2026",
+    categories: [
+      {
+        categorie: "Accueil",
+        items: [
+          "L'accueil affiche aussitôt la liste de vos prochains concerts, ou une roue de chargement, même quand la connexion est lente : le marquage « vu » ne retarde plus rien, et le badge « Nouveau » est visible lors de la visite où il apparaît.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.1.4 — 10 novembre 2026",
     categories: [
       {

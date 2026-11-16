@@ -194,7 +194,11 @@
 </template>
 
 <script setup>
-import { appelApi, lireJson } from "../utils/api.js";
+import {
+  appelApi,
+  ENTETE_DONNEES_EN_CACHE,
+  lireJson,
+} from "../utils/api.js";
 defineOptions({ name: "AccueilPage" });
 
 import {
@@ -226,7 +230,8 @@ const { chargerSession } = useSession();
 
 const donnees = shallowRef(null);
 const dialogueConfirmation = ref(null);
-const chargement = ref(false);
+// Vrai dès le montage : un titre seul, sans roue ni liste, n'est jamais un état affichable.
+const chargement = ref(true);
 
 const filtreNouveau = computed(() => route.query.nouveau === "true");
 const filtreIndisponibles = computed(() =>
@@ -241,6 +246,8 @@ const controleurComposant = new AbortController();
 // leurs résultats dans le désordre.
 let controleurActuel = null;
 
+// Retourne vrai quand la liste vient du serveur (pas d'une copie locale) : seule une liste
+// réellement affichée peut être marquée comme vue.
 async function charger() {
   controleurActuel?.abort();
   const controleur = new AbortController();
@@ -258,12 +265,14 @@ async function charger() {
     // au démarrage PWA (shell servi depuis le cache SW), cet appel peut partir avant que
     // la session ne soit confirmée côté serveur (401 transitoire, pas une vraie panne) — pas de
     // toast dans ce cas, comme le fait déjà App.vue pour ses propres appels de montage.
-    if (rep.status === 401) return;
+    if (rep.status === 401) return false;
     if (!rep.ok) throw new Error();
     donnees.value = await lireJson(rep);
+    return !rep.headers.has(ENTETE_DONNEES_EN_CACHE);
   } catch (e) {
-    if (e.name === "AbortError") return;
+    if (e.name === "AbortError") return false;
     afficherToast("Impossible de charger les concerts.", "erreur");
+    return false;
   } finally {
     if (controleurActuel === controleur) chargement.value = false;
   }
@@ -404,10 +413,8 @@ watch(
   { deep: true },
 );
 
-onMounted(async () => {
-  // Best-effort, jamais bloquant : une panne réseau sur cet appel ne doit pas empêcher le
-  // chargement de la page (chargerSession/charger/scrollVersAncre ci-dessous) — un badge
-  // "nouveau" resté affiché un cycle de plus n'est pas grave, une page blanche l'est.
+// Après l'affichage de la liste : le marquage ne retarde ni ne modifie jamais ce qui est affiché.
+async function marquerVus() {
   try {
     const rep = await appelApi("/api/accueil/marquer-vus", {
       method: "POST",
@@ -415,10 +422,15 @@ onMounted(async () => {
     });
     await rep.arrayBuffer();
   } catch (_) {
-    // ignoré volontairement
+    // un badge « nouveau » resté un cycle de plus n'est pas grave
   }
   chargerSession();
-  await charger();
+}
+
+onMounted(async () => {
+  const listeAffichee = await charger();
+  if (listeAffichee) marquerVus();
+  else chargerSession();
   await scrollVersAncre();
 });
 
