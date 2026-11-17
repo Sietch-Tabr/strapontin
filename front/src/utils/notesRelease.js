@@ -12,6 +12,20 @@ export function trouverEntree(versions, version) {
 }
 
 /**
+ * Indique une pré-version : un suffixe suit le numéro (« 3.2.0-dev.1 »). Une pré-version d'essai
+ * n'est jamais annoncée aux utilisateurs : elle n'a ni entrée de changelog ni entrée de Roadmap.
+ * @param {string} version numéro de version sans préfixe
+ * @returns {boolean} vrai si la version porte un suffixe de pré-version
+ */
+export function estPreVersion(version) {
+  return /^\d+\.\d+\.\d+-/.test(version);
+}
+
+/** Notes d'une pré-version d'essai, qui n'a pas d'entrée de changelog. */
+export const NOTES_PRE_VERSION =
+  "Pré-version d'essai, non destinée à la production.\n";
+
+/**
  * Formate une entrée du changelog en Markdown, une section par catégorie.
  * @param {{categories: Array<{categorie: string, items: string[]}>}} entree entrée du changelog
  * @returns {string} les notes de release, terminées par un saut de ligne
