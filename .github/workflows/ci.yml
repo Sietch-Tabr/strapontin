@@ -1,6 +1,8 @@
 name: ci
 
-# Aucun cache de dépendances : le workflow publie des releases, un cache empoisonné serait livré.
+# Cache Maven dans les seuls jobs qui ne livrent rien (tests, analyse statique, dépendances) : construction
+# et publication téléchargent tout depuis Maven Central, un cache empoisonné ne peut donc pas être livré.
+# Seuls les push de main et de tags écrivent dans le cache (aucune PR, aucun fork).
 # Déclenché par un push sur main (aucune exécution avant le merge) ou sur un tag de version : tous les jobs
 # rejouent alors sur le commit étiqueté, puis le job publication crée la release.
 on:
@@ -40,6 +42,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
       # Testcontainers utilise le Docker préinstallé du runner.
       - run: mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am test
 
@@ -57,6 +60,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
       - run: >-
           mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am
           compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests
@@ -103,6 +107,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
       # Inventaire Maven puis analyse OSV (image épinglée dans le script, comme en local), bloquante.
       - run: bash scripts/analyse-dependances.sh local
 

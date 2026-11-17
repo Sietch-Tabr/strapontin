@@ -9,7 +9,7 @@
 ## Règles
 
 - Actions épinglées par SHA, images d'outils par condensat, jeton en lecture seule sauf `construction` (attestation) et `publication` (release).
-- Aucun cache de dépendances : le workflow publie des releases, un cache empoisonné serait livré.
+- Cache Maven (`cache: maven`, clé = hachage des `pom.xml`) dans `tests-java`, `analyse-statique` et `dependances` seulement : sans cache, chaque job Maven retéléchargeait environ 140 Mo (255 JARs, 465 POMs pour `tests-java`) et Maven Central répondait 429. `construction` et `publication` n'ont aucun cache : les JARs livrés et attestés viennent toujours de Maven Central. Le workflow ne se déclenche que sur push de `main` et de tags, aucune PR ni fork n'écrit dans le cache ; un tag lit le cache de `main`. Après un changement de `pom.xml`, les trois jobs repartent à vide une fois.
 - Artefacts à un jour ; aucun secret dans la CI.
 - Runners GitHub (16 Go, Docker préinstallé) ; chaque job tourne sur une machine neuve, le build du front passe à `construction` par un artefact.
 - Dependabot : écosystème `github-actions` seulement.
