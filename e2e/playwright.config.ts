@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: "**/*.e2e.ts",
   timeout: 60000,
-  // Retries toujours actifs (pas seulement en CI — Woodpecker ne lance pas les E2E, ce projet
+  // Retries toujours actifs (pas seulement en CI — la CI ne lance pas les E2E, ce projet
   // les exécute uniquement en local/manuel, la condition CI ne se déclenchait donc jamais).
   // webkit/mobile-safari (même moteur WebKit) présentent un blocage réseau intermittent
   // page.goto (aucune requête, page blanche) confirmé identique sur du code non modifié et

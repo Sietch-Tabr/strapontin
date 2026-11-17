@@ -3,12 +3,12 @@
 Ne ratez plus les concerts de vos artistes préférés. Strapontin agrège automatiquement les événements depuis Ticketmaster et Eventim, vous notifie dès qu'une nouvelle date est annoncée, et centralise tout en un seul endroit — sans avoir à surveiller chaque billetterie séparément.
 
 <p align="center">
-  <a href="https://codeberg.org/Kwaite/strapontin/raw/branch/main/docs/screenshots/concerts-desktop.png">
-    <img src="https://codeberg.org/Kwaite/strapontin/raw/branch/main/docs/screenshots/concerts-desktop.png" alt="Vue desktop" width="560" />
+  <a href="https://raw.githubusercontent.com/Sietch-Tabr/strapontin/main/docs/screenshots/concerts-desktop.png">
+    <img src="https://raw.githubusercontent.com/Sietch-Tabr/strapontin/main/docs/screenshots/concerts-desktop.png" alt="Vue desktop" width="560" />
   </a>
   &nbsp;
-  <a href="https://codeberg.org/Kwaite/strapontin/raw/branch/main/docs/screenshots/concerts-mobile.png">
-    <img src="https://codeberg.org/Kwaite/strapontin/raw/branch/main/docs/screenshots/concerts-mobile.png" alt="Vue mobile" width="190" />
+  <a href="https://raw.githubusercontent.com/Sietch-Tabr/strapontin/main/docs/screenshots/concerts-mobile.png">
+    <img src="https://raw.githubusercontent.com/Sietch-Tabr/strapontin/main/docs/screenshots/concerts-mobile.png" alt="Vue mobile" width="190" />
   </a>
 </p>
 
@@ -51,7 +51,7 @@ Ne ratez plus les concerts de vos artistes préférés. Strapontin agrège autom
 
 ## Installation
 
-Voir le [wiki Déploiement](https://codeberg.org/Kwaite/strapontin/wiki/Déploiement) pour les instructions complètes (LXC Proxmox, variables d'environnement, scripts de provisioning).
+Voir le [wiki Déploiement](https://github.com/Sietch-Tabr/strapontin/wiki/Déploiement) pour les instructions complètes (LXC Proxmox, variables d'environnement, scripts de provisioning).
 
 ## Licence
 

@@ -1,66 +1,56 @@
-Vérifie l'état de la dernière pipeline Woodpecker sur la branche main et affiche les logs en cas d'échec.
+Vérifie l'état de la dernière exécution de la CI GitHub sur la branche main et affiche les journaux en cas d'échec.
 
 ## Outil et accès
 
-Tout passe par `woodpecker-cli` (client officiel de Woodpecker, installé sur le Mac par Homebrew, version 3.20.1 au 09/11/2026), qui interroge directement le serveur CI : aucun accès au LXC de CI n'est nécessaire. Dépôt : `Kwaite/strapontin` (ID 4).
-
-**Authentification : rien à passer.** La CLI lit le contexte enregistré par `woodpecker-cli setup` (serveur et token, fichier `~/Library/Application Support/woodpecker/contexts.json`) : toutes les commandes ci-dessous s'écrivent sans `--server`, sans `--token` et sans variable d'environnement. Vérifié le 09/11/2026 en retirant `WOODPECKER_SERVER` et `WOODPECKER_TOKEN` de l'environnement.
-
-- Jamais de `--token` dans une commande : si elle échoue, le message d'erreur du shell recopie la ligne entière, donc le token (constaté le 09/11/2026).
-- Contexte absent (autre poste, fichier supprimé) : lancer `woodpecker-cli setup` (ouvre l'interface Woodpecker dans le navigateur pour valider la connexion), ou, à défaut, exporter `WOODPECKER_SERVER` (voir `CLAUDE.local.md`, section Woodpecker CI) et `WOODPECKER_TOKEN` (trousseau : `security find-generic-password -s woodpecker-strapontin -w`).
-- `woodpecker-cli context list` affiche les contextes enregistrés.
+Tout passe par `gh`, déjà authentifié : aucun jeton à passer, aucun contexte à enregistrer, aucun accès à un serveur de CI. Les commandes se lancent depuis la racine du dépôt (hors d'un dépôt git, `gh` ne trouve ni le dépôt ni l'exécution). Jamais de jeton dans une commande.
 
 ## Procédure
 
-1. Récupérer le dernier pipeline sur main :
+1. Dernière exécution sur main :
 
    ```bash
-   woodpecker-cli pipeline last Kwaite/strapontin --branch main
+   gh run list --branch main --limit 5 --json databaseId,status,conclusion,headSha,displayTitle,createdAt
    ```
 
-   Afficher : numéro, statut, événement, message du commit, auteur. Le tableau ne donne pas la date ; `woodpecker-cli pipeline ls Kwaite/strapontin --branch main --limit 5` donne l'historique récent.
+   Afficher : numéro, statut, conclusion, titre, date. L'exécution « Dependabot Updates » est une autre exécution, sans rapport avec le commit : l'ignorer (`--workflow ci` la filtre).
 
-2. Si le statut est déjà terminal (`success`, `failure`, `error`, `killed`) : passer directement à l'étape 4, sans attendre.
+2. Statut `completed` : passer directement à l'étape 4, sans attendre.
 
-3. Si le statut est `pending` ou `running` : lancer l'attente en arrière-plan (jamais de `sleep` en foreground, bloqué dans ce harness) via l'outil Bash avec `run_in_background: true`. Lire le statut **global** du pipeline (modèle `{{.Status}}` ci-dessous), pas celui d'une étape : `pipeline ps` liste un statut par étape (`clone` peut être `success` pendant que `test` tourne encore).
+3. Sinon (`queued` ou `in_progress`) : attendre en arrière-plan (jamais de `sleep` en foreground, bloqué dans ce harness) via l'outil Bash avec `run_in_background: true` :
 
    ```bash
-   while true; do
-     statut=$(woodpecker-cli pipeline show Kwaite/strapontin <N> \
-       --output 'go-template={{range .}}{{.Status}}{{end}}' 2>/dev/null)
-     case "$statut" in pending|running|"") sleep 15 ;; *) break ;; esac
-   done
-   echo "$statut"
+   gh run watch <id> --exit-status --interval 15
    ```
 
-   `<N>` est le numéro lu à l'étape 1. La boucle attend aussi bien `pending` (en file) que `running`, et un statut vide (erreur réseau passagère). Une seule notification arrive quand le pipeline quitte l'état attendu (timeout par défaut 5 min, à ajuster si le pipeline est historiquement plus long). Une fois notifié, refaire l'étape 1 pour lire le statut final.
+   Une seule notification arrive à la fin ; relire ensuite l'état par `gh run view <id> --json status,conclusion` (le code de sortie ne remplace pas la relecture).
 
-4. Si le statut final est `success` : signaler OK et s'arrêter, sauf demande de vérification des avertissements (voir l'étape 5). Sinon (`failure`, `error`) : lister les étapes et lire les logs.
+4. Conclusion `success` : signaler OK et s'arrêter, sauf demande de vérification des avertissements (étape 5). Sinon : lister les jobs et lire les journaux.
 
    ```bash
-   woodpecker-cli pipeline ps Kwaite/strapontin <N>
-   woodpecker-cli pipeline log show Kwaite/strapontin <N> <étape> 2>&1 | grep -iE 'warn|error|exception|failed' | head -50
+   gh run view <id> --json jobs --jq '.jobs[]|[.name,.conclusion]|@tsv'
+   gh run view <id> --log-failed | grep -iE 'warn|error|exception|failed' | head -50
    ```
 
-   Étapes de la pipeline : `clone`, `test`, `test-front`, `build-front`, `lint-front`, `static-analysis`, `inventaire-dependances`, `analyse-dependances`, `build`, `backup`, `deploy`. Sans nom d'étape, `pipeline log show` imprime le journal de toutes les étapes (plusieurs milliers de lignes) : toujours cibler l'étape, ou filtrer avec `grep`.
+   Jobs du workflow : `tests-java`, `analyse-statique`, `front`, `dependances`, `secrets`, `workflows`, `construction`. Sans filtre, `--log` imprime des milliers de lignes : toujours cibler (`--job <idJob>`) ou filtrer avec `grep`.
 
-5. Vérification des avertissements (clôture de jalon, `success` ne suffit pas) : lire le journal de **chaque** étape, pas seulement celles en échec. Les WARN/ERROR dans les tests unitaires (fixtures, cas simulés) sont normaux : vérifier que `Tests run: X, Failures: 0, Errors: 0` pour chaque module et qu'aucune exception n'apparaît hors des tests.
+5. Vérification des avertissements (clôture de jalon, `success` ne suffit pas) : lire le journal de **chaque** job. Les WARN et ERROR dans les tests unitaires (fixtures, cas simulés) sont normaux : vérifier `Tests run: X, Failures: 0, Errors: 0` pour chaque module et qu'aucune exception n'apparaît hors des tests.
 
    ```bash
-   woodpecker-cli pipeline log show Kwaite/strapontin <N> test 2>&1 | grep -E 'Tests run:.*Fail'
+   gh run view <id> --log > <fichier du scratchpad>
+   grep -E 'Tests run:.*Fail' <fichier> | grep -v 'Time elapsed'
    ```
+
+6. Provenance des JARs (avant un déploiement) : voir `/deploiement-prod`.
 
 ## Aide-mémoire
 
-| Besoin                    | Commande                                                                                   |
-| ------------------------- | ------------------------------------------------------------------------------------------ |
-| Dernier pipeline de main  | `pipeline last Kwaite/strapontin --branch main`                                            |
-| Historique                | `pipeline ls Kwaite/strapontin --branch main --limit 5`                                    |
-| Statut seul d'un pipeline | `pipeline show Kwaite/strapontin <N> --output 'go-template={{range .}}{{.Status}}{{end}}'` |
-| Étapes et leur état       | `pipeline ps Kwaite/strapontin <N>`                                                        |
-| Journal d'une étape       | `pipeline log show Kwaite/strapontin <N> <étape>`                                          |
-| Pipelines en file         | `pipeline queue`                                                                           |
+| Besoin                    | Commande                                                              |
+| ------------------------- | --------------------------------------------------------------------- |
+| Dernière exécution de ci  | `gh run list --workflow ci --branch main --limit 1`                   |
+| Statut seul               | `gh run view <id> --json status,conclusion`                           |
+| Jobs et leur conclusion   | `gh run view <id> --json jobs`                                        |
+| Journal d'un job          | `gh run view <id> --log --job <idJob>`                                |
+| Attendre la fin           | `gh run watch <id> --exit-status`                                     |
+| Artefacts                 | `gh run download <id> -n jars -D <dossier vide>`                      |
 
-`--output json` n'est pas pris en compte par `pipeline show` sur la version testée (il affiche le tableau) : utiliser `go-template`, avec `{{range .}}` (le résultat est une liste, même pour un seul pipeline).
-
-Documentation officielle : <https://woodpecker-ci.org/docs/cli/reference>.
+Documentation : <https://cli.github.com/manual/gh_run>.

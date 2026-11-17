@@ -5,8 +5,8 @@ set -euo pipefail
 #
 # À exécuter directement SUR Proxmox (root@192.168.1.99), jamais à distance :
 # copier le script sur Proxmox puis l'exécuter là-bas. Jamais automatisé en
-# cron/CI — le LXC Woodpecker n'a volontairement pas accès au réseau de
-# management Proxmox, frontière de sécurité à ne pas franchir pour ce confort.
+# cron/CI : donner à un pipeline un accès root à l'hyperviseur serait
+# disproportionné, la frontière de sécurité reste infranchissable pour ce confort.
 #
 # Séquence : vzdump prod (snapshot, non disruptif) → restore → démarrage →
 # restauration applicative → health check → destruction

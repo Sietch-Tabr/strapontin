@@ -15,7 +15,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 /**
  * Base commune pour <strong>tous</strong> les tests d'intégration Testcontainers du module worker —
  * un seul conteneur PostgreSQL statique partagé entre les sous-classes plutôt qu'un par classe (le
- * champ statique, hérité, désigne la même instance JVM pour toutes) : l'agent CI Woodpecker (1 Go
+ * champ statique, hérité, désigne la même instance JVM pour toutes) : l'ancien agent CI (1 Go
  * RAM) a été tué ({@code Killed}, conteneurs Postgres orphelins jamais nettoyés par Ryuk après le
  * kill) quand le module worker en a fait tourner 5 simultanément (2.7.3).
  *

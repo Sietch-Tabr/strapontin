@@ -18,7 +18,7 @@ import java.util.function.Supplier;
 public final class IdentiteHttp {
 
   /** Adresse du dépôt, défaut de {@code strapontin.projet.url}. */
-  public static final String URL_PROJET_PAR_DEFAUT = "https://codeberg.org/Kwaite/strapontin";
+  public static final String URL_PROJET_PAR_DEFAUT = "https://github.com/Sietch-Tabr/strapontin";
 
   private static final String NOM = "Strapontin";
 

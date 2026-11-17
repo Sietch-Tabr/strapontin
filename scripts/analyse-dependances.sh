@@ -5,8 +5,8 @@ set -euo pipefail
 # Usage : analyse-dependances.sh sbom|local
 #   sbom  : génère l'inventaire CycloneDX des modules Java (étape CI, image Maven)
 #   local : sbom puis analyse de l'inventaire et des package-lock.json (front et e2e) via Docker
-# L'analyse en CI est lancée directement par .woodpecker/ci.yaml (l'image osv-scanner n'a pas
-# de bash). Une exception justifiée se déclare dans osv-scanner.toml (IgnoredVulns, effectiveUntil).
+# L'analyse en CI (job dependances du workflow) lance « local » : Docker est préinstallé sur le
+# runner. Une exception justifiée se déclare dans osv-scanner.toml (IgnoredVulns, effectiveUntil).
 
 RACINE=$(cd "$(dirname "$0")/.." && pwd)
 IMAGE_SCANNER="ghcr.io/google/osv-scanner:v2.7.1"

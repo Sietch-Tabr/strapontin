@@ -291,7 +291,7 @@ Les anomalies de données confirmées se réparent, elles ne restent pas en atte
 1. **Tout vérifier moi-même d'abord** : site officiel du lieu, OSM, API de la billetterie, position, base. Ne lister en « non vérifié » que ce qui exige une autorisation explicite (déchiffrement de clé) ; jamais demander la permission de vérifier.
 2. **Impact chiffré** : nombre de salles, fiches, comptes, notifications touchés (requête, pas impression), et conséquence visible pour l'utilisateur. Un impact nul ou cosmétique : recommander « pas de ticket ».
 3. **Durabilité du correctif** :
-   - La cause racine est-elle établie, ou seul un cas est traité ? Chercher la famille (`tea issues -k` sur le mécanisme) : si 3 tickets ou plus corrigent la même classe de défaut cas par cas, le ticket demande la cause de la classe, pas un cas de plus.
+   - La cause racine est-elle établie, ou seul un cas est traité ? Chercher la famille (`gh issue list --state all --search "<mécanisme>" --limit 100`) : si 3 tickets ou plus corrigent la même classe de défaut cas par cas, le ticket demande la cause de la classe, pas un cas de plus.
    - La donnée corrigée sera-t-elle réécrite par une source ou un job (nom suivi de la billetterie, alignement, purge) ? Si oui, le dire et ne proposer un ticket que pour le mécanisme.
    - Le mécanisme touche-t-il d'autres lignes encore non traitées ? Mesurer le taux d'erreur sur les lignes déjà traitées et le projeter sur celles à venir.
 4. **Présenter** : impact chiffré, durabilité, et une recommandation explicite « ticket » ou « pas de ticket » avec la raison. Un brouillon n'est rédigé que si la recommandation est « ticket ».
@@ -301,7 +301,7 @@ Les anomalies de données confirmées se réparent, elles ne restent pas en atte
 
 **Structure du ticket : Constat / Analyse / Attendu — jamais de section "piste de correction"/implémentation proposée.** Un ticket écrit au moment de la découverte n'a pas la vue d'ensemble du jalon qui le traitera plus tard (autres tickets, refactors en cours) — imposer une implémentation biaiserait à tort la session qui l'implémentera. Exception : un ticket qui documente une correction directe de données déjà exécutée en BDD prod peut décrire l'opération SQL faite (compte-rendu d'action, pas une piste de code).
 
-Si un ticket est créé : jalon courant (vérifier la version dans `java/pom.xml`/CLAUDE.md, jamais codé en dur), label `Bug`. `tea issue create --labels X --milestone Y` combinés échoue silencieusement — créer avec `--milestone` seul puis `tea issue edit <idx> --add-labels Bug`.
+Si un ticket est créé : jalon courant (vérifier la version dans `java/pom.xml`/CLAUDE.md, jamais codé en dur), étiquette `bug`. `gh issue create --label bug --milestone "<jalon>"`, puis relire l'état du ticket par `gh issue view <N> --json labels,milestone` (voir `/ticket`).
 
 ## 15. Mettre à jour la mémoire
 
