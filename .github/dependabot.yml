@@ -1,0 +1,11 @@
+version: 2
+updates:
+  # Mises à jour des actions GitHub épinglées par SHA : une demande de fusion par action, relue puis fusionnée.
+  # Maven et npm restent hors de ce fichier : alertes de sécurité seules, activées dans les réglages du dépôt.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
