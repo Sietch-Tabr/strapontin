@@ -163,12 +163,13 @@ jobs:
         with:
           name: front
           path: java/web/src/main/resources/static
-      - run: mvn -f java/pom.xml -pl web,worker -am package -DskipTests
+      - run: mvn -f java/pom.xml -pl web,worker,mise-a-jour -am package -DskipTests
       - name: Rassembler les JARs
         run: |
           mkdir dist
           cp java/web/target/web-*.jar dist/web.jar
           cp java/worker/target/worker-*.jar dist/worker.jar
+          cp java/mise-a-jour/target/mise-a-jour-*.jar dist/mise-a-jour.jar
           bash scripts/archive-exploitation.sh dist/exploitation.tar.gz
       # L'attestation de provenance n'existe pas en dépôt privé avec le plan gratuit : seulement en public.
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
@@ -225,11 +226,11 @@ jobs:
         run: node scripts/notes-release.mjs "$REVISION" > notes.md
       - name: Publier la release
         run: |
-          (cd dist && sha256sum web.jar worker.jar exploitation.tar.gz > SHA256SUMS)
+          (cd dist && sha256sum web.jar worker.jar mise-a-jour.jar exploitation.tar.gz > SHA256SUMS)
           drapeau=""
           case "$ETIQUETTE" in *-*) drapeau="--prerelease" ;; esac
           # Brouillon d'abord, publication une fois tous les fichiers joints.
           gh release create "$ETIQUETTE" --draft --verify-tag --title "$ETIQUETTE" \
             --notes-file notes.md $drapeau \
-            dist/web.jar dist/worker.jar dist/exploitation.tar.gz dist/SHA256SUMS
+            dist/web.jar dist/worker.jar dist/mise-a-jour.jar dist/exploitation.tar.gz dist/SHA256SUMS
           gh release edit "$ETIQUETTE" --draft=false
