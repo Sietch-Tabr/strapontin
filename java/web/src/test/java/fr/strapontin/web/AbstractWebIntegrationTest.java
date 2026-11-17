@@ -20,7 +20,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
  * <p>Introduite en 2.7.5 : {@code AdminServiceIntegrationTest} et {@code
  * SalleRepositoryIntegrationTest} (ajoutées le même jour, 17/07/2026, jamais alignées sur ce
  * pattern) faisaient tourner 2 conteneurs Postgres indépendants simultanément — suffisant pour
- * épuiser la limite de 1 Go RAM de l'agent CI Woodpecker ({@code Killed}, confirmé par {@code free
+ * épuiser la limite de 1 Go RAM de l'ancien agent CI ({@code Killed}, confirmé par {@code free
  * -h} en direct : swap à 511/512 Mio au moment du kill), le même mécanisme que l'incident worker de
  * 2.7.3 mais jamais corrigé côté web faute d'avoir été touché à ce moment-là. <strong>Toute
  * nouvelle classe d'intégration Testcontainers du module web doit étendre cette classe</strong> —

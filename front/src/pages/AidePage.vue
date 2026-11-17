@@ -211,8 +211,8 @@
                 :href="config.urlProjet"
                 target="_blank"
                 rel="noopener noreferrer"
-                >Codeberg</a
-              ><template v-else>Codeberg</template>.
+                >GitHub</a
+              ><template v-else>GitHub</template>.
             </p>
           </div>
 

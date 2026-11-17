@@ -16,8 +16,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Garde-fou : un seul conteneur Testcontainers PostgreSQL doit exister pour tout le
- * module worker ({@link AbstractWorkerIntegrationTest}), jamais un de plus — l'agent CI
- * Woodpecker (1 Go RAM) a déjà été tué ({@code Killed}, OOM) à deux reprises (2.7.3 côté worker, 2.7.5
+ * module worker ({@link AbstractWorkerIntegrationTest}), jamais un de plus — l'ancien agent
+ * de CI (1 Go RAM) a déjà été tué ({@code Killed}, OOM) à deux reprises (2.7.3 côté worker, 2.7.5
  * côté web) pour cette exacte raison. Échoue si une classe de test déclare son propre {@code new
  * PostgreSQLContainer(...)} au lieu d'étendre la base partagée.
  *
