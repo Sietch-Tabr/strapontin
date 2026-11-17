@@ -4,17 +4,15 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.core.JournalAdmin;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.postgresql.util.PGobject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -31,7 +29,7 @@ public class LogAdminService {
   private static final int LIMITE_ERREURS_DEPUIS = 1000;
 
   private final NamedParameterJdbcTemplate jdbc;
-  private final ObjectMapper jackson;
+  private final JournalAdmin journal;
 
   /**
    * @param jdbc accès JDBC
@@ -39,7 +37,7 @@ public class LogAdminService {
    */
   public LogAdminService(final NamedParameterJdbcTemplate jdbc, final ObjectMapper jackson) {
     this.jdbc = jdbc;
-    this.jackson = jackson;
+    this.journal = new JournalAdmin(jdbc, jackson);
   }
 
   /**
@@ -73,30 +71,23 @@ public class LogAdminService {
       final String source,
       final String message,
       final Map<String, Object> meta) {
-    try {
-      final PGobject pgMeta = new PGobject();
-      pgMeta.setType("jsonb");
-      pgMeta.setValue(meta != null ? jackson.writeValueAsString(meta) : null);
+    journal.ecrire(niveau, source, message, meta);
+  }
 
-      final Map<String, Object> params = new HashMap<>();
-      params.put("ts", Timestamp.from(Instant.now()));
-      params.put("niveau", niveau);
-      params.put("source", source);
-      params.put("message", message);
-      params.put("meta", pgMeta);
-
-      jdbc.update(
-          """
-          INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          VALUES (:ts, :niveau, :source, :message, :meta)
-          """,
-          params);
-
-    } catch (JacksonException e) {
-      LOG.warn("Erreur sérialisation meta log admin", e);
-    } catch (Exception e) {
-      LOG.warn("Erreur insertion log admin", e);
-    }
+  /**
+   * Journalise un événement admin, sauf si le même avertissement (source et
+   * message) a été écrit depuis moins de 24 h.
+   * @param niveau niveau de log
+   * @param source module source
+   * @param message message
+   * @param meta métadonnées (sérialisées en JSON), ou null
+   */
+  public void logAdminSansRepetition(
+      final String niveau,
+      final String source,
+      final String message,
+      final Map<String, Object> meta) {
+    journal.ecrireSansRepetition(niveau, source, message, meta);
   }
 
   /**

@@ -4,8 +4,7 @@
  */
 package fr.strapontin.worker;
 
-import java.sql.Timestamp;
-import java.time.Instant;
+import fr.strapontin.core.JournalAdmin;
 import java.util.HashMap;
 import java.util.Map;
 import org.quartz.JobExecutionContext;
@@ -15,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -30,16 +28,14 @@ public class LogAdminJobListener implements JobListener {
 
   private static final Logger LOG = LoggerFactory.getLogger(LogAdminJobListener.class);
 
-  private final NamedParameterJdbcTemplate jdbc;
-  private final ObjectMapper jackson;
+  private final JournalAdmin journal;
 
   /**
    * @param jdbc accès JDBC
    * @param jackson sérialisation des métadonnées de job en JSON
    */
   public LogAdminJobListener(final NamedParameterJdbcTemplate jdbc, final ObjectMapper jackson) {
-    this.jdbc = jdbc;
-    this.jackson = jackson;
+    this.journal = new JournalAdmin(jdbc, jackson);
   }
 
   @Override
@@ -78,24 +74,6 @@ public class LogAdminJobListener implements JobListener {
 
   private void insererLog(
       final String niveau, final String message, final Map<String, Object> meta) {
-    try {
-      final String metaJson = meta != null ? jackson.writeValueAsString(meta) : null;
-      final Map<String, Object> params = new HashMap<>();
-      params.put("ts", Timestamp.from(Instant.now()));
-      params.put("niveau", niveau);
-      params.put("source", "worker");
-      params.put("message", message);
-      params.put("meta", metaJson);
-      jdbc.update(
-          """
-          INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
-          """,
-          params);
-    } catch (JacksonException e) {
-      LOG.warn("Erreur sérialisation meta log admin : {}", e.getMessage());
-    } catch (Exception e) {
-      LOG.warn("Impossible d'insérer log admin : {}", e.getMessage());
-    }
+    journal.ecrire(niveau, "worker", message, meta);
   }
 }

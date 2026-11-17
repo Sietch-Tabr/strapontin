@@ -4,14 +4,12 @@
  */
 package fr.strapontin.worker;
 
-import java.sql.Timestamp;
-import java.time.Instant;
+import fr.strapontin.core.JournalAdmin;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -26,16 +24,14 @@ public class LogsAdminWorker {
 
   private static final Logger LOG = LoggerFactory.getLogger(LogsAdminWorker.class);
 
-  private final NamedParameterJdbcTemplate jdbc;
-  private final ObjectMapper objectMapper;
+  private final JournalAdmin journal;
 
   /**
    * @param jdbc accès JDBC
    * @param objectMapper sérialisation des métadonnées en JSON
    */
   public LogsAdminWorker(final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
-    this.jdbc = jdbc;
-    this.objectMapper = objectMapper;
+    this.journal = new JournalAdmin(jdbc, objectMapper);
   }
 
   /**
@@ -51,29 +47,6 @@ public class LogsAdminWorker {
       final String source,
       final String message,
       final Map<String, Object> meta) {
-    try {
-      final String metaJson = meta != null ? objectMapper.writeValueAsString(meta) : "{}";
-      // Un avertissement identique déjà écrit dans les dernières 24 h n'apprend
-      // rien de plus : répété à chaque cycle, il noyait le journal.
-      jdbc.update(
-          """
-          INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          SELECT :ts, :niveau, :source, :message, CAST(:meta AS jsonb)
-          WHERE :niveau <> 'warn' OR NOT EXISTS (
-              SELECT 1 FROM logs_admin
-              WHERE niveau = 'warn' AND source = :source AND message = :message
-                AND ts > now() - interval '24 hours')
-          """,
-          Map.of(
-              "ts", Timestamp.from(Instant.now()),
-              "niveau", niveau,
-              "source", source,
-              "message", message,
-              "meta", metaJson));
-    } catch (JacksonException e) {
-      LOG.warn("Erreur sérialisation meta log admin source={} : {}", source, e.getMessage());
-    } catch (Exception e) {
-      LOG.warn("Erreur insertion log admin source={} : {}", source, e.getMessage());
-    }
+    journal.ecrireSansRepetition(niveau, source, message, meta == null ? Map.of() : meta);
   }
 }
