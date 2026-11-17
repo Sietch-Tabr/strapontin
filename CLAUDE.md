@@ -2,7 +2,7 @@
 
 ## Architecture — monorepo Maven
 
-`java/{core,sources,web,worker,exploitation-commun}` (BOM parent `java/pom.xml`, Java 27, Spring Boot 4.1.2) — `core` : normalisation/dédup/types partagés ; `exploitation-commun` : bibliothèque des modules d'exploitation du LXC (versions, chemins, verrou) ; `sources` : clients TM/Eventim/Deezer ; `web` : REST API + Vue SPA (8080) ; `worker` : Quartz (8081). `scripts/` : provisionnement/déploiement/sauvegarde — noms auto-descriptifs sauf `restore-test.sh` (test de restauration à la demande, jamais en CI, voir section Sauvegarde).
+`java/{core,sources,web,worker,exploitation-commun,mise-a-jour}` (BOM parent `java/pom.xml`, Java 27, Spring Boot 4.1.2) — `core` : normalisation/dédup/types partagés ; `exploitation-commun` : bibliothèque des modules d'exploitation du LXC (versions, chemins, verrou) ; `mise-a-jour` : module root de mise à jour depuis l'admin, sans Spring ; `sources` : clients TM/Eventim/Deezer ; `web` : REST API + Vue SPA (8080) ; `worker` : Quartz (8081). `scripts/` : provisionnement/déploiement/sauvegarde — noms auto-descriptifs sauf `restore-test.sh` (test de restauration à la demande, jamais en CI, voir section Sauvegarde).
 
 ## Architecture module web — couche service/repository
 
@@ -120,7 +120,7 @@ Ordre de traitement, garde-fous et incidents : [`worker…/persister/CLAUDE.md`]
 
 UI/Vue, schéma SQL, style Java, tests E2E — scopées par type de fichier, chargées automatiquement en travaillant dessus plutôt que dupliquées ici : [`.claude/rules/frontend-vue.md`](.claude/rules/frontend-vue.md), [`.claude/rules/sql-migrations.md`](.claude/rules/sql-migrations.md), [`.claude/rules/backend-java.md`](.claude/rules/backend-java.md), [`.claude/rules/e2e-testing.md`](.claude/rules/e2e-testing.md).
 
-Commandes de test (à connaître même hors édition d'un fichier) : `mvn -f java/pom.xml clean test -pl core,sources,web,worker,exploitation-commun -am` (Docker requis, Testcontainers) ; `cd front && npm run test:unit` (Vitest, fonctions pures) ; `cd e2e && npx playwright test` (jamais `--project`, 5 navigateurs). Analyse statique (bloquante en CI) : `PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun -am compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests` ; `cd front && npm run lint && npm run lint:css`.
+Commandes de test (à connaître même hors édition d'un fichier) : `mvn -f java/pom.xml clean test -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am` (Docker requis, Testcontainers) ; `cd front && npm run test:unit` (Vitest, fonctions pures) ; `cd e2e && npx playwright test` (jamais `--project`, 5 navigateurs). Analyse statique (bloquante en CI) : `PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests` ; `cd front && npm run lint && npm run lint:css`.
 
 ## Skills projet (`.claude/commands/`, `.claude/skills/`)
 

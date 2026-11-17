@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>fr.strapontin</groupId>
+        <artifactId>strapontin-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>mise-a-jour</artifactId>
+
+    <!-- Module exécuté sur le LXC par un service systemd root : télécharge une release GitHub, vérifie
+         sa provenance (attestation Sigstore) puis confie le remplacement à update.sh. Sans Spring.
+         Le JAR exécutable (spring-boot-maven-plugin, JARs imbriqués) vient avec le point d'entrée. -->
+
+    <dependencies>
+        <dependency>
+            <groupId>fr.strapontin</groupId>
+            <artifactId>exploitation-commun</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Lecture de la demande et des réponses de l'API GitHub (Jackson 3, comme le reste du projet) -->
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Tests -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>
