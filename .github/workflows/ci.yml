@@ -106,9 +106,25 @@ jobs:
       # Inventaire Maven puis analyse OSV (image épinglée dans le script, comme en local), bloquante.
       - run: bash scripts/analyse-dependances.sh local
 
+  secrets:
+    name: secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # Tout l'historique est analysé ; les faux positifs connus sont listés dans .gitleaksignore.
+      # gitleaks v8.30.1, image désignée par son condensat.
+      - run: |
+          docker run --rm -v "$PWD":/repo -w /repo \
+            ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git --redact --no-banner --gitleaks-ignore-path /repo /repo
+
   construction:
     name: construction
-    needs: [tests-java, analyse-statique, front, dependances]
+    needs: [tests-java, analyse-statique, front, dependances, secrets]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
