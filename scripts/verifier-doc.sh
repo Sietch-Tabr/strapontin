@@ -166,7 +166,9 @@ roadmap = texte_wiki.get("Roadmap", "")
 versions_roadmap = set(re.findall(r"^### (\d+\.\d+\.\d+)", roadmap, re.M))
 revision = re.search(r"<revision>([^<]+)", pom)
 attendues = {t[1:] for t in etiquettes if re.fullmatch(r"v\d+\.\d+\.\d+", t)}
-if revision:
+# Une pré-version d'essai (suffixe) n'a ni entrée de Roadmap ni entrée de changelog.
+version_finale = revision and "-" not in revision.group(1)
+if version_finale:
     attendues.add(revision.group(1))
 absentes = sorted(
     (v for v in attendues if v not in versions_roadmap),
@@ -177,7 +179,7 @@ rapport("versions publiées et en cours présentes dans la Roadmap", [f"{v} (auc
 # 6. Changelog utilisateur de la version en cours
 changelog = lire(f"{racine}/front/src/pages/changelogVersions.js")
 manque = []
-if revision and f"v {revision.group(1)} " not in changelog:
+if version_finale and f"v {revision.group(1)} " not in changelog:
     manque.append(f"aucune entrée « v {revision.group(1)} » dans changelogVersions.js")
 rapport("changelog utilisateur de la version en cours", manque)
 
