@@ -5,13 +5,14 @@
 package fr.strapontin.miseajour;
 
 import fr.strapontin.exploitation.Chemins;
+import fr.strapontin.exploitation.EcritureAtomique;
+import fr.strapontin.exploitation.Etape;
+import fr.strapontin.exploitation.FichierRelease;
 import fr.strapontin.exploitation.Version;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,20 +30,13 @@ import java.util.stream.Stream;
 public final class Installateur {
 
   private static final System.Logger JOURNAL = System.getLogger("miseajour");
-  private static final String WEB = "web.jar";
-  private static final String WORKER = "worker.jar";
-  private static final String MISE_A_JOUR = "mise-a-jour.jar";
-  private static final String EXPLOITATION = "exploitation.tar.gz";
-  private static final String SOMMES = "SHA256SUMS";
-  private static final List<String> FICHIERS_CONTROLES =
-      List.of(WEB, WORKER, MISE_A_JOUR, EXPLOITATION);
 
   private final SourceReleases source;
   private final VerificateurProvenance provenance;
   private final ExecuteurCommande executeur;
   private final Chemins chemins;
   private final String depot;
-  private final EtatMiseAJour etat;
+  private final SuiviEtat etat;
 
   /**
    * @param source origine des releases
@@ -58,7 +52,7 @@ public final class Installateur {
       final ExecuteurCommande executeur,
       final Chemins chemins,
       final String depot,
-      final EtatMiseAJour etat) {
+      final SuiviEtat etat) {
     this.source = source;
     this.provenance = provenance;
     this.executeur = executeur;
@@ -76,7 +70,8 @@ public final class Installateur {
    */
   public void installer(final Version cible) {
     etat.demarrer(cible);
-    final Version installee = VersionInstallee.lire(chemins.appJars().resolve(WEB));
+    final Version installee =
+        VersionInstallee.lire(chemins.appJars().resolve(FichierRelease.WEB.nom()));
     if (cible.compareTo(installee) <= 0) {
       throw new InstallationException(
           "La version " + cible + " n'est pas postérieure à la version installée " + installee);
@@ -87,7 +82,7 @@ public final class Installateur {
       final Map<String, Telechargement> fichiers = telecharger(release, dossier);
       controler(fichiers, cible);
       sauvegarder();
-      extraire(fichiers.get(EXPLOITATION), dossier);
+      extraire(fichiers.get(FichierRelease.EXPLOITATION.nom()), dossier);
       deposerJars(fichiers);
       lancerUpdate();
       verifierVersion(cible);
@@ -111,7 +106,7 @@ public final class Installateur {
   private Map<String, Telechargement> telecharger(final ReleaseGithub release, final Path dossier) {
     etat.etape(Etape.TELECHARGEMENT);
     final Map<String, Telechargement> fichiers = new LinkedHashMap<>();
-    for (final String nom : List.of(SOMMES, WEB, WORKER, MISE_A_JOUR, EXPLOITATION)) {
+    for (final String nom : FichierRelease.noms()) {
       final Asset asset = release.assets().get(nom);
       if (asset == null) {
         throw new InstallationException("Fichier absent de la release : " + nom);
@@ -125,12 +120,14 @@ public final class Installateur {
     etat.etape(Etape.PROVENANCE);
     final SommesControle sommes;
     try {
-      sommes = SommesControle.analyser(Files.readString(fichiers.get(SOMMES).fichier()));
+      sommes =
+          SommesControle.analyser(
+              Files.readString(fichiers.get(FichierRelease.SOMMES.nom()).fichier()));
     } catch (final IOException e) {
       throw new InstallationException("SHA256SUMS illisible", e);
     }
     final IdentiteAttendue identite = IdentiteAttendue.pourRelease(depot, cible);
-    for (final String nom : FICHIERS_CONTROLES) {
+    for (final String nom : FichierRelease.nomsControles()) {
       sommes.verifier(fichiers.get(nom));
       provenance.verifier(fichiers.get(nom).fichier(), identite);
     }
@@ -151,9 +148,7 @@ public final class Installateur {
     etat.etape(Etape.EXTRACTION);
     final Path extraction = dossier.resolve("extraction");
     try {
-      Files.createDirectory(
-          extraction,
-          PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+      EcritureAtomique.creerDossierPrive(extraction);
     } catch (final IOException e) {
       throw new InstallationException("Dossier d'extraction impossible", e);
     }
@@ -165,10 +160,15 @@ public final class Installateur {
   private void deposerJars(final Map<String, Telechargement> fichiers) {
     etat.etape(Etape.INSTALLATION);
     try {
-      for (final String nom : List.of(WEB, WORKER, MISE_A_JOUR)) {
-        final Path cible = chemins.appJars().resolve(nom + ".new");
-        Files.copy(fichiers.get(nom).fichier(), cible, StandardCopyOption.REPLACE_EXISTING);
-        Files.setPosixFilePermissions(cible, PosixFilePermissions.fromString("rw-r--r--"));
+      for (final String nom :
+          List.of(
+              FichierRelease.WEB.nom(),
+              FichierRelease.WORKER.nom(),
+              FichierRelease.MISE_A_JOUR.nom())) {
+        EcritureAtomique.copier(
+            fichiers.get(nom).fichier(),
+            chemins.appJars().resolve(nom + ".new"),
+            EcritureAtomique.DROITS_LECTURE);
       }
     } catch (final IOException e) {
       throw new InstallationException("Dépôt des JARs impossible", e);
@@ -184,7 +184,8 @@ public final class Installateur {
 
   private void verifierVersion(final Version cible) {
     etat.etape(Etape.CONTROLE);
-    final Version relue = VersionInstallee.lire(chemins.appJars().resolve(WEB));
+    final Version relue =
+        VersionInstallee.lire(chemins.appJars().resolve(FichierRelease.WEB.nom()));
     if (!relue.equals(cible)) {
       throw new InstallationException(
           "Version relue " + relue + " différente de la version demandée " + cible);
@@ -201,9 +202,7 @@ public final class Installateur {
     try {
       nettoyer(dossier);
       Files.createDirectories(dossier.getParent());
-      return Files.createDirectory(
-          dossier,
-          PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+      return EcritureAtomique.creerDossierPrive(dossier);
     } catch (final IOException e) {
       throw new InstallationException("Dossier de téléchargement impossible", e);
     }

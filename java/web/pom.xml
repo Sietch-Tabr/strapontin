@@ -18,6 +18,12 @@
             <groupId>fr.strapontin</groupId>
             <artifactId>core</artifactId>
         </dependency>
+        <!-- Comparaison des versions (SemVer) de la mise à jour depuis l'administration -->
+        <dependency>
+            <groupId>fr.strapontin</groupId>
+            <artifactId>exploitation-commun</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>fr.strapontin</groupId>
             <artifactId>sources</artifactId>
