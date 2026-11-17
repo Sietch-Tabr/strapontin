@@ -30,6 +30,13 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
+        <!-- Vérification de l'attestation de provenance GitHub (bundles DSSE de Sigstore) -->
+        <dependency>
+            <groupId>dev.sigstore</groupId>
+            <artifactId>sigstore-java</artifactId>
+            <version>${sigstore-java.version}</version>
+        </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

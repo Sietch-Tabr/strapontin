@@ -53,6 +53,10 @@
              Multiplatform) ; version alignée ici sur la dernière publiée. -->
         <okhttp-jvm.version>5.5.1</okhttp-jvm.version>
         <jsoup.version>1.24.1</jsoup.version>
+        <!-- Vérification des attestations de provenance GitHub (module mise-a-jour) ; dépendances
+             transitives (Gson, BouncyCastle, gRPC) alignées par le BOM Spring Boot et la propriété
+             bouncycastle.version, vérifiées avec ce classpath exact. -->
+        <sigstore-java.version>2.4.0</sigstore-java.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
         <!-- Propriété dédiée à l'agent JaCoCo, distincte de argLine : le module worker fixe déjà
