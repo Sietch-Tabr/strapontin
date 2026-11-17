@@ -11,9 +11,10 @@ ExecStart=/usr/bin/java -Xms64m -Xmx256m -jar /opt/strapontin/application/mise-a
 Restart=no
 # Seuls dossiers inscriptibles : les JARs et l'exploitation livrés, les données variables (demandes,
 # état, téléchargements, sauvegardes locales), les unités et la baseline AIDE qu'update.sh met à jour,
-# le NAS des sauvegardes. NoNewPrivileges est absent : backup-local.sh passe par su (setuid).
+# le NAS des sauvegardes (préfixe - : un chemin absent, hôte sans AIDE ni NAS, ne doit pas empêcher
+# le démarrage). NoNewPrivileges est absent : backup-local.sh passe par su (setuid).
 ProtectSystem=strict
-ReadWritePaths=/opt/strapontin/application /opt/strapontin/exploitation /var/opt/strapontin /etc/systemd/system /etc/aide /var/lib/aide /mnt/backup
+ReadWritePaths=/opt/strapontin/application /opt/strapontin/exploitation /var/opt/strapontin /etc/systemd/system -/etc/aide -/var/lib/aide -/mnt/backup
 PrivateTmp=yes
 ProtectHome=yes
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
