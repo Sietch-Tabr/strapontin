@@ -1,0 +1,29 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.miseajour;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Lancement d'un programme du système (tar, scripts d'exploitation), séparé
+ * de l'installateur pour que les tests n'exécutent rien.
+ *
+ * @since 3.2.0
+ * @author Kwaite
+ */
+@FunctionalInterface
+public interface ExecuteurCommande {
+
+  /**
+   * Lance une commande et attend sa fin.
+   *
+   * @param commande programme et arguments, sans interprétation par un shell
+   * @param environnement variables ajoutées à l'environnement du processus
+   * @return le code de sortie et la sortie du processus
+   * @throws InstallationException si le programme ne peut pas être lancé
+   */
+  SortieCommande executer(List<String> commande, Map<String, String> environnement);
+}
