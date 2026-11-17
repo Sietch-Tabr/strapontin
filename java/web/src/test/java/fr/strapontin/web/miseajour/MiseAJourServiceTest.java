@@ -82,6 +82,7 @@ class MiseAJourServiceTest {
     assertEquals("3.2.0", etat.versionProposee());
     assertNull(etat.etat());
     assertFalse(etat.demandeEnAttente());
+    assertFalse(etat.enCours());
     assertTrue(etat.totpActif());
   }
 
@@ -95,6 +96,24 @@ class MiseAJourServiceTest {
   void etat_fichierEtatIllisible_neLevePas() throws IOException {
     Files.writeString(dossierEtat.resolve(EtatMiseAJour.FICHIER), "pas du json");
     assertNull(service.etat(true).etat());
+  }
+
+  @Test
+  void etat_demandeEnAttente_estEnCours() throws IOException {
+    Files.writeString(demandes.resolve("1.json"), "{}");
+    assertTrue(service.etat(true).enCours());
+  }
+
+  @Test
+  void etat_miseAJourRecente_estEnCours() {
+    ecrireEtat(Resultat.EN_COURS, "2026-11-17T09:30:00Z");
+    assertTrue(service.etat(true).enCours());
+  }
+
+  @Test
+  void etat_enCoursPerime_nEstPlusEnCours() {
+    ecrireEtat(Resultat.EN_COURS, "2026-11-17T07:00:00Z");
+    assertFalse(service.etat(true).enCours());
   }
 
   @Test
