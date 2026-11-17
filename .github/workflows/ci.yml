@@ -36,7 +36,7 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
       # Testcontainers utilise le Docker préinstallé du runner.
-      - run: mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun -am test
+      - run: mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am test
 
   analyse-statique:
     name: analyse-statique
@@ -53,7 +53,7 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
       - run: >-
-          mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun -am
+          mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am
           compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests
       # Scripts d'exploitation déployés en production : leurs tests tournent avant tout déploiement.
       - run: bash scripts/tester-update.sh
