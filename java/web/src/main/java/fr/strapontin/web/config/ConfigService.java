@@ -7,6 +7,7 @@ package fr.strapontin.web.config;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.core.AccesAppConfig;
+import fr.strapontin.core.ConfigChiffree;
 import fr.strapontin.core.ConfigCipher;
 import java.time.Duration;
 import java.util.Objects;
@@ -32,8 +33,7 @@ public class ConfigService {
   private static final Logger LOG = LoggerFactory.getLogger(ConfigService.class);
   private static final String CLE_CLE = "cle";
 
-  private final ConfigCipher cipher;
-  private final AccesAppConfig acces;
+  private final ConfigChiffree config;
   private final Cache<String, Optional<String>> cache;
 
   /**
@@ -45,8 +45,8 @@ public class ConfigService {
       @Value("${app.config.secret}") final String secret,
       @Value("${app.config.secret-precedent:}") final String secretPrecedent,
       final NamedParameterJdbcTemplate jdbc) {
-    this.cipher = new ConfigCipher(secret, secretPrecedent);
-    this.acces = new AccesAppConfig(jdbc);
+    this.config =
+        new ConfigChiffree(new ConfigCipher(secret, secretPrecedent), new AccesAppConfig(jdbc));
     this.cache =
         Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(5)).maximumSize(200).build();
   }
@@ -73,12 +73,7 @@ public class ConfigService {
   public void sauvegarderConfig(final String cle, final String valeur) {
     Objects.requireNonNull(cle, "La clé de configuration est requise");
     cache.invalidate(cle);
-    if (valeur == null || valeur.isBlank()) {
-      acces.supprimer(cle);
-      LOG.info("config supprimée cle={}", cle);
-      return;
-    }
-    acces.ecrire(cle, cipher.chiffrer(valeur));
+    config.ecrire(cle, valeur);
   }
 
   /**
@@ -87,19 +82,10 @@ public class ConfigService {
    * @return les clés configurées
    */
   public Set<String> lireConfigsPresentes() {
-    return acces.cles();
+    return config.cles();
   }
 
   private Optional<String> chargerDepuisDb(final String cle) {
-    final Optional<String> chiffree = acces.lire(cle);
-    if (chiffree.isEmpty()) {
-      return Optional.empty();
-    }
-    try {
-      return Optional.of(cipher.dechiffrer(chiffree.get()));
-    } catch (Exception e) {
-      LOG.error("Échec déchiffrement config '{}' — APP_CONFIG_SECRET modifié ?", cle, e);
-      return Optional.empty();
-    }
+    return config.lire(cle);
   }
 }

@@ -4,15 +4,15 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.JournalAdmin;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
-import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Job de révocation des admins dont le préavis est écoulé — extrait de {@code
@@ -28,6 +28,7 @@ public class WorkerRevocationService {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final WorkerStatsService workerStatsService;
+  private final JournalAdmin journal;
 
   /**
    * @param jdbc accès JDBC
@@ -37,6 +38,7 @@ public class WorkerRevocationService {
       final NamedParameterJdbcTemplate jdbc, final WorkerStatsService workerStatsService) {
     this.jdbc = jdbc;
     this.workerStatsService = workerStatsService;
+    this.journal = new JournalAdmin(jdbc, JsonMapper.builder().build());
   }
 
   /**
@@ -66,17 +68,11 @@ public class WorkerRevocationService {
           LOG.info("revoquer:admins terminé nb={}", nb);
           if (nb > 0) {
             revoquerSessions(usernamesRevoques);
-            jdbc.update(
-                """
-                INSERT INTO logs_admin (ts, niveau, source, message, meta)
-                VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
-                """,
-                Map.of(
-                    "ts", Timestamp.from(Instant.now()),
-                    "niveau", "warn",
-                    "source", "admin",
-                    "message", "révocation admin effective — " + nb + " compte(s) rétrogradé(s)",
-                    "meta", "{}"));
+            journal.ecrireDansLaTransaction(
+                "warn",
+                "admin",
+                "révocation admin effective — " + nb + " compte(s) rétrogradé(s)",
+                Map.of());
           }
           return new ResultatPersistance(0, nb);
         });

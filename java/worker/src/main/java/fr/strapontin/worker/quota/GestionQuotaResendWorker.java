@@ -8,9 +8,9 @@ import fr.strapontin.core.AccesAppConfig;
 import fr.strapontin.core.CompteurEnvoisResend;
 import fr.strapontin.core.RegleQuotaResend;
 import fr.strapontin.core.RetrySerialisable;
+import fr.strapontin.core.StockageCompteurResend;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.Map;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -37,8 +36,7 @@ public class GestionQuotaResendWorker {
   private static final int MAX_TENTATIVES = 3;
 
   private final NamedParameterJdbcTemplate jdbc;
-  private final AccesAppConfig acces;
-  private final ObjectMapper objectMapper;
+  private final StockageCompteurResend stockage;
   private final LogsAdminWorker logsAdminWorker;
   private GestionQuotaResendWorker self;
 
@@ -52,8 +50,7 @@ public class GestionQuotaResendWorker {
       final ObjectMapper objectMapper,
       final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
-    this.acces = new AccesAppConfig(jdbc);
-    this.objectMapper = objectMapper;
+    this.stockage = new StockageCompteurResend(new AccesAppConfig(jdbc), objectMapper);
     this.logsAdminWorker = logsAdminWorker;
   }
 
@@ -70,28 +67,8 @@ public class GestionQuotaResendWorker {
     this.self = self;
   }
 
-  private Optional<CompteurEnvoisResend> lireCompteurBrut() {
-    try {
-      return acces
-          .lire(RegleQuotaResend.CLE_QUOTA)
-          .map(json -> objectMapper.readValue(json, CompteurEnvoisResend.class));
-    } catch (JacksonException e) {
-      LOG.warn("compteur Resend malformé en base — ignoré : {}", e.getMessage());
-      return Optional.empty();
-    }
-  }
-
-  private void ecrireCompteur(final CompteurEnvoisResend compteur) {
-    try {
-      final String json = objectMapper.writeValueAsString(compteur);
-      acces.ecrire(RegleQuotaResend.CLE_QUOTA, json);
-    } catch (JacksonException e) {
-      LOG.error("impossible de sérialiser le compteur Resend", e);
-    }
-  }
-
   private CompteurEnvoisResend lireCompteurCourant() {
-    return RegleQuotaResend.courant(lireCompteurBrut());
+    return RegleQuotaResend.courant(stockage.lireBrut());
   }
 
   /**
@@ -116,7 +93,7 @@ public class GestionQuotaResendWorker {
   boolean reserverEnvoiTransactionnel() {
     final CompteurEnvoisResend actuel = lireCompteurCourant();
     if (RegleQuotaResend.estAtteint(actuel)) {
-      ecrireCompteur(actuel);
+      stockage.ecrire(actuel);
       LOG.error(
           "quota Resend atteint — envoi digest bloqué jour={}/{} mois={}/{}",
           actuel.envoyesJour(),
@@ -138,7 +115,7 @@ public class GestionQuotaResendWorker {
               RegleQuotaResend.LIMITE_MOIS));
       return false;
     }
-    ecrireCompteur(RegleQuotaResend.apresEnvoi(actuel));
+    stockage.ecrire(RegleQuotaResend.apresEnvoi(actuel));
     return true;
   }
 }

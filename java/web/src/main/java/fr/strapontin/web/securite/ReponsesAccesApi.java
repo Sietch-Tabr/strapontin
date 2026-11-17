@@ -40,7 +40,7 @@ final class ReponsesAccesApi {
         meta.put("ip", request.getRemoteAddr());
         final String ua = request.getHeader("User-Agent");
         meta.put("userAgent", ua != null ? ua.substring(0, Math.min(ua.length(), 200)) : "");
-        logAdminService.logAdmin(
+        logAdminService.logAdminSansRepetition(
             "warn", "web", "Accès API non authentifié : " + request.getServletPath(), meta);
       } catch (Exception e) {
         LOG.warn("échec de la journalisation d'un accès non authentifié", e);

@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.JournalAdmin;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -14,7 +15,6 @@ import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import tools.jackson.databind.ObjectMapper;
 
@@ -31,37 +31,23 @@ final class NotificationDigestStats {
   private static final Logger LOG = LoggerFactory.getLogger(NotificationDigestStats.class);
 
   private final NamedParameterJdbcTemplate jdbc;
-  private final ObjectMapper jackson;
+  private final JournalAdmin journal;
 
   /* package-private : instancié uniquement par NotificationDigestService (même
    * package). */
   NotificationDigestStats(final NamedParameterJdbcTemplate jdbc, final ObjectMapper jackson) {
     this.jdbc = jdbc;
-    this.jackson = jackson;
+    this.journal = new JournalAdmin(jdbc, jackson);
   }
 
   /* package-private : appelé par NotificationDigestService (même package). */
   void logAdminDigest(final int nbEmails, final int nbPush, final int nbErreurs) {
-    try {
-      final String metaJson =
-          jackson.writeValueAsString(
-              Map.of("nb_emails", nbEmails, "nb_push", nbPush, "nb_erreurs", nbErreurs));
-      final String message = "digest — " + nbEmails + " email(s), " + nbPush + " push envoyés";
-      final String niveau = nbErreurs > 0 ? "warn" : "info";
-      jdbc.update(
-          """
-          INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
-          """,
-          new MapSqlParameterSource()
-              .addValue("ts", Timestamp.from(Instant.now()))
-              .addValue("niveau", niveau)
-              .addValue("source", "worker")
-              .addValue("message", message)
-              .addValue("meta", metaJson));
-    } catch (Exception e) {
-      LOG.warn("Impossible d'écrire log admin digest : {}", e.getMessage());
-    }
+    final String message = "digest — " + nbEmails + " email(s), " + nbPush + " push envoyés";
+    journal.ecrire(
+        nbErreurs > 0 ? "warn" : "info",
+        "worker",
+        message,
+        Map.of("nb_emails", nbEmails, "nb_push", nbPush, "nb_erreurs", nbErreurs));
   }
 
   /* package-private : appelé par NotificationDigestService (même package). */

@@ -7,11 +7,10 @@ package fr.strapontin.web.email;
 import fr.strapontin.core.AccesAppConfig;
 import fr.strapontin.core.CompteurEnvoisResend;
 import fr.strapontin.core.RegleQuotaResend;
-import java.util.Optional;
+import fr.strapontin.core.StockageCompteurResend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -34,33 +33,11 @@ class GestionQuotaResend {
   private static final double SEUIL_ALERTE = 0.8;
   private static final String CLE_QUOTA = RegleQuotaResend.CLE_QUOTA;
 
-  private final AccesAppConfig acces;
-  private final ObjectMapper objectMapper;
+  private final StockageCompteurResend stockage;
 
   /* package-private : instancié uniquement par EmailSender (même package). */
   GestionQuotaResend(final AccesAppConfig acces, final ObjectMapper objectMapper) {
-    this.acces = acces;
-    this.objectMapper = objectMapper;
-  }
-
-  private Optional<CompteurEnvoisResend> lireCompteurBrut() {
-    try {
-      return acces
-          .lire(CLE_QUOTA)
-          .map(json -> objectMapper.readValue(json, CompteurEnvoisResend.class));
-    } catch (JacksonException e) {
-      LOG.warn("compteur Resend malformé en base — ignoré : {}", e.getMessage());
-      return Optional.empty();
-    }
-  }
-
-  private void ecrireCompteur(final CompteurEnvoisResend compteur) {
-    try {
-      final String json = objectMapper.writeValueAsString(compteur);
-      acces.ecrire(CLE_QUOTA, json);
-    } catch (JacksonException e) {
-      LOG.error("impossible de sérialiser le compteur Resend", e);
-    }
+    this.stockage = new StockageCompteurResend(acces, objectMapper);
   }
 
   /**
@@ -74,7 +51,7 @@ class GestionQuotaResend {
   /* package-private : appelé par
    * AlerteQuotaResendService/EmailAlerteService/EmailSender (même package). */
   CompteurEnvoisResend lireCompteurCourant() {
-    return RegleQuotaResend.courant(lireCompteurBrut());
+    return RegleQuotaResend.courant(stockage.lireBrut());
   }
 
   /**
@@ -89,7 +66,7 @@ class GestionQuotaResend {
   boolean reserverEnvoi() {
     final CompteurEnvoisResend actuel = lireCompteurCourant();
     if (RegleQuotaResend.estAtteint(actuel)) {
-      ecrireCompteur(actuel);
+      stockage.ecrire(actuel);
       LOG.error(
           "quota Resend atteint — envoi bloqué jour={}/{} mois={}/{}",
           actuel.envoyesJour(),
@@ -98,7 +75,7 @@ class GestionQuotaResend {
           LIMITE_MOIS);
       return false;
     }
-    ecrireCompteur(RegleQuotaResend.apresEnvoi(actuel));
+    stockage.ecrire(RegleQuotaResend.apresEnvoi(actuel));
     return true;
   }
 
@@ -131,7 +108,7 @@ class GestionQuotaResend {
   void marquerAlerteEnvoyee(final CompteurEnvoisResend compteur) {
     final boolean jourSeuil = compteur.envoyesJour() >= LIMITE_JOUR * SEUIL_ALERTE;
     final boolean moisSeuil = compteur.envoyesMois() >= LIMITE_MOIS * SEUIL_ALERTE;
-    ecrireCompteur(
+    stockage.ecrire(
         new CompteurEnvoisResend(
             compteur.jour(),
             compteur.envoyesJour(),
@@ -155,7 +132,7 @@ class GestionQuotaResend {
     if (envoyesJourReels <= actuel.envoyesJour() && envoyesMoisReels <= actuel.envoyesMois()) {
       return false;
     }
-    ecrireCompteur(
+    stockage.ecrire(
         new CompteurEnvoisResend(
             actuel.jour(),
             Math.max(actuel.envoyesJour(), envoyesJourReels),
