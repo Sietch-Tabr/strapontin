@@ -3,12 +3,12 @@
 Ne ratez plus les concerts de vos artistes préférés. Strapontin agrège automatiquement les événements depuis Ticketmaster et Eventim, vous notifie dès qu'une nouvelle date est annoncée, et centralise tout en un seul endroit — sans avoir à surveiller chaque billetterie séparément.
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/Sietch-Tabr/strapontin/main/docs/screenshots/concerts-desktop.png">
-    <img src="https://raw.githubusercontent.com/Sietch-Tabr/strapontin/main/docs/screenshots/concerts-desktop.png" alt="Vue desktop" width="560" />
+  <a href="docs/screenshots/concerts-desktop.png">
+    <img src="docs/screenshots/concerts-desktop.png" alt="Vue desktop" width="560" />
   </a>
   &nbsp;
-  <a href="https://raw.githubusercontent.com/Sietch-Tabr/strapontin/main/docs/screenshots/concerts-mobile.png">
-    <img src="https://raw.githubusercontent.com/Sietch-Tabr/strapontin/main/docs/screenshots/concerts-mobile.png" alt="Vue mobile" width="190" />
+  <a href="docs/screenshots/concerts-mobile.png">
+    <img src="docs/screenshots/concerts-mobile.png" alt="Vue mobile" width="190" />
   </a>
 </p>
 
