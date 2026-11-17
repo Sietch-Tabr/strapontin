@@ -54,8 +54,7 @@
           class="alerte alerte-erreur"
           role="alert"
         >
-          La mise à jour a échoué : {{ donnees.etat.message }} L'application
-          reste sur la version {{ donnees.versionInstallee }}.
+          {{ phraseEchec(donnees) }}
         </p>
         <div v-if="installee" class="alerte alerte-succes" role="status">
           <p>La version {{ donnees.versionInstallee }} est installée.</p>
@@ -93,6 +92,7 @@ import {
   estInstallee,
   ETAPES,
   motifImpossible,
+  phraseEchec,
   presentationStatut,
   statutEtape,
 } from "../../utils/miseAJour.js";

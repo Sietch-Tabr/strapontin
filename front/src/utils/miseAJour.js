@@ -98,6 +98,21 @@ export function demandeTerminee(donnees, empreinteAvant) {
 }
 
 /**
+ * Phrase affichée après un échec : le motif rapporté par le module (qui peut ne pas finir par un
+ * point) puis la version restée en service.
+ *
+ * @param {{ versionInstallee: string, etat: { message: string | null } }} donnees réponse de l'API
+ * @returns {string} la phrase complète, ponctuée
+ */
+export function phraseEchec(donnees) {
+  const motif = (donnees.etat.message ?? "").trim();
+  const echec = motif
+    ? `La mise à jour a échoué : ${/[.!?]$/.test(motif) ? motif : `${motif}.`}`
+    : "La mise à jour a échoué.";
+  return `${echec} L'application reste sur la version ${donnees.versionInstallee}.`;
+}
+
+/**
  * Indique la version cible installée et vérifiée.
  *
  * @param {{ versionInstallee: string, etat: { resultat: string, versionCible: string } | null }} donnees
