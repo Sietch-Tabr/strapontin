@@ -15,7 +15,7 @@
 
     <!-- Module exécuté sur le LXC par un service systemd root : télécharge une release GitHub, vérifie
          sa provenance (attestation Sigstore) puis confie le remplacement à update.sh. Sans Spring.
-         Le JAR exécutable (spring-boot-maven-plugin, JARs imbriqués) vient avec le point d'entrée. -->
+         Le JAR exécutable (spring-boot-maven-plugin, JARs imbriqués) a pour point d'entrée MiseAJour. -->
 
     <dependencies>
         <dependency>
@@ -51,5 +51,18 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- JAR exécutable (JARs imbriqués) lancé par l'unité systemd strapontin-mise-a-jour -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>fr.strapontin.miseajour.MiseAJour</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

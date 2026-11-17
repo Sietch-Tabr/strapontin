@@ -111,8 +111,26 @@ verifier test "$CODE" = 0
 verifier grep -q "DÉRIVE corrigée" "$TMP/sortie"
 verifier cmp -s "$APP_EXPLOITATION/systemd/strapontin-web.service" "$UNITES_DIR/strapontin-web.service"
 
+# 6. Module de mise à jour livré (.new) : mis en place après un déploiement réussi, absent sans lui,
+# donc sans effet pour les livraisons qui ne le portent pas (cas 1 à 5).
+preparer
+echo m1 > "$APP_JARS/mise-a-jour.jar"; echo m2 > "$APP_JARS/mise-a-jour.jar.new"
+lancer
+verifier test "$CODE" = 0
+verifier test "$(cat "$APP_JARS/mise-a-jour.jar")" = m2
+verifier test ! -e "$APP_JARS/mise-a-jour.jar.new"
+verifier test "$(cat "$AIDE_BASE/aide.db")" = base-1
+
+# 7. Rollback : le module de mise à jour n'est pas remplacé, son .new reste pour la livraison suivante.
+preparer
+echo m1 > "$APP_JARS/mise-a-jour.jar"; echo m2 > "$APP_JARS/mise-a-jour.jar.new"
+SANTE=down lancer
+verifier test "$CODE" = 1
+verifier test "$(cat "$APP_JARS/mise-a-jour.jar")" = m1
+verifier test -e "$APP_JARS/mise-a-jour.jar.new"
+
 if [ "$echecs" -ne 0 ]; then
     echo "$echecs contrôle(s) en échec" >&2
     exit 1
 fi
-echo "update.sh : baseline AIDE (déploiement, rollback, changement externe), livraison contrôlée, dérive d'unité corrigée"
+echo "update.sh : baseline AIDE (déploiement, rollback, changement externe), livraison contrôlée, dérive d'unité corrigée, module de mise à jour mis en place"

@@ -1,0 +1,10 @@
+[Unit]
+Description=Strapontin — demande de mise à jour déposée par l'administration
+
+[Path]
+# Le web dépose une demande (un fichier .json) dans ce dossier ; le service la traite puis la retire.
+PathExistsGlob=/var/opt/strapontin/demandes/*.json
+Unit=strapontin-mise-a-jour.service
+
+[Install]
+WantedBy=multi-user.target

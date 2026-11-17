@@ -98,6 +98,7 @@ aligner_installation() {
 # le pré-contrôle ci-dessous.
 FICHIERS_DEPLOIEMENT=(
     "$APP_JARS" "$APP_JARS/web.jar.new" "$APP_JARS/worker.jar.new"
+    "$APP_JARS/mise-a-jour.jar" "$APP_JARS/mise-a-jour.jar.new"
     "$APP_EXPLOITATION" "$APP_EXPLOITATION/systemd" "$MANIFESTE"
 )
 if [ -f "$MANIFESTE" ]; then
@@ -196,6 +197,14 @@ if ! systemctl is-active --quiet strapontin-worker; then
     exit 1
 fi
 echo "[update] Service worker UP"
+
+# Le module de mise à jour se remplace en dernier, une fois le déploiement validé : un rollback ne
+# le touche pas, et la baseline AIDE ci-dessous le prend en compte. Absent, rien à faire (livraison
+# par deploy-dev ou /deploiement-prod). Le processus qui nous lance garde l'ancien fichier ouvert.
+if [ -f "$APP_JARS/mise-a-jour.jar.new" ]; then
+    mv "$APP_JARS/mise-a-jour.jar.new" "$APP_JARS/mise-a-jour.jar"
+    echo "[update] mise-a-jour.jar mis en place"
+fi
 
 if [ "$AIDE_ACTIF" = true ] && [ -n "$CHANGEMENTS_EXTERNES" ]; then
     # Baseline conservée : les JARs du déploiement apparaîtront aussi dans l'alerte

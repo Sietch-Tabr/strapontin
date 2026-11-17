@@ -1,0 +1,19 @@
+[Unit]
+Description=Strapontin — mise à jour depuis l'administration
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/java -Xms64m -Xmx256m -jar /opt/strapontin/application/mise-a-jour.jar
+# Un oneshot n'est relancé que par une nouvelle demande : jamais de reprise automatique.
+Restart=no
+# Seuls dossiers inscriptibles : les JARs et l'exploitation livrés, les données variables (demandes,
+# état, téléchargements, sauvegardes locales), les unités et la baseline AIDE qu'update.sh met à jour,
+# le NAS des sauvegardes. NoNewPrivileges est absent : backup-local.sh passe par su (setuid).
+ProtectSystem=strict
+ReadWritePaths=/opt/strapontin/application /opt/strapontin/exploitation /var/opt/strapontin /etc/systemd/system /etc/aide /var/lib/aide /mnt/backup
+PrivateTmp=yes
+ProtectHome=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
