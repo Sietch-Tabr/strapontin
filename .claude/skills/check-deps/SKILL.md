@@ -3,7 +3,7 @@ name: Vérification dépendances
 description: >
   Vérifie les mises à jour disponibles pour les dépendances Maven (java/pom.xml,
   4 modules), npm (front/package.json) et la stack infra (PostgreSQL, Java/Temurin,
-  Node, template LXC dans provision.sh/.woodpecker), analyse les changelogs pour
+  Node, template LXC dans provision.sh et .github/workflows), analyse les changelogs pour
   repérer breaking changes et nouveautés exploitables.
 when_to_use: >
   Invoquer automatiquement dès qu'un message utilisateur commence par
@@ -46,15 +46,13 @@ Deux projets npm : `front/` (application) et `e2e/` (Playwright, tests de bout e
 
 Informatif uniquement — jamais appliqué automatiquement, un changement d'OS/PostgreSQL/Java majeur dépasse le cadre d'un jalon applicatif.
 
-**Images de la pipeline** : `grep -n 'image:' .woodpecker/ci.yaml` (maven, node, osv-scanner, alpine au 01/11/2026). Comparer chaque tag à la dernière version publiée ; une image sans tag (`alpine` du step de sauvegarde) suit `latest` : le signaler, c'est un constat (non reproductible, jamais relu), pas une modification à faire seul.
+**Workflow de la CI** : actions épinglées par SHA de commit (version en commentaire) et images désignées par condensat (`docker run` de gitleaks, actionlint, zizmor). Lister les actions : `grep -n 'uses:' .github/workflows/ci.yml`, comparer chaque version à la dernière release (`gh api repos/<action>/releases/latest --jq .tag_name`) et vérifier que le SHA épinglé correspond bien au tag (`gh api repos/<action>/git/ref/tags/<tag>`). Dependabot propose ces mises à jour par PR (écosystème `github-actions`) : les relire comme les autres dépendances (changelog). Versions d'outils des runners : Java Temurin 27 et Node 26 (`setup-java`, `setup-node`).
 
-**Scanner OSV** : l'image est épinglée à deux endroits, `scripts/analyse-dependances.sh` (`IMAGE_SCANNER`) et `.woodpecker/ci.yaml` ; les deux doivent rester identiques et comparées à la dernière release (`curl -s https://api.github.com/repos/google/osv-scanner/releases/latest`, champ `tag_name`). C'est le contrôle bloquant de la pipeline : un scanner périmé est un angle mort.
+**Scanner OSV** : l'image est épinglée dans `scripts/analyse-dependances.sh` (`IMAGE_SCANNER`), que le job `dependances` de la CI lance ; elle se compare à la dernière release (`curl -s https://api.github.com/repos/google/osv-scanner/releases/latest`, champ `tag_name`). C'est le contrôle bloquant de la CI : un scanner périmé est un angle mort.
 
-**Hors périmètre, géré par l'utilisateur** (ne pas le reproposer) : les mises à jour `apt` des conteneurs LXC, et les outils du poste (brew, tea, woodpecker-cli, Docker) via topgrade.
+**Hors périmètre, géré par l'utilisateur** (ne pas le reproposer) : les mises à jour `apt` des conteneurs LXC, et les outils du poste (brew, gh, Docker) via topgrade.
 
-Grep des versions épinglées dans `scripts/provision.sh` (PostgreSQL, template Debian LXC, Temurin/Java) et `.woodpecker/` (image de build, version Node) ; comparer aux dernières versions stables publiées (WebSearch/WebFetch).
-
-**Serveur Woodpecker** (installé à la main par `.deb`, aucune mise à jour automatique) : comparer la version servie par `http://192.168.20.88:8000/version` aux releases GitHub (`woodpecker-ci/woodpecker`) et lire les notes des versions sautées (migrations de base, variables renommées). Contrôler aussi si le script Proxmox communautaire Woodpecker-CI est sorti de DevScripts (ticket `community-scripts/DevScripts#2384`) et ce qu'il décrit pour la mise à jour. Mise à jour seulement après accord : procédure dans la mémoire `reference_woodpecker_mise_a_jour`.
+Grep des versions épinglées dans `scripts/provision.sh` (PostgreSQL, template Debian LXC, Temurin/Java) et `.github/workflows/ci.yml` (versions de Java et de Node) ; comparer aux dernières versions stables publiées (WebSearch/WebFetch).
 
 ## 5. Analyser le changelog de chaque dépendance obsolète
 
@@ -76,7 +74,7 @@ Pour chaque propriété de version du pom parent (`java/pom.xml`) et chaque dép
 - **Silencieux dans le rapport si RAS** : dernière publication < 12 mois et aucune CVE ouverte.
 - **Signalé** (mode jalon : mentionné sans bloquer le jalon ; mode hors-jalon : dans le rapport, avec proposition de ticket constat-only si pertinent) : aucune publication depuis 12+ mois, projet visiblement à l'arrêt, ou CVE trouvée sans version corrigée disponible.
 - Ne jamais rétrograder ou remplacer une dépendance vétuste par une alternative de son propre chef — même règle que l'étape 11 : constat, jamais de piste d'implémentation imposée.
-- **Étape obligatoire, jamais sautée** : lancer `bash scripts/analyse-dependances.sh local` (Docker requis ; même analyse OSV que l'étape bloquante `analyse-dependances` de la pipeline de `main`, exceptions de `osv-scanner.toml` comprises). Un avis sans correctif installable se signale à l'utilisateur **avant la PR** pour décider d'une exception datée, jamais après le merge : la pipeline de `main` s'arrête sinon avant `build`, `backup` et `deploy` (jalon 3.1.1 avec deepmerge, jalon 3.1.2 avec glob et minimatch). Le compte rendu de l'invocation écrit « étape 6 : faite » avec le résultat du scan.
+- **Étape obligatoire, jamais sautée** : lancer `bash scripts/analyse-dependances.sh local` (Docker requis ; même analyse OSV que le job bloquant `dependances` de la CI de `main`, exceptions de `osv-scanner.toml` comprises). Un avis sans correctif installable se signale à l'utilisateur **avant la PR** pour décider d'une exception datée, jamais après le merge : la CI de `main` échoue sinon avant `construction`, donc sans JAR à déployer (jalon 3.1.1 avec deepmerge, jalon 3.1.2 avec glob et minimatch). Le compte rendu de l'invocation écrit « étape 6 : faite » avec le résultat du scan.
 
 ## 7. Audit périodique des fonctionnalités inexploitées (dépendances déjà à jour)
 
@@ -105,7 +103,7 @@ Résumé structuré par dépendance : version actuelle → disponible, résumé 
 
 ## 9 bis. Dette déclarée des avertissements front
 
-`front/avertissements-attendus.txt` liste les avertissements `npm ci` et `npm run build` encore émis, chacun avec sa cause amont et la date de sa dernière vérification ; `scripts/avertissements-front.sh` (pipeline) fait échouer un avertissement absent de la liste **et** un avertissement de la liste qui a disparu. À chaque invocation en mode jalon : relire chaque ligne contre l'état amont (paquet, version, demande de fusion citée), mettre à jour la date ou supprimer la ligne si la cause est corrigée. Ne jamais allonger la liste sans cause nommée ; l'objectif est qu'elle soit vide.
+`front/avertissements-attendus.txt` liste les avertissements `npm ci` et `npm run build` encore émis, chacun avec sa cause amont et la date de sa dernière vérification ; `scripts/avertissements-front.sh` (job `front`) fait échouer un avertissement absent de la liste **et** un avertissement de la liste qui a disparu. À chaque invocation en mode jalon : relire chaque ligne contre l'état amont (paquet, version, demande de fusion citée), mettre à jour la date ou supprimer la ligne si la cause est corrigée. Ne jamais allonger la liste sans cause nommée ; l'objectif est qu'elle soit vide.
 
 ## 10. Pièges connus à revérifier systématiquement
 

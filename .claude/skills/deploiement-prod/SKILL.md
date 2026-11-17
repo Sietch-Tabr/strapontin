@@ -24,7 +24,7 @@ Hôtes : dev `192.168.20.78` (LXC 114, arrêté par défaut : `acces hote exec "
 
 ## 2. JARs et provenance
 
-Dans un dossier vide du scratchpad (les artefacts expirent au bout d'un jour) :
+Dans un dossier vide du scratchpad (les artefacts expirent au bout d'un jour), `gh` lancé depuis la racine du dépôt (hors d'un dépôt git, il ne trouve ni le dépôt ni le run) :
 
 ```bash
 gh run download <id> -n jars -D <dossier>
@@ -36,6 +36,8 @@ done
 ```
 
 Chaque commande doit sortir avec le code 0 et afficher le SHA de `git rev-parse HEAD`. Sinon : ne rien livrer.
+
+Contrôle final après `update.sh` : `sha256sum` de `web.jar` et `worker.jar` sur le LXC égal à celui des fichiers de l'artefact attesté.
 
 ## 3. Sauvegardes (prod)
 

@@ -4,7 +4,7 @@ Build et déploie l'application sur le LXC dev (192.168.20.78).
    - Si le build échoue, s'arrêter et rapporter -- ne pas continuer.
 2. Build Maven avec tests : `mvn -f java/pom.xml -pl web,worker -am clean package`
    - Si le build ou les tests échouent, s'arrêter et rapporter -- ne pas déployer.
-3. Livrer les scripts d'exploitation (liste unique `scripts/liste-exploitation.txt`, mêmes fichiers que `scripts/woodpecker-deploy.sh`, contrôle de dérive compris) puis les JARs vers les fichiers temporaires (déploiement atomique) :
+3. Livrer les scripts d'exploitation (liste unique `scripts/liste-exploitation.txt`, contrôle de dérive compris) puis les JARs vers les fichiers temporaires (déploiement atomique) :
    ```
    SSH=ssh SCP=scp HOST=root@192.168.20.78
    . scripts/deposer-exploitation.sh && deposer_exploitation

@@ -1,4 +1,4 @@
-Met à jour toute la documentation impactée par les changements de la branche courante, puis crée la PR sur Codeberg.
+Met à jour toute la documentation impactée par les changements de la branche courante, puis crée la PR sur GitHub.
 
 ## 1. Analyser les changements
 
@@ -20,7 +20,7 @@ version, reprise de `front/src/pages/changelogVersions.js`.
 
 Pour chaque page concernée : comparer avec l'implémentation réelle, proposer les mises à jour, attendre validation, éditer.
 
-Les modifications du wiki sont committées et poussées dans `strapontin-wiki/` au jalon même, jamais accumulées. Contrôle obligatoire après le push : `git ls-remote origin main` doit donner le même hash que `git rev-parse HEAD`. Sinon, s'arrêter et le signaler : `origin/main` local ne prouve rien, il peut afficher un commit que le serveur n'a plus (panne Codeberg de l'automne 2026, dernier commit sain `1086a4c`).
+Les modifications du wiki sont committées et poussées dans `strapontin-wiki/` au jalon même, jamais accumulées. Contrôle obligatoire après le push : `git ls-remote github refs/heads/master` (le wiki GitHub est sur `master`, le clone local sur `main` : `git push github main:master`) doit donner le même hash que `git rev-parse HEAD`. Sinon, s'arrêter et le signaler : le dépôt local ne prouve pas que le serveur a reçu les commits.
 
 ## 3. CLAUDE.md
 
@@ -59,20 +59,15 @@ Proposer le message de commit (`docs: ...`), attendre validation, puis committer
 ## 9. Créer la PR
 
 ```bash
-tea pr create -r Kwaite/strapontin \
-  --title "..." \
-  --description "$(cat <<'EOF'
-Closes #N
-
-## Résumé
-...
-EOF
-)"
+gh pr create --title "..." --body-file <fichier.md> --label "<bug|enhancement>" --milestone "<jalon>"
 ```
 
-- Toujours inclure `Closes #N` dans le corps (pas seulement le titre).
-- Base : branche d'intégration courante (ne pas spécifier `--base` pour utiliser la branche par défaut du dépôt).
-- Labels : selon nature (`Bug`, `Feature`, `Task`…).
+Le fichier contient `Closes #N` (mot-clé répété devant chaque ticket : `Closes #A, closes #B`), puis `## Résumé`.
+
+- Toujours inclure `Closes #N` dans le corps (pas seulement le titre) ; le mot-clé n'agit que sur une PR qui vise la branche par défaut.
+- Base : ne pas spécifier `--base` (branche par défaut du dépôt).
+- Étiquettes : `bug` ou `enhancement`.
+- La CI ne tourne que sur `main` : rejouer ici les commandes des jobs `tests-java`, `analyse-statique`, `front` et `dependances` avant la PR.
 
 ## 10. Suite
 

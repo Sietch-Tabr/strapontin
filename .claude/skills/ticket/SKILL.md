@@ -1,9 +1,9 @@
 ---
 name: Création de ticket
 description: >
-  Crée un ticket Codeberg (Kwaite/strapontin) au format du projet : constat, analyse,
-  attendu, sans piste de solution ; étiquette vérifiée, jalon par --milestone, doublon
-  recherché avant création.
+  Crée un ticket GitHub du dépôt au format du projet : constat, analyse, attendu, sans
+  piste de solution ; étiquette vérifiée, jalon par --milestone, doublon recherché avant
+  création.
 when_to_use: >
   Quand l'utilisateur demande de créer, rédiger ou « ticketer » un ou plusieurs tickets,
   ou valide un brouillon de ticket proposé dans la conversation.
@@ -16,17 +16,12 @@ Les tickets du dépôt sont publics : tout ce qui y est écrit est publié.
 Avant toute rédaction, chercher un ticket existant sur le même sujet, ouvert ou fermé :
 
 ```bash
-tea issues -r Kwaite/strapontin --state all -k "<mot-clé>" -f "index,title,state,milestone"
+gh issue list --state all --search "<mot-clé>" --limit 100 --json number,title,state,milestone
 ```
 
-Pour un jalon donné, `tea issues --milestones` peut sous-compter silencieusement un gros jalon : croiser avec l'API.
+Pour un jalon donné : `gh issue list --state all --milestone "<jalon>" --limit 1000 --json number --jq '[.[].number]|sort'` (`gh` ne retourne que 30 résultats sans `--limit`).
 
-```bash
-curl -s --max-time 20 "https://codeberg.org/api/v1/repos/Kwaite/strapontin/issues?milestones=<jalon>&state=all&limit=50" \
-  | python3 -c "import json,sys; print(sorted(i['number'] for i in json.load(sys.stdin)))"
-```
-
-Lire un ticket candidat en entier, commentaires compris (`tea issue view N -f "index,title,body"` puis l'API `/issues/N/comments`) : un ticket proche peut déjà couvrir le constat, qui s'ajoute alors à son corps, jamais en commentaire.
+Lire un ticket candidat en entier, commentaires compris (`gh issue view N --comments`) : un ticket proche peut déjà couvrir le constat, qui s'ajoute alors à son corps, jamais en commentaire.
 
 ## 2. Rédiger
 
@@ -48,25 +43,23 @@ Présenter le brouillon complet (titre, étiquette, jalon, corps) et attendre un
 
 ## 4. Créer et vérifier
 
-Étiquettes existantes, sensibles à la casse : `Bug`, `Feature`, `Task`, `Question`, `Duplicate`, `Invalid`. Un nom invalide est ignoré sans erreur par tea.
+Étiquettes du dépôt : `bug`, `enhancement` (ancien Feature et Task), `question`, `duplicate`, `invalid`.
 
 ```bash
-tea issues create -r Kwaite/strapontin --title "<titre>" --description-file <fichier.md> \
-  --labels "<Étiquette>" --milestone "<jalon>"
+gh issue create --title "<titre>" --body-file <fichier.md> --label "<étiquette>" --milestone "<jalon>"
 ```
 
 Vérifier côté serveur que l'étiquette et le jalon sont bien posés :
 
 ```bash
-curl -s --max-time 20 "https://codeberg.org/api/v1/repos/Kwaite/strapontin/issues/<N>" \
-  | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['number'], [l['name'] for l in d['labels']], (d['milestone'] or {}).get('title'))"
+gh issue view <N> --json number,labels,milestone --jq '[.number,[.labels[].name],.milestone.title]'
 ```
 
-À défaut, corriger avec `tea issues edit <N> -r Kwaite/strapontin --add-labels "<Étiquette>" --milestone "<jalon>"`.
+À défaut, corriger avec `gh issue edit <N> --add-label "<étiquette>" --milestone "<jalon>"`. Un nom d'étiquette ou de jalon inconnu fait échouer `gh` avec une erreur : la lire, ne jamais conclure sans relire l'état du ticket.
 
 ## Ne jamais
 
 - Commenter, fermer ou changer le statut d'un ticket sans demande explicite ; un commentaire demandé se montre d'abord dans la conversation.
-- Utiliser `tea comment` (bloque en lisant stdin) : `tea api --method POST "/repos/Kwaite/strapontin/issues/<N>/comments" -f "body=$(cat fichier.md)"`.
+- Écrire un commentaire autrement que par `gh issue comment <N> --body-file fichier.md` (le contenu en fichier, jamais en argument).
 - Déplacer un ticket d'un jalon dont l'échéance est aujourd'hui (elle court jusqu'à 23:59).
 - Référencer un ticket dans le code source : seulement dans les commits et les PR.
