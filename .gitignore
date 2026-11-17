@@ -52,6 +52,7 @@ QODER.md
 !.claude/skills/suivi-fiabilite/
 !.claude/skills/ticket/
 !.claude/skills/cloture-jalon/
+!.claude/skills/deploiement-prod/
 !.claude/skills/restauration-dev/
 .claude/skills/suivi-fiabilite/snapshots/
 .claude/skills/suivi-fiabilite/scripts/curseurs_rotation.json
