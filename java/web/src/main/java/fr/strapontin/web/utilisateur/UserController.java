@@ -100,6 +100,17 @@ public class UserController {
   }
 
   /**
+   * Indique si la double authentification est activée, lu en base :
+   * le principal de la session est figé à la connexion.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return vrai si la double authentification est activée
+   */
+  public boolean deuxFacteursActif(final String userId) {
+    return utilisateurRepository.deuxFacteursActif(userId);
+  }
+
+  /**
    * Met à jour l'identifiant (username) de l'utilisateur courant.
    *
    * @param requete corps JSON avec {@code identifiant}
