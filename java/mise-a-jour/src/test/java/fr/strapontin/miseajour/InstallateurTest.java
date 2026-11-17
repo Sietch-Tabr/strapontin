@@ -61,12 +61,11 @@ class InstallateurTest {
     Files.createDirectories(var.resolve("etat"));
     chemins = new Chemins(Map.of("APP_RACINE", racine.toString(), "VAR_RACINE", var.toString()));
     etat = new SuiviEtat(chemins.etatDir(), Clock.systemUTC());
-    VersionInstalleeTest.jar(jars.resolve("web.jar"), "build.version=3.1.5\n");
+    VersionInstalleeTest.jar(jars.resolve("web.jar"), "3.1.5");
     Files.writeString(jars.resolve("worker.jar"), "ancien worker");
     fichiersRelease.put(
         "web.jar",
-        Files.readAllBytes(
-            VersionInstalleeTest.jar(dossier.resolve("nouveau.jar"), "build.version=3.2.0\n")));
+        Files.readAllBytes(VersionInstalleeTest.jar(dossier.resolve("nouveau.jar"), "3.2.0")));
     fichiersRelease.put("worker.jar", "nouveau worker".getBytes());
     fichiersRelease.put("mise-a-jour.jar", "nouvel installateur".getBytes());
     final String script = "#!/bin/bash\necho ok\n";

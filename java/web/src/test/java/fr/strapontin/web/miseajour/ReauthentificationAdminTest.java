@@ -6,7 +6,9 @@ package fr.strapontin.web.miseajour;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -50,6 +52,7 @@ class ReauthentificationAdminTest {
     journal = mock(LogAdminService.class);
     reauthentification = new ReauthentificationAdmin(encodeur, totp, utilisateurs, journal);
     when(utilisateurs.lireSecretTotp("id-1")).thenReturn("SECRET");
+    when(utilisateurs.deuxFacteursActif("id-1")).thenReturn(true);
   }
 
   @Test
@@ -61,6 +64,7 @@ class ReauthentificationAdminTest {
 
   @Test
   void exiger_totpNonActive_refuseEn422SansVerifier() {
+    when(utilisateurs.deuxFacteursActif("id-1")).thenReturn(false);
     final ErreurMetier erreur =
         assertThrows(
             ErreurMetier.class, () -> reauthentification.exiger(admin(false), "mdp", "123456"));
@@ -122,5 +126,31 @@ class ReauthentificationAdminTest {
     assertThrows(
         ErreurMetier.class, () -> reauthentification.exiger(admin(true), "faux", "000000"));
     assertDoesNotThrow(() -> reauthentification.exiger(admin(true), "mdp", "123456"));
+  }
+
+  @Test
+  void exiger_totpActiveDepuisLaConnexion_estAccepte() {
+    // Le principal de la session est figé à la connexion : seule la base fait foi.
+    when(encodeur.matches("mdp", "hash")).thenReturn(true);
+    when(totp.verifierCode("SECRET", "123456")).thenReturn(true);
+
+    assertDoesNotThrow(() -> reauthentification.exiger(admin(false), "mdp", "123456"));
+  }
+
+  @Test
+  void exiger_totpDesactiveDepuisLaConnexion_estRefuse() {
+    when(utilisateurs.deuxFacteursActif("id-1")).thenReturn(false);
+
+    final ErreurMetier erreur =
+        assertThrows(
+            ErreurMetier.class, () -> reauthentification.exiger(admin(true), "mdp", "123456"));
+    assertEquals(422, erreur.getStatus());
+  }
+
+  @Test
+  void totpActif_litLaBaseEtNonLaSession() {
+    assertTrue(reauthentification.totpActif(admin(false)));
+    when(utilisateurs.deuxFacteursActif("id-1")).thenReturn(false);
+    assertFalse(reauthentification.totpActif(admin(true)));
   }
 }

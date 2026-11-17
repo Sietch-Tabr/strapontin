@@ -54,6 +54,17 @@ public class ReauthentificationAdmin {
   }
 
   /**
+   * Indique si l'administrateur a activé son TOTP, lu en base :
+   * la session est figée à la connexion.
+   *
+   * @param admin administrateur de la session
+   * @return vrai si le TOTP est activé
+   */
+  public boolean totpActif(final UtilisateurDetails admin) {
+    return userController.deuxFacteursActif(admin.id());
+  }
+
+  /**
    * Exige le mot de passe et le code TOTP de l'administrateur connecté.
    *
    * @param admin administrateur de la session
@@ -63,7 +74,7 @@ public class ReauthentificationAdmin {
    */
   public void exiger(
       final UtilisateurDetails admin, final String motDePasse, final String codeTotp) {
-    if (!admin.twoFactorActif()) {
+    if (!totpActif(admin)) {
       throw new ErreurMetier(
           "Activez d'abord l'authentification à deux facteurs de votre compte.", 422);
     }

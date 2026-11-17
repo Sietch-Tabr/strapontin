@@ -54,7 +54,7 @@ public class MiseAJourAdminController {
    */
   @GetMapping
   public ResponseEntity<EtatMiseAJourWeb> lire(final Authentication auth) {
-    return ResponseEntity.ok(service.etat(utilisateur(auth).twoFactorActif()));
+    return ResponseEntity.ok(service.etat(reauthentification.totpActif(utilisateur(auth))));
   }
 
   /**

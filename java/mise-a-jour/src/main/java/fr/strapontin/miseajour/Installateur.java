@@ -30,6 +30,7 @@ import java.util.stream.Stream;
 public final class Installateur {
 
   private static final System.Logger JOURNAL = System.getLogger("miseajour");
+  private static final int SORTIE_JOURNAL_MAX = 4000;
 
   private final SourceReleases source;
   private final VerificateurProvenance provenance;
@@ -141,7 +142,11 @@ public final class Installateur {
             List.of("bash", scripts.resolve("backup-local.sh").toString()), Map.of()),
         "Sauvegarde locale impossible : mise à jour abandonnée");
     // Comme /deploiement-prod : le NAS est en plus, sa panne n'arrête rien.
-    executeur.executer(List.of("bash", scripts.resolve("backup.sh").toString()), Map.of());
+    final SortieCommande nas =
+        executeur.executer(List.of("bash", scripts.resolve("backup.sh").toString()), Map.of());
+    if (nas.code() != 0) {
+      consigner(System.Logger.Level.WARNING, "Sauvegarde NAS ignorée", nas);
+    }
   }
 
   private void extraire(final Telechargement archive, final Path dossier) {
@@ -194,8 +199,21 @@ public final class Installateur {
 
   private static void exiger(final SortieCommande sortie, final String message) {
     if (sortie.code() != 0) {
+      consigner(System.Logger.Level.ERROR, message, sortie);
       throw new InstallationException(message);
     }
+  }
+
+  // L'état n'affiche que le motif : la fin de la sortie du script,
+  // seule trace de la cause, va au journal.
+  private static void consigner(
+      final System.Logger.Level niveau, final String message, final SortieCommande sortie) {
+    final String texte = sortie.sortie();
+    final String fin =
+        texte.length() > SORTIE_JOURNAL_MAX
+            ? texte.substring(texte.length() - SORTIE_JOURNAL_MAX)
+            : texte;
+    JOURNAL.log(niveau, "{0} (code {1}) :\n{2}", message, sortie.code(), fin);
   }
 
   private static Path preparer(final Path dossier) {

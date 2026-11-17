@@ -172,6 +172,16 @@ jobs:
           cp java/worker/target/worker-*.jar dist/worker.jar
           cp java/mise-a-jour/target/mise-a-jour-*.jar dist/mise-a-jour.jar
           bash scripts/archive-exploitation.sh dist/exploitation.tar.gz
+      # Le module de mise à jour lit la version installée dans le manifeste du JAR : il doit valoir la
+      # version du pom (un écart ferait échouer toute mise à jour à sa première étape).
+      - name: Contrôler la version des JARs
+        run: |
+          revision=$(sed -n 's:.*<revision>\(.*\)</revision>.*:\1:p' java/pom.xml | head -1)
+          for jar in web worker mise-a-jour; do
+            unzip -p "dist/$jar.jar" META-INF/MANIFEST.MF | tr -d '\r' \
+              | grep -qx "Implementation-Version: $revision" \
+              || { echo "dist/$jar.jar : Implementation-Version différente de $revision" >&2; exit 1; }
+          done
       # L'attestation de provenance n'existe pas en dépôt privé avec le plan gratuit : seulement en public.
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         if: ${{ github.event.repository.private == false }}
