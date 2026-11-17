@@ -36,11 +36,20 @@ UNITES_DIR="${UNITES_DIR:-/etc/systemd/system}"
 AIDE_CONF="${AIDE_CONF:-/etc/aide/aide.conf}"
 AIDE_BASE="${AIDE_BASE:-/var/lib/aide}"
 APP_USER="${APP_USER:-strapontin}"
+JAVA="${JAVA:-/usr/bin/java}"
 
 # Valeur d'une clé du fichier d'environnement (vide si absente).
 lire_env() {
     [ -f "$ENV_FICHIER" ] || return 0
     grep "^$1=" "$ENV_FICHIER" | cut -d'=' -f2- || true
+}
+
+# Lance une commande du JAR exploitation-controle (livré dans application/ avec les autres JARs) :
+# les scripts de contrôle ne sont que des enveloppes de ce JAR, dont le code de sortie est le leur.
+lancer_controle() {
+    local jar="$APP_JARS/exploitation-controle.jar"
+    [ -f "$jar" ] || { echo "ERREUR : $jar absent : livrer exploitation-controle.jar (update.sh)" >&2; return 1; }
+    "$JAVA" -Xmx128m -jar "$jar" "$@"
 }
 
 # Pose CLÉ=valeur dans le fichier d'environnement : remplace la ligne existante ou ajoute la clé.

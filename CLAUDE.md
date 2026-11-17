@@ -2,7 +2,7 @@
 
 ## Architecture — monorepo Maven
 
-`java/{core,sources,web,worker,exploitation-commun,mise-a-jour}` (BOM parent `java/pom.xml`, Java 27, Spring Boot 4.1.2) — `core` : normalisation/dédup/types partagés ; `exploitation-commun` : bibliothèque des modules d'exploitation du LXC (versions, chemins, verrou, contrat demande/état de la mise à jour) ; `mise-a-jour` : module root de mise à jour depuis l'admin, sans Spring ; `sources` : clients TM/Eventim/Deezer ; `web` : REST API + Vue SPA (8080) ; `worker` : Quartz (8081). `scripts/` : provisionnement/déploiement/sauvegarde — noms auto-descriptifs sauf `restore-test.sh` (test de restauration à la demande, jamais en CI, voir section Sauvegarde).
+`java/{core,sources,web,worker,exploitation-commun,mise-a-jour,exploitation-controle}` (BOM parent `java/pom.xml`, Java 27, Spring Boot 4.1.2) — `core` : normalisation/dédup/types partagés ; `exploitation-commun` : bibliothèque des modules d'exploitation (versions, chemins, verrou, contrat de mise à jour) ; `mise-a-jour` : mise à jour depuis l'admin, root, sans Spring ; `exploitation-controle` : commandes d'exploitation, root ; `sources` : clients TM/Eventim/Deezer ; `web` : REST API + Vue SPA (8080) ; `worker` : Quartz (8081). `scripts/` : provisionnement/déploiement/sauvegarde — noms auto-descriptifs sauf `restore-test.sh` (test de restauration à la demande, jamais en CI, voir section Sauvegarde).
 
 ## Architecture module web — couche service/repository
 
@@ -76,7 +76,7 @@ SPRING_PROFILES_ACTIVE=dev|prod
 
 `BACKUP_INTERNAL_SECRET` : `backup-local.sh` le lit dans ce fichier et l'envoie via `Authorization: Bearer`. Absent → l'endpoint répond 403 (notifications de backup perdues, mais le dump continue). `INTEGRITY_INTERNAL_SECRET` : même mécanisme pour `aide-check.sh`/`update.sh` → `IntegriteAlerteController`. `update.sh` vérifie aussi, avant de régénérer la baseline AIDE, qu'aucun fichier hors livraison n'a été modifié — sinon baseline conservée et alerte `modifie`.
 
-**Rotation des secrets** : `scripts/rotation-secrets.sh` (`--db`/`--app-config`/`--backup`/`--integrite`/`--mise-a-jour`/`--tous`, sur le LXC) sauvegarde le fichier, pose le nouveau secret, redémarre et restaure l'ancien en cas d'échec. Pour `APP_CONFIG_SECRET`, l'ancien secret passe dans `APP_CONFIG_SECRET_PRECEDENT` : `ConfigCipher` s'y replie au déchiffrement et `RechiffrementSecretConfig` (web, au démarrage) rechiffre `app_config` **et** `users.two_factor_secret` avec le nouveau, puis le script retire la variable. Procédure complète : [wiki Sécurité](https://github.com/Sietch-Tabr/strapontin/wiki/S%C3%A9curit%C3%A9).
+**Rotation des secrets** : `scripts/rotation-secrets.sh` (`--db`/`--app-config`/`--backup`/`--integrite`/`--mise-a-jour`/`--tous`, sur le LXC), avec retour arrière. Détail du rechiffrement d'`APP_CONFIG_SECRET` : [`scripts/CLAUDE.md`](scripts/CLAUDE.md) ; procédure : [wiki Sécurité](https://github.com/Sietch-Tabr/strapontin/wiki/S%C3%A9curit%C3%A9).
 
 ## Configuration applicative (`app_config`)
 
@@ -121,7 +121,7 @@ Ordre de traitement, garde-fous et incidents : [`worker…/persister/CLAUDE.md`]
 
 UI/Vue, schéma SQL, style Java, tests E2E — scopées par type de fichier, chargées automatiquement en travaillant dessus plutôt que dupliquées ici : [`.claude/rules/frontend-vue.md`](.claude/rules/frontend-vue.md), [`.claude/rules/sql-migrations.md`](.claude/rules/sql-migrations.md), [`.claude/rules/backend-java.md`](.claude/rules/backend-java.md), [`.claude/rules/e2e-testing.md`](.claude/rules/e2e-testing.md).
 
-Commandes de test (à connaître même hors édition d'un fichier) : `mvn -f java/pom.xml clean test -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am` (Docker requis, Testcontainers) ; `cd front && npm run test:unit` (Vitest, fonctions pures) ; `cd e2e && npx playwright test` (jamais `--project`, 5 navigateurs). Analyse statique (bloquante en CI) : `PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests` ; `cd front && npm run lint && npm run lint:css`.
+Commandes de test (à connaître même hors édition d'un fichier) : `mvn -f java/pom.xml clean test -pl core,sources,web,worker,exploitation-commun,mise-a-jour,exploitation-controle -am` (Docker requis, Testcontainers) ; `cd front && npm run test:unit` (Vitest, fonctions pures) ; `cd e2e && npx playwright test` (jamais `--project`, 5 navigateurs). Analyse statique (bloquante en CI) : `PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour,exploitation-controle -am compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests` ; `cd front && npm run lint && npm run lint:css`.
 
 ## Skills projet (`.claude/commands/`, `.claude/skills/`)
 

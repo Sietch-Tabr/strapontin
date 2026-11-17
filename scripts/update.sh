@@ -93,14 +93,19 @@ aligner_installation() {
     return 0
 }
 
+# JARs des outils d'exploitation, remplacés en dernier par update.sh (voir plus bas).
+JARS_OUTILS=(mise-a-jour exploitation-controle)
+
 # Chemins qu'un déploiement légitime a déjà pu modifier avant cet appel : les fichiers du
 # manifeste (déposés par deposer-exploitation.sh) et les JARs .new, qui ne sont activés qu'après
 # le pré-contrôle ci-dessous.
 FICHIERS_DEPLOIEMENT=(
     "$APP_JARS" "$APP_JARS/web.jar.new" "$APP_JARS/worker.jar.new"
-    "$APP_JARS/mise-a-jour.jar" "$APP_JARS/mise-a-jour.jar.new"
     "$APP_EXPLOITATION" "$APP_EXPLOITATION/systemd" "$MANIFESTE"
 )
+for outil in "${JARS_OUTILS[@]}"; do
+    FICHIERS_DEPLOIEMENT+=("$APP_JARS/$outil.jar" "$APP_JARS/$outil.jar.new")
+done
 if [ -f "$MANIFESTE" ]; then
     while read -r _ nom; do FICHIERS_DEPLOIEMENT+=("$APP_EXPLOITATION/$nom"); done < "$MANIFESTE"
 fi
@@ -203,13 +208,16 @@ if ! systemctl is-active --quiet strapontin-worker; then
 fi
 echo "[update] Service worker UP"
 
-# Le module de mise à jour se remplace en dernier, une fois le déploiement validé : un rollback ne
-# le touche pas, et la baseline AIDE ci-dessous le prend en compte. Absent, rien à faire (livraison
-# par deploy-dev ou /deploiement-prod). Le processus qui nous lance garde l'ancien fichier ouvert.
-if [ -f "$APP_JARS/mise-a-jour.jar.new" ]; then
-    mv "$APP_JARS/mise-a-jour.jar.new" "$APP_JARS/mise-a-jour.jar"
-    echo "[update] mise-a-jour.jar mis en place"
-fi
+# Les outils d'exploitation (module de mise à jour, commandes de contrôle) se remplacent en dernier,
+# une fois le déploiement validé : un rollback n'y touche pas, et la baseline AIDE ci-dessous les
+# prend en compte. Absents, rien à faire (livraison par deploy-dev ou /deploiement-prod). Le
+# processus qui nous lance garde l'ancien fichier ouvert.
+for outil in "${JARS_OUTILS[@]}"; do
+    if [ -f "$APP_JARS/$outil.jar.new" ]; then
+        mv "$APP_JARS/$outil.jar.new" "$APP_JARS/$outil.jar"
+        echo "[update] $outil.jar mis en place"
+    fi
+done
 
 if [ "$AIDE_ACTIF" = true ] && [ -n "$CHANGEMENTS_EXTERNES" ]; then
     # Baseline conservée : les JARs du déploiement apparaîtront aussi dans l'alerte

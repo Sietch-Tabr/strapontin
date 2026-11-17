@@ -3,7 +3,7 @@ Lance toute la suite de tests du projet et résume les résultats. Un run n'est 
 1. **Tests Java** (Docker requis, Testcontainers), depuis la racine du dépôt. Sous macOS, `caffeinate -i` évite qu'une mise en veille fausse les tests sensibles à l'horloge :
 
    ```
-   caffeinate -i mvn -f java/pom.xml clean test -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am
+   caffeinate -i mvn -f java/pom.xml clean test -pl core,sources,web,worker,exploitation-commun,mise-a-jour,exploitation-controle -am
    ```
 
    En cas d'échec : afficher les tests en erreur (`java/*/target/surefire-reports/*.txt`), ne pas continuer.
