@@ -2,7 +2,7 @@
 
 ## Architecture — monorepo Maven
 
-`java/{core,sources,web,worker,exploitation-commun,mise-a-jour}` (BOM parent `java/pom.xml`, Java 27, Spring Boot 4.1.2) — `core` : normalisation/dédup/types partagés ; `exploitation-commun` : bibliothèque des modules d'exploitation du LXC (versions, chemins, verrou) ; `mise-a-jour` : module root de mise à jour depuis l'admin, sans Spring ; `sources` : clients TM/Eventim/Deezer ; `web` : REST API + Vue SPA (8080) ; `worker` : Quartz (8081). `scripts/` : provisionnement/déploiement/sauvegarde — noms auto-descriptifs sauf `restore-test.sh` (test de restauration à la demande, jamais en CI, voir section Sauvegarde).
+`java/{core,sources,web,worker,exploitation-commun,mise-a-jour}` (BOM parent `java/pom.xml`, Java 27, Spring Boot 4.1.2) — `core` : normalisation/dédup/types partagés ; `exploitation-commun` : bibliothèque des modules d'exploitation du LXC (versions, chemins, verrou, contrat demande/état de la mise à jour) ; `mise-a-jour` : module root de mise à jour depuis l'admin, sans Spring ; `sources` : clients TM/Eventim/Deezer ; `web` : REST API + Vue SPA (8080) ; `worker` : Quartz (8081). `scripts/` : provisionnement/déploiement/sauvegarde — noms auto-descriptifs sauf `restore-test.sh` (test de restauration à la demande, jamais en CI, voir section Sauvegarde).
 
 ## Architecture module web — couche service/repository
 

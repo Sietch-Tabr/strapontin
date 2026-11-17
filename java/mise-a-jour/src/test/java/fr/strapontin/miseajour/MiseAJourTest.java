@@ -9,12 +9,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.exploitation.Chemins;
+import fr.strapontin.exploitation.EtatMiseAJour;
 import fr.strapontin.exploitation.Verrou;
 import fr.strapontin.exploitation.Version;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,8 +38,11 @@ class MiseAJourTest {
   @TempDir Path dossier;
 
   private Chemins chemins;
-  private EtatMiseAJour etat;
+  private SuiviEtat etat;
   private Installateur installateur;
+  private final List<String> rapports = new ArrayList<>();
+  private final Rapporteur rapporteur =
+      (reussie, version, message) -> rapports.add(reussie + "|" + version + "|" + message);
 
   @BeforeEach
   void preparer() throws IOException {
@@ -47,7 +53,7 @@ class MiseAJourTest {
     Files.createDirectories(var.resolve("demandes"));
     VersionInstalleeTest.jar(jars.resolve("web.jar"), "build.version=3.1.5\n");
     chemins = new Chemins(Map.of("APP_RACINE", racine.toString(), "VAR_RACINE", var.toString()));
-    etat = new EtatMiseAJour(chemins.etatDir(), Clock.systemUTC());
+    etat = new SuiviEtat(chemins.etatDir(), Clock.systemUTC());
     final SourceReleases sansRelease =
         new SourceReleases() {
           @Override
@@ -80,34 +86,39 @@ class MiseAJourTest {
 
   @Test
   void executer_sansDemande_neFaitRien() {
-    assertEquals(0, MiseAJour.executer(chemins, installateur, etat));
+    assertEquals(0, MiseAJour.executer(chemins, installateur, etat, rapporteur));
     assertFalse(Files.exists(chemins.etatDir().resolve(EtatMiseAJour.FICHIER)));
+    assertTrue(rapports.isEmpty());
   }
 
   @Test
   void executer_installationEnEchec_ecritLEtatEtRetireLaDemande() throws IOException {
     final Path demande = deposer(DEMANDE);
-    assertEquals(1, MiseAJour.executer(chemins, installateur, etat));
+    assertEquals(1, MiseAJour.executer(chemins, installateur, etat, rapporteur));
     assertFalse(Files.exists(demande));
     assertTrue(etatLu().contains("ECHEC"));
     assertTrue(etatLu().contains("Release introuvable"));
     assertFalse(Files.exists(chemins.verrouDir()));
+    assertEquals(List.of("false|3.2.0|Release introuvable : v3.2.0"), rapports);
   }
 
   @Test
   void executer_demandeIllisible_ecritUnEchecEtLaRetire() throws IOException {
     final Path demande = deposer("pas du json");
-    assertEquals(1, MiseAJour.executer(chemins, installateur, etat));
+    assertEquals(1, MiseAJour.executer(chemins, installateur, etat, rapporteur));
     assertFalse(Files.exists(demande));
     assertTrue(etatLu().contains("ECHEC"));
+    assertEquals(1, rapports.size());
+    assertTrue(rapports.get(0).startsWith("false|inconnue|"));
   }
 
   @Test
   void executer_verrouPris_ecritUnEchecEtRetireLaDemande() throws IOException {
     final Path demande = deposer(DEMANDE);
     try (Verrou autre = Verrou.prendre(chemins.verrouDir(), "backup")) {
-      assertEquals(1, MiseAJour.executer(chemins, installateur, etat));
+      assertEquals(1, MiseAJour.executer(chemins, installateur, etat, rapporteur));
       assertTrue(etatLu().contains("autre opération"));
+      assertEquals(1, rapports.size());
     }
     assertFalse(Files.exists(demande));
   }

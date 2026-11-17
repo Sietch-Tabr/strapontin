@@ -164,6 +164,8 @@ public class SecurityConfiguration {
         .permitAll()
         .requestMatchers(HttpMethod.POST, "/api/interne/integrite-statut")
         .permitAll()
+        .requestMatchers(HttpMethod.POST, "/api/interne/mise-a-jour-statut")
+        .permitAll()
         .requestMatchers(HttpMethod.POST, "/api/auth/totp")
         .authenticated()
         .requestMatchers(HttpMethod.POST, "/api/client/erreur")

@@ -98,6 +98,41 @@ final class EmailTemplatesAlertes {
   }
 
   /**
+   * Rend le HTML de l'alerte de fin de mise à jour.
+   *
+   * @param reussie vrai si la version est installée
+   * @param version version visée
+   * @param message détail rapporté par le module
+   * @param baseUrl l'URL publique de base de l'application
+   */
+  /* package-private : appelé uniquement par AlerteMiseAJourService (même
+   * package). */
+  static String alerteMiseAJour(
+      final boolean reussie, final String version, final String message, final String baseUrl) {
+    final String couleur = reussie ? EmailTemplates.C_TEXTE : EmailTemplates.C_ERREUR;
+    final String phrase =
+        reussie
+            ? "La version %s est installée. Si vous n'avez pas demandé cette mise à jour,"
+                + " vérifiez les sessions de l'administration."
+            : "La mise à jour vers la version %s a échoué : l'application reste sur la version"
+                + " précédente.";
+    final String corps =
+        """
+        <p style="color: %s; font-size: 14px; margin: 0 0 16px">%s</p>
+        <p style="color: %s; font-size: 14px; margin: 0 0 24px; font-family: monospace;\
+        white-space: pre-wrap">%s</p>
+        """
+            .formatted(
+                EmailTemplates.C_TEXTE,
+                EmailTemplates.e(phrase.formatted(version)),
+                couleur,
+                EmailTemplates.e(message));
+    return reussie
+        ? EmailTemplates.envelopper("Mise à jour installée", corps, baseUrl)
+        : EmailTemplates.enveloppErreur("Échec de la mise à jour", corps, baseUrl);
+  }
+
+  /**
    * Alerte de bounce email (rejet définitif par le serveur destinataire).
    *
    * @param emailBouncee l'adresse email ayant produit le bounce

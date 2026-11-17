@@ -47,7 +47,7 @@ class InstallateurTest {
   private final Map<String, byte[]> fichiersRelease = new HashMap<>();
   private Chemins chemins;
   private Path jars;
-  private EtatMiseAJour etat;
+  private SuiviEtat etat;
   private boolean provenanceRefusee;
   private boolean sommeFausse;
   private boolean releaseAbsente;
@@ -60,7 +60,7 @@ class InstallateurTest {
     Files.createDirectories(racine.resolve("exploitation"));
     Files.createDirectories(var.resolve("etat"));
     chemins = new Chemins(Map.of("APP_RACINE", racine.toString(), "VAR_RACINE", var.toString()));
-    etat = new EtatMiseAJour(chemins.etatDir(), Clock.systemUTC());
+    etat = new SuiviEtat(chemins.etatDir(), Clock.systemUTC());
     VersionInstalleeTest.jar(jars.resolve("web.jar"), "build.version=3.1.5\n");
     Files.writeString(jars.resolve("worker.jar"), "ancien worker");
     fichiersRelease.put(

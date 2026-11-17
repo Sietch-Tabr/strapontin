@@ -5,10 +5,10 @@
 package fr.strapontin.web.admin;
 
 import static fr.strapontin.web.ControllerUtils.erreur;
+import static fr.strapontin.web.ControllerUtils.utilisateur;
 
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
-import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Locale;
@@ -306,13 +306,6 @@ public class AdminController {
           Map.<String, Object>of(CLE_SUCCES, true, CLE_ACTION, "deverrouillerCompte"));
     }
     return erreur(404, MSG_UTILISATEUR_INTROUVABLE);
-  }
-
-  private static UtilisateurDetails utilisateur(final Authentication auth) {
-    if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
-      throw new IllegalStateException("Principal inattendu");
-    }
-    return ud;
   }
 
   private Optional<String> resoudreBaseUrl() {

@@ -22,6 +22,8 @@ NoNewPrivileges=yes
 ProtectSystem=strict
 PrivateTmp=yes
 ProtectHome=yes
+# Dépose les demandes de mise à jour de l'administration (le module de mise à jour, root, les traite).
+ReadWritePaths=-/var/opt/strapontin/demandes
 
 [Install]
 WantedBy=multi-user.target

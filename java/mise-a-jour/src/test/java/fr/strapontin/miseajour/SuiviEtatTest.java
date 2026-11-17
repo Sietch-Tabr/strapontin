@@ -7,6 +7,8 @@ package fr.strapontin.miseajour;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import fr.strapontin.exploitation.Etape;
+import fr.strapontin.exploitation.EtatMiseAJour;
 import fr.strapontin.exploitation.Version;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -20,12 +22,12 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Tests unitaires pour {@link EtatMiseAJour}.
+ * Tests unitaires pour {@link SuiviEtat}.
  *
  * @since 3.2.0
  * @author Kwaite
  */
-class EtatMiseAJourTest {
+class SuiviEtatTest {
 
   private static final Clock HORLOGE =
       Clock.fixed(Instant.parse("2026-11-17T10:00:00Z"), ZoneOffset.UTC);
@@ -38,7 +40,7 @@ class EtatMiseAJourTest {
 
   @Test
   void demarrer_ecritUnEtatEnCours() throws IOException {
-    new EtatMiseAJour(dossier, HORLOGE).demarrer(Version.analyser("3.2.0"));
+    new SuiviEtat(dossier, HORLOGE).demarrer(Version.analyser("3.2.0"));
     final JsonNode etat = lire();
     assertEquals("EN_COURS", etat.get("resultat").asString());
     assertEquals("VERIFICATION", etat.get("etape").asString());
@@ -48,7 +50,7 @@ class EtatMiseAJourTest {
 
   @Test
   void echouer_garde_lEtapeEtLeMessage() throws IOException {
-    final EtatMiseAJour etat = new EtatMiseAJour(dossier, HORLOGE);
+    final SuiviEtat etat = new SuiviEtat(dossier, HORLOGE);
     etat.demarrer(Version.analyser("3.2.0"));
     etat.etape(Etape.SAUVEGARDE);
     etat.echouer("Sauvegarde impossible");
@@ -61,17 +63,17 @@ class EtatMiseAJourTest {
 
   @Test
   void echouer_messageTropLong_estTronque() throws IOException {
-    final EtatMiseAJour etat = new EtatMiseAJour(dossier, HORLOGE);
+    final SuiviEtat etat = new SuiviEtat(dossier, HORLOGE);
     etat.echouer("x".repeat(900));
     assertEquals(500, lire().get("message").asString().length());
   }
 
   @Test
   void reussir_ecritUnResultatReussi() throws IOException {
-    final EtatMiseAJour etat = new EtatMiseAJour(dossier, HORLOGE);
+    final SuiviEtat etat = new SuiviEtat(dossier, HORLOGE);
     etat.demarrer(Version.analyser("3.2.0"));
     etat.reussir();
     assertEquals("REUSSI", lire().get("resultat").asString());
-    assertTrue(Files.notExists(dossier.resolve(EtatMiseAJour.FICHIER + ".tmp")));
+    assertTrue(Files.notExists(dossier.resolve(EtatMiseAJour.FICHIER + ".nouveau")));
   }
 }

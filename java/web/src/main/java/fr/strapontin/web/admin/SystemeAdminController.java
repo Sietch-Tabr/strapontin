@@ -5,10 +5,10 @@
 package fr.strapontin.web.admin;
 
 import static fr.strapontin.web.ControllerUtils.erreur;
+import static fr.strapontin.web.ControllerUtils.utilisateur;
 
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailServiceAdmin;
-import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
@@ -282,12 +282,5 @@ public class SystemeAdminController {
             System.getenv("APP_CONFIG_SECRET") != null,
             "version",
             buildProperties.getVersion()));
-  }
-
-  private static UtilisateurDetails utilisateur(final Authentication auth) {
-    if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
-      throw new IllegalStateException("Principal inattendu");
-    }
-    return ud;
   }
 }
