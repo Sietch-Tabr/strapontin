@@ -7,6 +7,7 @@ set -euo pipefail
 
 RACINE="$(cd "$(dirname "$0")" && pwd)"
 TMP="$(mktemp -d)"
+export VERROU_DIR="$TMP/verrou"
 trap 'rm -rf "$TMP"' EXIT
 FAUX="$TMP/faux"
 mkdir -p "$FAUX"
@@ -57,7 +58,11 @@ preparer() {
     echo base-initiale > "$AIDE_BASE/aide.db"
     unset AIDE_RAPPORT AIDE_CODE SANTE
 }
-lancer() { bash "$RACINE/update.sh" > "$TMP/sortie" 2>&1 && CODE=0 || CODE=$?; }
+lancer() {
+    bash "$RACINE/update.sh" > "$TMP/sortie" 2>&1 && CODE=0 || CODE=$?
+    # Le verrou d'exploitation est libéré à la sortie, réussie ou non.
+    [ ! -e "$VERROU_DIR" ] || { echo "ECHEC : verrou non libéré par update.sh" >&2; exit 1; }
+}
 
 # 1. Déploiement réussi : nouveaux JARs actifs, baseline régénérée.
 preparer

@@ -27,7 +27,7 @@ _appel_statut() {
         --data-urlencode "horodatage=$HORODATAGE" \
         --data-urlencode "raison=${2:-}" \
         --data-urlencode "archive=${3:-}" \
-        "${URL_STATUT:-http://localhost:8080/api/interne/backup-statut}" \
+        "${URL_STATUT:-http://localhost:$PORT_WEB/api/interne/backup-statut}" \
         >/dev/null 2>&1 || true
 }
 

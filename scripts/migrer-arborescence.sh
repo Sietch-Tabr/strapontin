@@ -34,7 +34,7 @@ deplacer() {
 web_en_ligne() {
     local i
     for i in $(seq 1 "$ATTENTE_WEB_S"); do
-        if curl -sf "http://localhost:9090/actuator/health" | grep -q '"status":"UP"'; then return 0; fi
+        if curl -sf "http://localhost:$PORT_WEB_SANTE/actuator/health" | grep -q '"status":"UP"'; then return 0; fi
         sleep 1
     done
     return 1

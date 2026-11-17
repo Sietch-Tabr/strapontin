@@ -6,13 +6,30 @@
 #   /opt/strapontin/exploitation    scripts, unités et configuration livrés (root)
 #   /etc/opt/strapontin             strapontin.env, lu par EnvironmentFile= (root, 0600)
 #   /var/opt/strapontin/sauvegardes sauvegardes locales                     (root seul)
+#   /var/opt/strapontin/verrou      verrou d'exploitation (voir verrou.sh)  (root seul)
+#   /var/opt/strapontin/demandes    demandes de mise à jour de l'application (écrit par le web)
+#   /var/opt/strapontin/etat        état de la mise à jour, lu par l'application
 #   /var/log/strapontin             journaux d'accès, LogsDirectory= de l'unité web
+#
+# Les mêmes noms et valeurs par défaut sont lus par la bibliothèque Java exploitation-commun
+# (classe Chemins) : une modification ici se répercute là-bas.
 
 APP_RACINE="${APP_RACINE:-/opt/strapontin}"
 APP_JARS="${APP_JARS:-$APP_RACINE/application}"
 APP_EXPLOITATION="${APP_EXPLOITATION:-$APP_RACINE/exploitation}"
 ENV_FICHIER="${ENV_FICHIER:-/etc/opt/strapontin/strapontin.env}"
-SAUVEGARDES_LOCALES="${SAUVEGARDES_LOCALES:-/var/opt/strapontin/sauvegardes}"
+VAR_RACINE="${VAR_RACINE:-/var/opt/strapontin}"
+SAUVEGARDES_LOCALES="${SAUVEGARDES_LOCALES:-$VAR_RACINE/sauvegardes}"
+VERROU_DIR="${VERROU_DIR:-$VAR_RACINE/verrou}"
+DEMANDES_DIR="${DEMANDES_DIR:-$VAR_RACINE/demandes}"
+ETAT_DIR="${ETAT_DIR:-$VAR_RACINE/etat}"
+TELECHARGEMENTS_DIR="${TELECHARGEMENTS_DIR:-$VAR_RACINE/telechargements}"
+SIGSTORE_DIR="${SIGSTORE_DIR:-$VAR_RACINE/sigstore}"
+# Ports locaux : application, actuator du web, API interne du worker, actuator du worker.
+PORT_WEB="${PORT_WEB:-8080}"
+PORT_WEB_SANTE="${PORT_WEB_SANTE:-9090}"
+PORT_WORKER="${PORT_WORKER:-8081}"
+PORT_WORKER_SANTE="${PORT_WORKER_SANTE:-9091}"
 JOURNAUX_DIR="${JOURNAUX_DIR:-/var/log/strapontin}"
 SAUVEGARDES_NAS="${SAUVEGARDES_NAS:-/mnt/backup}"
 UNITES_DIR="${UNITES_DIR:-/etc/systemd/system}"
