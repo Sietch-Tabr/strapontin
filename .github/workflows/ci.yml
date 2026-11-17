@@ -1,6 +1,6 @@
 name: ci
 
-# Cache Maven dans les seuls jobs qui ne livrent rien (tests, analyse statique, dépendances) : construction
+# Cache Maven (un jeu par job) dans les seuls jobs qui ne livrent rien (tests, analyse statique, dépendances) : construction
 # et publication téléchargent tout depuis Maven Central, un cache empoisonné ne peut donc pas être livré.
 # Seuls les push de main et de tags écrivent dans le cache (aucune PR, aucun fork).
 # Déclenché par un push sur main (aucune exécution avant le merge) ou sur un tag de version : tous les jobs
@@ -42,7 +42,12 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
+      # Un jeu par job : leurs plugins diffèrent, et une clé commune ne laissait enregistrer que le premier.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ github.job }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: maven-${{ github.job }}-
       # Testcontainers utilise le Docker préinstallé du runner.
       - run: mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am test
 
@@ -60,7 +65,12 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
+      # Un jeu par job : leurs plugins diffèrent, et une clé commune ne laissait enregistrer que le premier.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ github.job }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: maven-${{ github.job }}-
       - run: >-
           mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am
           compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests
@@ -107,7 +117,12 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
+      # Un jeu par job : leurs plugins diffèrent, et une clé commune ne laissait enregistrer que le premier.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ github.job }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: maven-${{ github.job }}-
       # Inventaire Maven puis analyse OSV (image épinglée dans le script, comme en local), bloquante.
       - run: bash scripts/analyse-dependances.sh local
 
