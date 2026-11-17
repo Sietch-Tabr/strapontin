@@ -5,6 +5,7 @@
 package fr.strapontin.web.utilisateur;
 
 import static fr.strapontin.web.ControllerUtils.erreur;
+import static fr.strapontin.web.ControllerUtils.utilisateur;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.HashMap;
@@ -60,9 +61,7 @@ public class PreferencesController {
       @RequestParam(defaultValue = "fusionner") final String mode,
       @RequestParam(defaultValue = "false") final boolean importerConfig,
       final Authentication auth) {
-    if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
-      throw new IllegalStateException("Principal inattendu");
-    }
+    final UtilisateurDetails ud = utilisateur(auth);
 
     final String contentType = fichier.getContentType();
     if (contentType == null || !MediaType.APPLICATION_JSON_VALUE.equals(contentType)) {
@@ -104,9 +103,7 @@ public class PreferencesController {
    */
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<ExportComplet> exporter(final Authentication auth) {
-    if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
-      throw new IllegalStateException("Principal inattendu");
-    }
+    final UtilisateurDetails ud = utilisateur(auth);
     final ExportComplet export = preferencesService.exporter(ud.id());
     return ResponseEntity.ok()
         .header(

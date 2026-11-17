@@ -4,9 +4,11 @@
  */
 package fr.strapontin.web;
 
+import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 
 /**
  * Utilitaires partagés entre contrôleurs REST — jusqu'ici dupliqués verbatim
@@ -19,6 +21,20 @@ import org.springframework.http.ResponseEntity;
 public final class ControllerUtils {
 
   private ControllerUtils() {}
+
+  /**
+   * Utilisateur de la session courante.
+   *
+   * @param auth authentification de la requête
+   * @return l'utilisateur connecté
+   * @throws IllegalStateException si le principal n'est pas un utilisateur
+   */
+  public static UtilisateurDetails utilisateur(final Authentication auth) {
+    if (!(auth.getPrincipal() instanceof UtilisateurDetails details)) {
+      throw new IllegalStateException("Principal inattendu");
+    }
+    return details;
+  }
 
   /**
    * Construit une réponse d'erreur JSON {@code {"erreur": message}}.

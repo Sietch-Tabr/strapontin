@@ -4,9 +4,10 @@
  */
 package fr.strapontin.web.artiste;
 
+import static fr.strapontin.web.ControllerUtils.utilisateur;
+
 import fr.strapontin.web.BudgetRecherchesExternes;
 import fr.strapontin.web.ErreurMetier;
-import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.UUID;
@@ -95,12 +96,5 @@ public class ArtisteController {
     final String userId = utilisateur(auth).id();
     artisteService.supprimer(userId, artisteId);
     return ResponseEntity.noContent().build();
-  }
-
-  private static UtilisateurDetails utilisateur(final Authentication auth) {
-    if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
-      throw new IllegalStateException("Principal inattendu");
-    }
-    return ud;
   }
 }
