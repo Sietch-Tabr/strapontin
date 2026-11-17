@@ -13,3 +13,4 @@
 - Artefacts à un jour ; aucun secret dans la CI.
 - Runners GitHub (16 Go, Docker préinstallé) ; chaque job tourne sur une machine neuve, le build du front passe à `construction` par un artefact.
 - Dependabot : écosystème `github-actions` seulement.
+- Maven : 6 essais de téléchargement avec un délai plafonné à 60 s (`MAVEN_ARGS`), parce que Maven Central répond parfois 429 aux runners (3 essais par défaut, sans cache nous retéléchargeons tout à chaque job).

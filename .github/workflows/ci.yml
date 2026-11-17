@@ -20,7 +20,12 @@ concurrency:
 env:
   JAVA_VERSION: "27"
   NODE_VERSION: "26"
-  MAVEN_ARGS: "-B -ntp"
+  # Reprise des téléchargements après une limite de débit de Maven Central (HTTP 429, 3 essais
+  # par défaut) : 6 essais, délai croissant plafonné à 60 s ; -V consigne la version de Maven.
+  MAVEN_ARGS: >-
+    -B -ntp -V
+    -Daether.transport.http.retryHandler.count=6
+    -Daether.transport.http.retryHandler.intervalMax=60000
 
 jobs:
   tests-java:
