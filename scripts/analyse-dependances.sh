@@ -9,7 +9,8 @@ set -euo pipefail
 # runner. Une exception justifiée se déclare dans osv-scanner.toml (IgnoredVulns, effectiveUntil).
 
 RACINE=$(cd "$(dirname "$0")/.." && pwd)
-IMAGE_SCANNER="ghcr.io/google/osv-scanner:v2.7.1"
+# osv-scanner v2.7.1, image désignée par son condensat.
+IMAGE_SCANNER="ghcr.io/google/osv-scanner@sha256:a70ffffc2bfd33482953e5d6b64c6fcdb30239717a07b0f0d3ab2859ce3e4cde"
 VERSION_CYCLONEDX="2.9.3"
 
 generer_inventaire() {

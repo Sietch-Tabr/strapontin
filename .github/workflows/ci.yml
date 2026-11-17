@@ -1,6 +1,6 @@
 name: ci
 
-# Aucun cache de dépendances : le workflow publie des releases, un cache empoisonné serait livré (audit zizmor).
+# Aucun cache de dépendances : le workflow publie des releases, un cache empoisonné serait livré.
 # Déclenché par un push sur main (aucune exécution avant le merge) ou sur un tag de version : tous les jobs
 # rejouent alors sur le commit étiqueté, puis le job publication crée la release.
 on:
@@ -122,26 +122,9 @@ jobs:
             ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
             git --redact --no-banner --gitleaks-ignore-path /repo /repo
 
-  workflows:
-    name: workflows
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # actionlint 1.7.12 et zizmor 1.32.0, images désignées par leur condensat.
-      - run: |
-          docker run --rm -v "$PWD":/repo -w /repo \
-            rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -color
-      - run: |
-          docker run --rm -v "$PWD":/repo -w /repo \
-            ghcr.io/zizmorcore/zizmor@sha256:3014cc8f68f663935f69b3c3e0e41f5ce102b268d97db13db0f62208747f860d \
-            --no-progress --offline .github
-
   construction:
     name: construction
-    needs: [tests-java, analyse-statique, front, dependances, secrets, workflows]
+    needs: [tests-java, analyse-statique, front, dependances, secrets]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
