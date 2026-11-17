@@ -155,6 +155,11 @@ fi
 
 aligner_installation
 
+# Dossiers, secret et minuterie de la mise à jour depuis l'administration : convergence à chaque
+# déploiement. Un échec est signalé sans arrêter le déploiement, que cette fonction n'engage pas.
+bash "$(dirname "$0")/preparer-mise-a-jour.sh" \
+    || echo "[update] AVERTISSEMENT : préparation de la mise à jour depuis l'administration échouée" >&2
+
 # Sauvegarde des JARs actifs (absent au premier déploiement)
 echo "[update] Sauvegarde des JARs..."
 [ -f "$APP_JARS/web.jar" ] && cp "$APP_JARS/web.jar" "$APP_JARS/web.jar.prev"

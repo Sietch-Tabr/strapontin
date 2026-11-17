@@ -28,7 +28,7 @@ case "$*" in
 esac
 exit 0
 FIN
-for faux in systemctl journalctl sleep; do printf '#!/usr/bin/env bash\nexit 0\n' > "$FAUX/$faux"; done
+for faux in systemctl journalctl sleep chown; do printf '#!/usr/bin/env bash\nexit 0\n' > "$FAUX/$faux"; done
 chmod +x "$FAUX"/*
 export PATH="$FAUX:$PATH"
 
@@ -43,8 +43,8 @@ somme() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else sha
 preparer() {
     export APP_RACINE="$TMP/app" AIDE_BASE="$TMP/aide" AIDE_CONF="$TMP/aide.conf" TMP_JOURNAL="$TMP/journal"
     export APP_JARS="$APP_RACINE/application" APP_EXPLOITATION="$APP_RACINE/exploitation"
-    export UNITES_DIR="$TMP/unites" ENV_FICHIER="$TMP/strapontin.env"
-    rm -rf "$APP_RACINE" "$AIDE_BASE" "$TMP_JOURNAL" "$UNITES_DIR"
+    export UNITES_DIR="$TMP/unites" ENV_FICHIER="$TMP/strapontin.env" VAR_RACINE="$TMP/var"
+    rm -rf "$APP_RACINE" "$AIDE_BASE" "$TMP_JOURNAL" "$UNITES_DIR" "$VAR_RACINE"
     mkdir -p "$APP_JARS" "$APP_EXPLOITATION/systemd" "$AIDE_BASE" "$UNITES_DIR"
     echo "# configuration livrée" > "$APP_EXPLOITATION/aide.conf"
     echo "[Service]" > "$APP_EXPLOITATION/systemd/strapontin-web.service"
@@ -120,6 +120,22 @@ verifier test "$CODE" = 0
 verifier test "$(cat "$APP_JARS/mise-a-jour.jar")" = m2
 verifier test ! -e "$APP_JARS/mise-a-jour.jar.new"
 verifier test "$(cat "$AIDE_BASE/aide.db")" = base-1
+
+# 7a. Préparation de la mise à jour depuis l'administration : à chaque déploiement, avant le
+# redémarrage ; son échec n'arrête pas le déploiement.
+preparer
+lancer
+verifier test "$CODE" = 0
+verifier test -d "$VAR_RACINE/demandes"
+verifier grep -q '^UPDATE_INTERNAL_SECRET=' "$ENV_FICHIER"
+verifier grep -q "Dossiers, secret et minuterie prêts" "$TMP/sortie"
+preparer
+printf '#!/usr/bin/env bash\nexit 1\n' > "$FAUX/openssl"; chmod +x "$FAUX/openssl"
+lancer
+rm -f "$FAUX/openssl"
+verifier test "$CODE" = 0
+verifier grep -q "AVERTISSEMENT : préparation de la mise à jour" "$TMP/sortie"
+verifier test "$(cat "$APP_JARS/web.jar")" = v2
 
 # 7. Rollback : le module de mise à jour n'est pas remplacé, son .new reste pour la livraison suivante.
 preparer

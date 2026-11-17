@@ -43,6 +43,16 @@ lire_env() {
     grep "^$1=" "$ENV_FICHIER" | cut -d'=' -f2- || true
 }
 
+# Pose CLÉ=valeur dans le fichier d'environnement : remplace la ligne existante ou ajoute la clé.
+# Le fichier est réécrit en place (propriétaire et droits conservés), sans option propre à GNU.
+poser_env() {
+    local cle="$1" valeur="$2" temporaire
+    temporaire="$(mktemp)"
+    { grep -v "^$cle=" "$ENV_FICHIER" || true; echo "$cle=$valeur"; } > "$temporaire"
+    cat "$temporaire" > "$ENV_FICHIER"
+    rm -f "$temporaire"
+}
+
 # Environnement de l'instance (dev ou prod), d'après SPRING_PROFILES_ACTIVE : identifie ses
 # sauvegardes, qui partagent le dossier du NAS avec celles de l'autre environnement.
 environnement() {

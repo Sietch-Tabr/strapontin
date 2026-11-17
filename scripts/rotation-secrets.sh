@@ -4,7 +4,7 @@ set -euo pipefail
 # rotation-secrets.sh — régénère un ou plusieurs secrets du fichier d'environnement
 # (/etc/opt/strapontin/strapontin.env) sur une instance
 # déjà en service (après une fuite du fichier), sans recréer le LXC.
-# Usage : rotation-secrets.sh [--db] [--app-config] [--backup] [--integrite] | --tous
+# Usage : rotation-secrets.sh [--db] [--app-config] [--backup] [--integrite] [--mise-a-jour] | --tous
 # À exécuter en tant que root depuis le LXC. Procédure complète et checklist : wiki Sécurité.
 
 . "$(dirname "$0")/chemins.sh"
@@ -16,9 +16,10 @@ ROTATION_DB=false
 ROTATION_APP_CONFIG=false
 ROTATION_BACKUP=false
 ROTATION_INTEGRITE=false
+ROTATION_MISE_A_JOUR=false
 
 usage() {
-    echo "Usage : $0 [--db] [--app-config] [--backup] [--integrite] | --tous" >&2
+    echo "Usage : $0 [--db] [--app-config] [--backup] [--integrite] [--mise-a-jour] | --tous" >&2
     exit 1
 }
 
@@ -29,25 +30,14 @@ for argument in "$@"; do
         --app-config) ROTATION_APP_CONFIG=true ;;
         --backup) ROTATION_BACKUP=true ;;
         --integrite) ROTATION_INTEGRITE=true ;;
-        --tous) ROTATION_DB=true; ROTATION_APP_CONFIG=true; ROTATION_BACKUP=true; ROTATION_INTEGRITE=true ;;
+        --mise-a-jour) ROTATION_MISE_A_JOUR=true ;;
+        --tous) ROTATION_DB=true; ROTATION_APP_CONFIG=true; ROTATION_BACKUP=true; ROTATION_INTEGRITE=true
+            ROTATION_MISE_A_JOUR=true ;;
         *) usage ;;
     esac
 done
 
 [ -f "$ENV_FICHIER" ] || { echo "ERREUR : $ENV_FICHIER introuvable" >&2; exit 1; }
-
-lire() {
-    grep "^$1=" "$ENV_FICHIER" | cut -d'=' -f2- || true
-}
-
-remplacer() {
-    local cle="$1" valeur="$2"
-    if grep -q "^$cle=" "$ENV_FICHIER"; then
-        sed -i "s|^$cle=.*|$cle=$valeur|" "$ENV_FICHIER"
-    else
-        echo "$cle=$valeur" >> "$ENV_FICHIER"
-    fi
-}
 
 supprimer() {
     sed -i "/^$1=/d" "$ENV_FICHIER"
@@ -82,8 +72,8 @@ cp -p "$ENV_FICHIER" "$SAUVEGARDE"
 chmod 600 "$SAUVEGARDE"
 echo "[rotation] .env sauvegardé : $SAUVEGARDE (à supprimer une fois la rotation validée)"
 
-APP_USER=$(lire SPRING_DATASOURCE_USERNAME)
-ANCIEN_MDP_DB=$(lire SPRING_DATASOURCE_PASSWORD)
+APP_USER=$(lire_env SPRING_DATASOURCE_USERNAME)
+ANCIEN_MDP_DB=$(lire_env SPRING_DATASOURCE_PASSWORD)
 if [ "$ROTATION_DB" = true ]; then
     # Interpolé tel quel dans du SQL : jamais une valeur hors identifiant PostgreSQL simple.
     if [[ ! "$APP_USER" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
@@ -111,23 +101,27 @@ restaurer() {
 if [ "$ROTATION_DB" = true ]; then
     NOUVEAU_MDP_DB=$(openssl rand -hex 16)
     changer_mdp_db "$NOUVEAU_MDP_DB"
-    remplacer SPRING_DATASOURCE_PASSWORD "$NOUVEAU_MDP_DB"
+    poser_env SPRING_DATASOURCE_PASSWORD "$NOUVEAU_MDP_DB"
     echo "[rotation] Mot de passe PostgreSQL du rôle $APP_USER changé"
 fi
 if [ "$ROTATION_APP_CONFIG" = true ]; then
     # L'application rechiffre app_config et les secrets TOTP au démarrage, puis la variable
     # APP_CONFIG_SECRET_PRECEDENT est retirée (voir RechiffrementSecretConfig).
-    remplacer APP_CONFIG_SECRET_PRECEDENT "$(lire APP_CONFIG_SECRET)"
-    remplacer APP_CONFIG_SECRET "$(openssl rand -hex 32)"
+    poser_env APP_CONFIG_SECRET_PRECEDENT "$(lire_env APP_CONFIG_SECRET)"
+    poser_env APP_CONFIG_SECRET "$(openssl rand -hex 32)"
     echo "[rotation] APP_CONFIG_SECRET régénéré"
 fi
 if [ "$ROTATION_BACKUP" = true ]; then
-    remplacer BACKUP_INTERNAL_SECRET "$(openssl rand -hex 32)"
+    poser_env BACKUP_INTERNAL_SECRET "$(openssl rand -hex 32)"
     echo "[rotation] BACKUP_INTERNAL_SECRET régénéré"
 fi
 if [ "$ROTATION_INTEGRITE" = true ]; then
-    remplacer INTEGRITY_INTERNAL_SECRET "$(openssl rand -hex 32)"
+    poser_env INTEGRITY_INTERNAL_SECRET "$(openssl rand -hex 32)"
     echo "[rotation] INTEGRITY_INTERNAL_SECRET régénéré"
+fi
+if [ "$ROTATION_MISE_A_JOUR" = true ]; then
+    poser_env UPDATE_INTERNAL_SECRET "$(openssl rand -hex 32)"
+    echo "[rotation] UPDATE_INTERNAL_SECRET régénéré"
 fi
 # sed -i recrée le fichier : propriétaire et droits d'origine à rétablir.
 chown --reference="$SAUVEGARDE" "$ENV_FICHIER"

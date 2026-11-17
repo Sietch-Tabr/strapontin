@@ -70,12 +70,13 @@ SPRING_DATASOURCE_PASSWORD=<mot de passe du rôle applicatif>
 APP_CONFIG_SECRET=<clé AES-256-GCM de chiffrement de app_config>
 BACKUP_INTERNAL_SECRET=<secret Bearer protégeant POST /api/interne/backup-statut>
 INTEGRITY_INTERNAL_SECRET=<secret Bearer protégeant POST /api/interne/integrite-statut>
+UPDATE_INTERNAL_SECRET=<secret Bearer protégeant POST /api/interne/mise-a-jour-statut>
 SPRING_PROFILES_ACTIVE=dev|prod
 ```
 
 `BACKUP_INTERNAL_SECRET` : `backup-local.sh` le lit dans ce fichier et l'envoie via `Authorization: Bearer`. Absent → l'endpoint répond 403 (notifications de backup perdues, mais le dump continue). `INTEGRITY_INTERNAL_SECRET` : même mécanisme pour `aide-check.sh`/`update.sh` → `IntegriteAlerteController`. `update.sh` vérifie aussi, avant de régénérer la baseline AIDE, qu'aucun fichier hors livraison n'a été modifié — sinon baseline conservée et alerte `modifie`.
 
-**Rotation des secrets** : `scripts/rotation-secrets.sh` (`--db`/`--app-config`/`--backup`/`--integrite`/`--tous`, sur le LXC) sauvegarde le fichier, pose le nouveau secret, redémarre et restaure l'ancien en cas d'échec. Pour `APP_CONFIG_SECRET`, l'ancien secret passe dans `APP_CONFIG_SECRET_PRECEDENT` : `ConfigCipher` s'y replie au déchiffrement et `RechiffrementSecretConfig` (web, au démarrage) rechiffre `app_config` **et** `users.two_factor_secret` avec le nouveau, puis le script retire la variable. Procédure complète : [wiki Sécurité](https://github.com/Sietch-Tabr/strapontin/wiki/S%C3%A9curit%C3%A9).
+**Rotation des secrets** : `scripts/rotation-secrets.sh` (`--db`/`--app-config`/`--backup`/`--integrite`/`--mise-a-jour`/`--tous`, sur le LXC) sauvegarde le fichier, pose le nouveau secret, redémarre et restaure l'ancien en cas d'échec. Pour `APP_CONFIG_SECRET`, l'ancien secret passe dans `APP_CONFIG_SECRET_PRECEDENT` : `ConfigCipher` s'y replie au déchiffrement et `RechiffrementSecretConfig` (web, au démarrage) rechiffre `app_config` **et** `users.two_factor_secret` avec le nouveau, puis le script retire la variable. Procédure complète : [wiki Sécurité](https://github.com/Sietch-Tabr/strapontin/wiki/S%C3%A9curit%C3%A9).
 
 ## Configuration applicative (`app_config`)
 

@@ -318,6 +318,9 @@ chown root:root $ENV_FILE
 chmod 600 $ENV_FILE
 "
 
+echo "[7] Mise à jour depuis l'administration (dossiers, secret, minuterie)..."
+pct exec "$VMID" -- bash "$APP_DIR/exploitation/preparer-mise-a-jour.sh"
+
 echo "[7] Contrôle d'intégrité AIDE (#976)..."
 # Le paquet Debian aide embarque son propre timer (dailyaidecheck.timer, scan complet de l'OS +
 # alerte par mail local root, jamais lu sur cette infra) et l'active automatiquement à
@@ -390,9 +393,10 @@ echo "  environnement : $ENV_FILE (root, 600)"
 echo ""
 echo "  Étapes suivantes :"
 echo "  1. cd front && npm run build && cd .."
-echo "     mvn -f java/pom.xml -pl web,worker -am package"
+echo "     mvn -f java/pom.xml -pl web,worker,mise-a-jour -am package"
 echo "  2. scp \"\$(ls -t java/web/target/web-*.jar | grep -v '.original' | head -1)\" root@${IP%%/*}:$APP_DIR/application/web.jar.new"
 echo "     scp \"\$(ls -t java/worker/target/worker-*.jar | grep -v '.original' | head -1)\" root@${IP%%/*}:$APP_DIR/application/worker.jar.new"
+echo "     scp \"\$(ls -t java/mise-a-jour/target/mise-a-jour-*.jar | grep -v '.original' | head -1)\" root@${IP%%/*}:$APP_DIR/application/mise-a-jour.jar.new"
 echo "  3. ssh root@${IP%%/*} '$APP_DIR/exploitation/update.sh'"
 echo "  4. Ouvrir http://${IP%%/*}:8080/setup"
 echo "================================================================"
