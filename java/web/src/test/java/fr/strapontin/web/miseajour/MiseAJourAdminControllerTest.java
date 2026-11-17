@@ -56,7 +56,7 @@ class MiseAJourAdminControllerTest {
 
   @Test
   void lire_retourneLEtatAvecLeTotpDeLAdministrateur() {
-    final EtatMiseAJourWeb etat = new EtatMiseAJourWeb("3.1.5", "3.2.0", null, false, true);
+    final EtatMiseAJourWeb etat = new EtatMiseAJourWeb("3.1.5", "3.2.0", null, false, false, true);
     when(service.etat(true)).thenReturn(etat);
 
     final ResponseEntity<EtatMiseAJourWeb> reponse = controller.lire(auth);

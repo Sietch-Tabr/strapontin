@@ -81,11 +81,13 @@ public class MiseAJourService {
    * @return versions, dernier état et présence d'une demande
    */
   public EtatMiseAJourWeb etat(final boolean totpActif) {
+    final boolean attente = demandeEnAttente();
     return new EtatMiseAJourWeb(
         installee().toString(),
         releases.plusRecente(installee()).map(Version::toString).orElse(null),
         EtatMiseAJour.lire(dossierEtat).orElse(null),
-        demandeEnAttente(),
+        attente,
+        attente || miseAJourEnCours(),
         totpActif);
   }
 

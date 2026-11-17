@@ -51,6 +51,9 @@
       <KeepAlive
         ><AdminUtilisateurs v-if="ongletActif === '#utilisateurs'"
       /></KeepAlive>
+      <KeepAlive
+        ><AdminMiseAJour v-if="ongletActif === '#mise-a-jour'"
+      /></KeepAlive>
     </div>
   </div>
 </template>
@@ -70,6 +73,7 @@ import AdminLogs from "../components/admin/AdminLogs.vue";
 import AdminConfig from "../components/admin/AdminConfig.vue";
 import AdminBanniere from "../components/admin/AdminBanniere.vue";
 import AdminUtilisateurs from "../components/admin/AdminUtilisateurs.vue";
+import AdminMiseAJour from "../components/admin/AdminMiseAJour.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -88,6 +92,7 @@ const onglets = [
   { ancre: "#configuration", label: "Configuration" },
   { ancre: "#communication", label: "Communication" },
   { ancre: "#utilisateurs", label: "Utilisateurs" },
+  { ancre: "#mise-a-jour", label: "Mise à jour" },
 ];
 const ongletActif = ref("#jobs");
 
