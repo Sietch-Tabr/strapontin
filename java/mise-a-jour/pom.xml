@@ -37,6 +37,13 @@
             <version>${sigstore-java.version}</version>
         </dependency>
 
+        <!-- Version corrigée imposée à la place de celle de sigstore-java (voir la propriété du parent) -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+        </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
