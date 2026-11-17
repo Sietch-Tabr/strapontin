@@ -9,6 +9,8 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 # En cas d'échec : rollback via la commande affichée
 
 VMID="${1:?Usage: system-update.sh <VMID>}"
+# Port de l'actuator du web (le port applicatif sert la SPA et répond 200 à tout chemin inconnu).
+PORT_WEB_SANTE="${PORT_WEB_SANTE:-9090}"
 DATE=$(date +%Y%m%d)
 NOM_SNAPSHOT="pre-sysupdate-${DATE}"
 
@@ -65,7 +67,8 @@ fi
 # 4. Healthcheck applicatif
 echo "[4/4] Healthcheck..."
 RETRIES=10
-until pct exec "$VMID" -- curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1 || [ "$RETRIES" -eq 0 ]; do
+until pct exec "$VMID" -- curl -sf "http://localhost:$PORT_WEB_SANTE/actuator/health" 2>/dev/null \
+    | grep -q '"status":"UP"' || [ "$RETRIES" -eq 0 ]; do
     sleep 3
     RETRIES=$((RETRIES - 1))
 done

@@ -17,6 +17,7 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>exploitation-commun</module>
         <module>core</module>
         <module>sources</module>
         <module>worker</module>

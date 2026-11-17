@@ -8,6 +8,9 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 # (deposer-exploitation.sh) et des JARs dans application/*.jar.new.
 
 . "$(dirname "$0")/chemins.sh"
+. "$(dirname "$0")/verrou.sh"
+prendre_verrou "update.sh" || exit 1
+trap liberer_verrou EXIT
 MANIFESTE="$APP_EXPLOITATION/MANIFESTE.sha256"
 AIDE_ACTIF=false
 CHANGEMENTS_EXTERNES=""
@@ -167,7 +170,7 @@ systemctl restart strapontin-web strapontin-worker
 echo "[update] Attente démarrage web (max 60 s)..."
 HEALTH_OK=false
 for i in $(seq 1 60); do
-    if curl -sf "http://localhost:9090/actuator/health" | grep -q '"status":"UP"'; then
+    if curl -sf "http://localhost:$PORT_WEB_SANTE/actuator/health" | grep -q '"status":"UP"'; then
         echo "[update] Service web UP (${i}s)"
         HEALTH_OK=true
         break
@@ -204,7 +207,7 @@ if [ "$AIDE_ACTIF" = true ] && [ -n "$CHANGEMENTS_EXTERNES" ]; then
         -H "Authorization: Bearer $INTEGRITY_SECRET" \
         --data-urlencode "statut=modifie" \
         --data-urlencode "detail=Déploiement : baseline conservée, changement hors déploiement : $CHANGEMENTS_EXTERNES" \
-        "http://localhost:8080/api/interne/integrite-statut" \
+        "http://localhost:$PORT_WEB/api/interne/integrite-statut" \
         >/dev/null 2>&1 || echo "[update] AVERTISSEMENT : notification d'intégrité non envoyée" >&2
 elif [ "$AIDE_ACTIF" = true ]; then
     regenerer_baseline

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# declencher-job.sh — appel de l'API interne du worker (127.0.0.1:8081), authentifiée par un
+# declencher-job.sh — appel de l'API interne du worker (127.0.0.1, port PORT_WORKER), authentifiée par un
 # jeton dérivé d'APP_CONFIG_SECRET (HMAC-SHA256, même calcul que JetonInterneWorker) : le
 # secret n'est jamais affiché ni passé en argument.
 # Usage, en root sur le LXC :
@@ -19,9 +19,9 @@ unset SECRET
 
 if [ "$ARGUMENT" = "--simulation-salles" ]; then
     curl -sf --max-time 600 -H "X-Jeton-Worker: $JETON" \
-        "http://127.0.0.1:8081/trigger/simulation-salles"
+        "http://127.0.0.1:$PORT_WORKER/trigger/simulation-salles"
 else
     curl -sf --max-time 30 -X POST -H "X-Jeton-Worker: $JETON" \
-        --data-urlencode "typeJob=$ARGUMENT" "http://127.0.0.1:8081/trigger/job"
+        --data-urlencode "typeJob=$ARGUMENT" "http://127.0.0.1:$PORT_WORKER/trigger/job"
 fi
 echo

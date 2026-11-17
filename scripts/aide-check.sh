@@ -16,7 +16,7 @@ _appel_statut() {
         -H "Authorization: Bearer $INTEGRITY_SECRET" \
         --data-urlencode "statut=$1" \
         --data-urlencode "detail=${2:-}" \
-        "http://localhost:8080/api/interne/integrite-statut" \
+        "http://localhost:$PORT_WEB/api/interne/integrite-statut" \
         >/dev/null 2>&1 || true
 }
 

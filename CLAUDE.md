@@ -2,7 +2,7 @@
 
 ## Architecture — monorepo Maven
 
-`java/{core,sources,web,worker}` (BOM parent `java/pom.xml`, Java 27, Spring Boot 4.1.2) — `core` : normalisation/dédup/types partagés ; `sources` : clients TM/Eventim/Deezer ; `web` : REST API + Vue SPA (8080) ; `worker` : Quartz (8081). `scripts/` : provisionnement/déploiement/sauvegarde — noms auto-descriptifs sauf `restore-test.sh` (test de restauration à la demande, jamais en CI, voir section Sauvegarde).
+`java/{core,sources,web,worker,exploitation-commun}` (BOM parent `java/pom.xml`, Java 27, Spring Boot 4.1.2) — `core` : normalisation/dédup/types partagés ; `exploitation-commun` : bibliothèque des modules d'exploitation du LXC (versions, chemins, verrou) ; `sources` : clients TM/Eventim/Deezer ; `web` : REST API + Vue SPA (8080) ; `worker` : Quartz (8081). `scripts/` : provisionnement/déploiement/sauvegarde — noms auto-descriptifs sauf `restore-test.sh` (test de restauration à la demande, jamais en CI, voir section Sauvegarde).
 
 ## Architecture module web — couche service/repository
 
@@ -53,8 +53,7 @@ Utiliser le skill `/deploy-dev` (build Maven avec tests + livraison des scripts 
 
 CLI : `gh`. `gh issue view N --comments` ; toujours `--limit` sur `gh issue list` (30 résultats par défaut). Étiquettes : `bug`, `enhancement` (ex-Feature et Task), `question`, `duplicate`, `invalid`. Jalons : `gh api repos/{owner}/{repo}/milestones`. PR : `Closes #N` **dans le corps** (`--body-file`), mot-clé répété devant chaque ticket (`Closes #A, closes #B`), actif seulement vers `main`.
 
-`main` : la CI (`.github/workflows/ci.yml`) tourne à chaque push sur `main` ou sur un tag `v*`, jamais avant le merge : rejouer les commandes des jobs avant la PR. Aucun déploiement sans run vert : `/deploiement-prod` livre les JARs attestés (dev et prod). Règle du dépôt : push forcé et suppression de `main` interdits. Features : branche → PR → merge. Jobs : `tests-java`, `analyse-statique`, `front`, `dependances` (OSV), `secrets` (gitleaks), `workflows` (actionlint, zizmor), `construction` (JARs attestés), `publication` (release, sur tag). Actions épinglées par SHA, sans cache, artefacts à un jour.
-Runners GitHub (16 Go, Docker préinstallé) : plus de contrainte mémoire de l'ancien agent ; chaque job tourne sur une machine neuve (le build du front passe à `construction` par un artefact).
+`main` : la CI tourne à chaque push sur `main` ou sur un tag `v*`, jamais avant le merge (rejouer les commandes des jobs avant la PR) ; aucun déploiement sans run vert (`/deploiement-prod`). Features : branche → PR → merge. Jobs, release et règles du dépôt : [`.github/CLAUDE.md`](.github/CLAUDE.md).
 
 ## Sauvegarde et restauration
 
@@ -121,7 +120,7 @@ Ordre de traitement, garde-fous et incidents : [`worker…/persister/CLAUDE.md`]
 
 UI/Vue, schéma SQL, style Java, tests E2E — scopées par type de fichier, chargées automatiquement en travaillant dessus plutôt que dupliquées ici : [`.claude/rules/frontend-vue.md`](.claude/rules/frontend-vue.md), [`.claude/rules/sql-migrations.md`](.claude/rules/sql-migrations.md), [`.claude/rules/backend-java.md`](.claude/rules/backend-java.md), [`.claude/rules/e2e-testing.md`](.claude/rules/e2e-testing.md).
 
-Commandes de test (à connaître même hors édition d'un fichier) : `mvn -f java/pom.xml clean test -pl core,sources,web,worker -am` (Docker requis, Testcontainers) ; `cd front && npm run test:unit` (Vitest, fonctions pures) ; `cd e2e && npx playwright test` (jamais `--project`, 5 navigateurs). Analyse statique (bloquante en CI) : `PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f java/pom.xml -pl core,sources,web,worker -am compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests` ; `cd front && npm run lint && npm run lint:css`.
+Commandes de test (à connaître même hors édition d'un fichier) : `mvn -f java/pom.xml clean test -pl core,sources,web,worker,exploitation-commun -am` (Docker requis, Testcontainers) ; `cd front && npm run test:unit` (Vitest, fonctions pures) ; `cd e2e && npx playwright test` (jamais `--project`, 5 navigateurs). Analyse statique (bloquante en CI) : `PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun -am compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests` ; `cd front && npm run lint && npm run lint:css`.
 
 ## Skills projet (`.claude/commands/`, `.claude/skills/`)
 

@@ -73,7 +73,7 @@ echo "[restore-test] Attente post-restore (${WAIT_RESTORE}s)..."
 sleep "${WAIT_RESTORE}"
 
 echo "[restore-test] Health check web..."
-HEALTH=$(pct exec "${LXC_TEMP_ID}" -- curl -sf http://localhost:9090/actuator/health || echo "ECHEC")
+HEALTH=$(pct exec "${LXC_TEMP_ID}" -- curl -sf http://localhost:${PORT_WEB_SANTE:-9090}/actuator/health || echo "ECHEC")
 echo "[restore-test] Réponse : ${HEALTH}"
 if ! echo "$HEALTH" | grep -q '"status":"UP"'; then
     echo "[restore-test] ERREUR : health check web échoué — restauration invalide" >&2
@@ -81,7 +81,7 @@ if ! echo "$HEALTH" | grep -q '"status":"UP"'; then
 fi
 
 echo "[restore-test] Health check worker..."
-HEALTH_WORKER=$(pct exec "${LXC_TEMP_ID}" -- curl -sf http://localhost:9091/actuator/health || echo "ECHEC")
+HEALTH_WORKER=$(pct exec "${LXC_TEMP_ID}" -- curl -sf http://localhost:${PORT_WORKER_SANTE:-9091}/actuator/health || echo "ECHEC")
 echo "[restore-test] Réponse worker : ${HEALTH_WORKER}"
 if ! echo "$HEALTH_WORKER" | grep -q '"status":"UP"'; then
     echo "[restore-test] ERREUR : health check worker échoué" >&2

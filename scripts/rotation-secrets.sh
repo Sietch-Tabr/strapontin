@@ -8,6 +8,9 @@ set -euo pipefail
 # À exécuter en tant que root depuis le LXC. Procédure complète et checklist : wiki Sécurité.
 
 . "$(dirname "$0")/chemins.sh"
+. "$(dirname "$0")/verrou.sh"
+prendre_verrou "rotation-secrets.sh" || exit 1
+trap liberer_verrou EXIT
 
 ROTATION_DB=false
 ROTATION_APP_CONFIG=false
@@ -52,7 +55,7 @@ supprimer() {
 
 attendre_services() {
     for _ in $(seq 1 90); do
-        if curl -sf "http://localhost:9090/actuator/health" | grep -q '"status":"UP"' \
+        if curl -sf "http://localhost:$PORT_WEB_SANTE/actuator/health" | grep -q '"status":"UP"' \
             && systemctl is-active --quiet strapontin-worker; then
             return 0
         fi

@@ -8,6 +8,7 @@ set -euo pipefail
 
 RACINE="$(cd "$(dirname "$0")" && pwd)"
 TMP="$(mktemp -d)"
+export VERROU_DIR="$TMP/verrou"
 trap 'rm -rf "$TMP"' EXIT
 FAUX="$TMP/faux"
 mkdir -p "$FAUX" "$TMP/nas" "$TMP/entree"
@@ -54,6 +55,8 @@ rm -f "$TMP/entree/psql.sql"
 bash "$RACINE/restore.sh" "$DUMP" > /dev/null
 verifier grep -q "CREATE TABLE t" "$TMP/entree/psql.sql"
 verifier grep -q "SPRING_DATASOURCE_PASSWORD=secret" "$ENV_FICHIER"
+# Le verrou d'exploitation est libéré à la fin de la restauration (le piège : un autre trap EXIT).
+verifier test ! -e "$VERROU_DIR"
 
 # 4. restore.sh sur une ancienne archive .tar.gz (dump + .env + journaux) : toujours restaurable.
 printf -- '-- ancien dump\nCREATE TABLE ancien (a int);\n' > "$TMP/dump.sql"
@@ -62,6 +65,7 @@ tar -czf "$TMP/strapontin_ancien.tar.gz" -C "$TMP" dump.sql .env
 rm -f "$TMP/entree/psql.sql"
 bash "$RACINE/restore.sh" "$TMP/strapontin_ancien.tar.gz" > /dev/null
 verifier grep -q "CREATE TABLE ancien" "$TMP/entree/psql.sql"
+verifier test ! -e "$VERROU_DIR"
 
 # 5. Un dump compressé corrompu est refusé avant de toucher à la base.
 printf 'pas du gzip' > "$TMP/strapontin_casse.sql.gz"
@@ -69,6 +73,7 @@ if bash "$RACINE/restore.sh" "$TMP/strapontin_casse.sql.gz" > /dev/null 2>&1; th
     echo "ECHEC : un dump corrompu a été accepté" >&2
     echecs=$((echecs + 1))
 fi
+verifier test ! -e "$VERROU_DIR"
 
 # 6. Purge : une sauvegarde de plus de 30 jours est supprimée pour cet environnement et pour les
 # anciennes sans préfixe, jamais pour l'autre environnement, quel que soit son âge.

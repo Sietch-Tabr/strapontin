@@ -10,6 +10,9 @@ set -euo pipefail
 FICHIER="${1:?Usage: restore.sh <strapontin-ENV_YYYYMMDD_HHMMSS.sql.gz|.tar.gz>}"
 # Emplacements surchargeables par l'environnement pour le test (tester-sauvegardes.sh).
 . "$(dirname "$0")/chemins.sh"
+. "$(dirname "$0")/verrou.sh"
+prendre_verrou "restore.sh" || exit 1
+trap liberer_verrou EXIT
 APP_USER_DEFAUT="strapontin"
 
 [ -f "$FICHIER" ] || { echo "ERREUR : fichier introuvable : $FICHIER" >&2; exit 1; }
@@ -115,7 +118,7 @@ if [ "$ENV_PRESENT" = "1" ]; then
     # n'importe quel caractère (guillemet, $, backtick...), qui casserait sinon la commande
     # imbriquée dans su -c ou permettrait une injection SQL dans l'ALTER USER.
     MDP_TMP=$(mktemp)
-    trap 'rm -f "$MDP_TMP"' EXIT
+    trap 'rm -f "$MDP_TMP"; liberer_verrou' EXIT
     printf '%s' "$NOUVEAU_MDP" > "$MDP_TMP"
     chmod 600 "$MDP_TMP"
     su - postgres -c 'psql -v pass="$(cat '"$MDP_TMP"')" -c "ALTER USER '"$APP_USER"' WITH PASSWORD :'"'"'pass'"'"';"'
@@ -133,5 +136,5 @@ systemctl start strapontin-web strapontin-worker
 echo ""
 echo "================================================================"
 echo "  Restauration terminée"
-echo "  Vérifiez l'application : curl -sf http://localhost:9090/actuator/health"
+echo "  Vérifiez l'application : curl -sf http://localhost:$PORT_WEB_SANTE/actuator/health"
 echo "================================================================"
