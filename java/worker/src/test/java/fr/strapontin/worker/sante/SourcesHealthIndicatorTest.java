@@ -12,7 +12,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.QuotaTM;
-import fr.strapontin.worker.WorkerStatsService;
+import fr.strapontin.worker.maintenance.WorkerStatsService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
 import java.util.HashMap;
 import java.util.List;

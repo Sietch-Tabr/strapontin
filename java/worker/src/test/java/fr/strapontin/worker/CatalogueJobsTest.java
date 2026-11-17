@@ -7,6 +7,7 @@ package fr.strapontin.worker;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import fr.strapontin.core.CatalogueJobs;
+import fr.strapontin.worker.planification.NomsJobs;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

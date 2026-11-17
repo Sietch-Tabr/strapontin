@@ -4,12 +4,12 @@
  */
 package fr.strapontin.worker.jobs;
 
-import fr.strapontin.worker.WorkerFetchService;
-import fr.strapontin.worker.WorkerPurgePerimetreService;
-import fr.strapontin.worker.WorkerPurgeService;
-import fr.strapontin.worker.WorkerRevocationService;
-import fr.strapontin.worker.WorkerService;
-import fr.strapontin.worker.WorkerSuiviCyclesService;
+import fr.strapontin.worker.fetch.WorkerFetchService;
+import fr.strapontin.worker.maintenance.WorkerPurgePerimetreService;
+import fr.strapontin.worker.maintenance.WorkerPurgeService;
+import fr.strapontin.worker.maintenance.WorkerRevocationService;
+import fr.strapontin.worker.maintenance.WorkerService;
+import fr.strapontin.worker.maintenance.WorkerSuiviCyclesService;
 import java.util.Map;
 import java.util.Set;
 import org.quartz.JobBuilder;

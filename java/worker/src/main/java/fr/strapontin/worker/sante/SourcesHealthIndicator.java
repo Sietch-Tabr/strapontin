@@ -5,7 +5,7 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.QuotaTM;
-import fr.strapontin.worker.WorkerStatsService;
+import fr.strapontin.worker.maintenance.WorkerStatsService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
 import java.util.LinkedHashMap;
 import java.util.List;

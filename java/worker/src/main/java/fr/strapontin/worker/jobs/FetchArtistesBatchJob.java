@@ -4,7 +4,7 @@
  */
 package fr.strapontin.worker.jobs;
 
-import fr.strapontin.worker.WorkerFetchService;
+import fr.strapontin.worker.fetch.WorkerFetchService;
 import java.util.Arrays;
 import java.util.List;
 import org.quartz.DisallowConcurrentExecution;

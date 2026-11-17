@@ -7,7 +7,7 @@ package fr.strapontin.worker.sante;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.eventim.ProduitEcarte;
 import fr.strapontin.sources.eventim.SourceAvecProduitsEcartes;
-import fr.strapontin.worker.WorkerFetchCommun;
+import fr.strapontin.worker.fetch.WorkerFetchCommun;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;

@@ -1,0 +1,27 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.worker.fetch;
+
+import fr.strapontin.worker.maintenance.WorkerStatsService;
+import fr.strapontin.worker.notification.NotificationDigestService;
+import fr.strapontin.worker.sante.SignalementDatesFestivalEcartees;
+import fr.strapontin.worker.sante.SuiviSanteSourcesService;
+import org.springframework.stereotype.Component;
+
+/**
+ * Collaborateurs post-fetch partagés par les exécuteurs — notification,
+ * bilan de job, suivi passif par source, relevé des lieux Eventim, dates de
+ * festival écartées ; regroupés
+ * pour rester sous le seuil de paramètres de constructeur (8).
+ * @since 2.9.1
+ * @author Kwaite
+ */
+@Component
+public record FetchRapportage(
+    NotificationDigestService notificationDigestService,
+    WorkerStatsService workerStatsService,
+    SuiviSanteSourcesService suiviSanteSourcesService,
+    EnregistreurLieuxEventim enregistreurLieuxEventim,
+    SignalementDatesFestivalEcartees datesFestivalEcartees) {}

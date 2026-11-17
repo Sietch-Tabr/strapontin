@@ -6,7 +6,7 @@ package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.TitresDeSpectacle;
-import fr.strapontin.worker.WorkerFetchCommun;
+import fr.strapontin.worker.fetch.WorkerFetchCommun;
 import fr.strapontin.worker.persister.FusionSeancesDeuxSourcesService;
 import java.util.LinkedHashMap;
 import java.util.List;

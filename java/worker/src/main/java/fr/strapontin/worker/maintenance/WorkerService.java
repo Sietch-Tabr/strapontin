@@ -1,0 +1,113 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.worker.maintenance;
+
+import fr.strapontin.worker.notification.NotificationDigestService;
+import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
+import fr.strapontin.worker.persister.RecalculerMatchesService;
+import fr.strapontin.worker.sante.ReconciliationNocturneService;
+import fr.strapontin.worker.sante.ResultatReconciliation;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+/**
+ * Orchestration des jobs de recalcul de matches et de réconciliation
+ * nocturne — fetch/purge/révocation admin extraits ({@link
+ * WorkerFetchService}/{@link WorkerPurgeService}/{@link
+ * WorkerRevocationService}), point d'entrée fin restant ici.
+ * @since 2.0.0
+ * @author Kwaite
+ */
+@Service
+public class WorkerService {
+
+  private static final Logger LOG = LoggerFactory.getLogger(WorkerService.class);
+
+  private final RecalculerMatchesService recalculerMatchesService;
+  private final NotificationDigestService notificationDigestService;
+  private final ReconciliationNocturneService reconciliationNocturneService;
+  private final WorkerStatsService workerStatsService;
+
+  /**
+   * @param recalculerMatchesService recalcul des matches utilisateur
+   * @param notificationDigestService envoi du digest de notifications
+   * @param reconciliationNocturneService réconciliation nocturne des
+   *     identifiants suspects
+   * @param workerStatsService journalisation des bilans de job
+   */
+  public WorkerService(
+      final RecalculerMatchesService recalculerMatchesService,
+      final NotificationDigestService notificationDigestService,
+      final ReconciliationNocturneService reconciliationNocturneService,
+      final WorkerStatsService workerStatsService) {
+    this.recalculerMatchesService = recalculerMatchesService;
+    this.notificationDigestService = notificationDigestService;
+    this.reconciliationNocturneService = reconciliationNocturneService;
+    this.workerStatsService = workerStatsService;
+  }
+
+  /**
+   * Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.
+   *
+   * @param userIds IDs à recalculer, ou {@code null} pour tous
+   */
+  public void executerRecalculerMatches(final List<String> userIds) {
+    LOG.info("recalculer:matches démarré userIds={}", userIds);
+    workerStatsService.executerAvecStats(
+        LOG,
+        "recalculer:matches",
+        () -> {
+          final int nbUsers = recalculerMatchesService.recalculerMatches(userIds);
+          notificationDigestService.executerDigest("temps_reel");
+          LOG.info("recalculer:matches terminé users={}", nbUsers);
+          return new ResultatPersistance(0, 0);
+        });
+  }
+
+  /**
+   * Job nocturne de réconciliation des sources salles/artistes : health-check
+   * et redécouverte des identifiants suspects, puis enrichissement
+   * Wikidata/OSM/Deezer.
+   */
+  public void executerReconciliationNocturne() {
+    LOG.info("reconciliation:nocturne démarré");
+    workerStatsService.executerAvecStats(
+        LOG,
+        "reconciliation:nocturne",
+        () -> {
+          final ResultatReconciliation bilan = reconciliationNocturneService.executer();
+          LOG.info(
+              "reconciliation:nocturne terminé sallesVerifiees={} redecouvertes={} ambigues={}"
+                  + " enrichissementsSalle={} enrichissementsArtiste={} typesWikidataInvalides={}"
+                  + " nomsIncoherentsTM={} sallesFusionneesParCleForte={}"
+                  + " evenementsFusionnesArtiste={} fichesOrigineReportMarquees={}"
+                  + " positionsRealignees={} contaminationsMultiSalleSignalees={}"
+                  + " doublonsMultiSalleSignales={} motsGenericsSuggeres={}"
+                  + " integriteSignalements={}",
+              bilan.sallesVerifiees(),
+              bilan.sallesRedecouvertes(),
+              bilan.ambigues(),
+              bilan.enrichissementsSalle(),
+              bilan.enrichissementsArtiste(),
+              bilan.typesWikidataInvalides(),
+              bilan.nomsIncoherentsTM(),
+              bilan.sallesFusionneesParCleForte(),
+              bilan.evenementsFusionnesArtiste(),
+              bilan.fichesOrigineReportMarquees(),
+              bilan.positionsRealignees(),
+              bilan.contaminationsMultiSalleSignalees(),
+              bilan.doublonsMultiSalleSignales(),
+              bilan.motsGenericsSuggeres(),
+              bilan.integriteSignalements());
+          return new ResultatPersistance(
+              0,
+              bilan.sallesRedecouvertes()
+                  + bilan.enrichissementsSalle()
+                  + bilan.enrichissementsArtiste());
+        });
+  }
+}
