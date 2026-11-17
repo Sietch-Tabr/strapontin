@@ -41,7 +41,7 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
       # Testcontainers utilise le Docker préinstallé du runner.
-      - run: mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am test
+      - run: bash scripts/mvn-reprise.sh -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am test
 
   analyse-statique:
     name: analyse-statique
@@ -58,13 +58,14 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
       - run: >-
-          mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am
+          bash scripts/mvn-reprise.sh -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am
           compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests
       # Scripts d'exploitation déployés en production : leurs tests tournent avant tout déploiement.
       - run: bash scripts/tester-update.sh
       - run: bash scripts/tester-sauvegardes.sh
       - run: bash scripts/tester-exploitation.sh
       - run: bash scripts/tester-verrou.sh
+      - run: bash scripts/tester-mvn-reprise.sh
 
   front:
     name: front
@@ -160,7 +161,7 @@ jobs:
         with:
           name: front
           path: java/web/src/main/resources/static
-      - run: mvn -f java/pom.xml -pl web,worker -am package -DskipTests
+      - run: bash scripts/mvn-reprise.sh -f java/pom.xml -pl web,worker -am package -DskipTests
       - name: Rassembler les JARs
         run: |
           mkdir dist

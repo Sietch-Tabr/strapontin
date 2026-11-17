@@ -10,7 +10,7 @@ set -euo pipefail
 racine="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "== Java : Checkstyle, PMD, Spotless"
-PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f "$racine/java/pom.xml" \
+PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true bash "$racine/scripts/mvn-reprise.sh" -f "$racine/java/pom.xml" \
   -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests
 
 echo "== Front : ESLint et stylelint"

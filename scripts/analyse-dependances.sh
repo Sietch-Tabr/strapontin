@@ -14,7 +14,7 @@ VERSION_CYCLONEDX="2.9.3"
 
 generer_inventaire() {
   # Dépendances de test exclues : seules celles livrées en production comptent.
-  mvn -B -q -f "$RACINE/java/pom.xml" \
+  bash "$RACINE/scripts/mvn-reprise.sh" -B -q -f "$RACINE/java/pom.xml" \
     "org.cyclonedx:cyclonedx-maven-plugin:${VERSION_CYCLONEDX}:makeAggregateBom" \
     -DoutputFormat=json -DoutputName=bom -DincludeTestScope=false
 }

@@ -13,4 +13,4 @@
 - Artefacts à un jour ; aucun secret dans la CI.
 - Runners GitHub (16 Go, Docker préinstallé) ; chaque job tourne sur une machine neuve, le build du front passe à `construction` par un artefact.
 - Dependabot : écosystème `github-actions` seulement.
-- Maven : 6 essais de téléchargement avec un délai plafonné à 60 s (`MAVEN_ARGS`), parce que Maven Central répond parfois 429 aux runners (3 essais par défaut, sans cache nous retéléchargeons tout à chaque job).
+- Maven : 6 essais de téléchargement avec un délai plafonné à 60 s (`MAVEN_ARGS`), puis `scripts/mvn-reprise.sh` (3 essais espacés de 2 min, seulement si le journal contient `HTTP Status: 429` ; un autre échec n'est jamais rejoué) dans les jobs Maven et dans `analyse-dependances.sh` : Maven Central limite par adresse, les runners en partagent. Pas de cache de lecture : `zizmor` 1.32.0 le refuse dans un workflow de release (testé avec `cache-mode` `read`, `write`, conditions sur le tag), et `actionlint` 1.7.12 rejette `cache-mode`. Test : `scripts/tester-mvn-reprise.sh`.
