@@ -11,4 +11,4 @@ Un seul jeu : `java/web/.../db/migration/`. Seul web migre la production ; les t
 
 Toute clé étrangère reçoit un index dont elle forme le préfixe (suppressions en cascade, `SET NULL`, vérification `NO ACTION`), sauf choix explicite documenté dans la migration.
 
-Schéma actuel table par table : [wiki Schéma](https://codeberg.org/Kwaite/strapontin/wiki/Schéma-de-base-de-données) ; historique des migrations : [wiki Roadmap](https://codeberg.org/Kwaite/strapontin/wiki/Roadmap).
+Schéma actuel table par table : [wiki Schéma](https://github.com/Sietch-Tabr/strapontin/wiki/Schéma-de-base-de-données) ; historique des migrations : [wiki Roadmap](https://github.com/Sietch-Tabr/strapontin/wiki/Roadmap).

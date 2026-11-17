@@ -18,7 +18,7 @@ Pattern 3-couches : `XxxController` (HTTP) → `XxxService` (`@Transactional`) �
 
 **okhttp/Resend (Kotlin Multiplatform)** : l'artefact `com.squareup.okhttp3:okhttp` est vide côté JVM depuis okhttp 5.0.0 ; resend-java (≥ 4.28.0) dépend directement de `okhttp-jvm`, dont la version est seulement gérée dans le pom parent. Revérifier par `dependency:tree` à chaque montée de Resend qu'aucun `okhttp` vide n'est tiré (un oubli côté worker a déjà causé un `NoClassDefFoundError` silencieux sur tout email worker). **Jackson 3 uniquement** (`tools.jackson`, `JsonMapper` autoconfiguré par Spring Boot, aucun bean maison) : les `RestClient` des sources retiennent Jackson 3 dans le runtime web/worker, le module `sources` en dépend pour que ses tests désérialisent avec la même pile ; seules les annotations restent dans `com.fasterxml.jackson.annotation`.
 
-Historique jalon par jalon : [wiki Roadmap](https://codeberg.org/Kwaite/strapontin/wiki/Roadmap). Détails par domaine : [wiki Architecture](https://codeberg.org/Kwaite/strapontin/wiki/Architecture), [wiki Sources-de-données](https://codeberg.org/Kwaite/strapontin/wiki/Sources-de-données), [wiki Sécurité](https://codeberg.org/Kwaite/strapontin/wiki/Sécurité).
+Historique jalon par jalon : [wiki Roadmap](https://github.com/Sietch-Tabr/strapontin/wiki/Roadmap). Détails par domaine : [wiki Architecture](https://github.com/Sietch-Tabr/strapontin/wiki/Architecture), [wiki Sources-de-données](https://github.com/Sietch-Tabr/strapontin/wiki/Sources-de-données), [wiki Sécurité](https://github.com/Sietch-Tabr/strapontin/wiki/Sécurité).
 
 ## Stack technique
 
@@ -41,7 +41,7 @@ Historique jalon par jalon : [wiki Roadmap](https://codeberg.org/Kwaite/strapont
 | Environnement | VMID | IP            | Notes                                           |
 | ------------- | ---- | ------------- | ----------------------------------------------- |
 | dev           | 114  | 192.168.20.78 | déploiement manuel via `/deploy-dev`            |
-| prod          | 113  | 192.168.20.79 | production — Woodpecker déploie sur push `main` |
+| prod          | 113  | 192.168.20.79 | production — `/deploiement-prod` (JARs attestés de la CI GitHub) |
 
 Logs : `journalctl -fu strapontin-web`/`strapontin-worker` (depuis le LXC), ou `ssh root@<ip> "journalctl -u strapontin-web -n 50 --no-pager"` depuis le Mac. Actuator : `:9090` (web) / `:9091` (worker) — **pas** `:8080`, le port applicatif/SPA. Accès app dev : `http://192.168.20.78:8080` — config locale (tunnel SSH, URL sandbox) dans `CLAUDE.local.md`.
 
@@ -49,12 +49,12 @@ Logs : `journalctl -fu strapontin-web`/`strapontin-worker` (depuis le LXC), ou `
 
 Utiliser le skill `/deploy-dev` (build Maven avec tests + livraison des scripts et JARs + `exploitation/update.sh` + tail logs) — commandes manuelles dans le skill lui-même si besoin d'un fallback.
 
-### Gestion des issues (Codeberg) et Git
+### Gestion des issues (GitHub) et Git
 
-CLI : `tea` (pas `gh` — Codeberg est Gitea, incompatible avec `gh`). `tea issue view N` → toujours `-f "index,title,body"` (body absent par défaut). Labels : `Bug`, `Feature`, `Question`, `Task`, `Duplicate`, `Invalid`. PR : `Closes #N` **dans le corps** (`--description`), pas seulement le titre — Gitea ferme les issues via le corps, jamais via le titre.
+CLI : `gh`. `gh issue view N --comments` ; toujours `--limit` sur `gh issue list` (30 résultats par défaut). Étiquettes : `bug`, `enhancement` (ex-Feature et Task), `question`, `duplicate`, `invalid`. Jalons : `gh api repos/{owner}/{repo}/milestones`. PR : `Closes #N` **dans le corps** (`--body-file`), mot-clé répété devant chaque ticket (`Closes #A, closes #B`), actif seulement vers `main`.
 
-`main` : Woodpecker déploie sur prod à chaque push (**jamais de push manuel sans build valide**). Features : branche `feature/xxx` → PR → merge. Pipeline (`.woodpecker/ci.yaml`) : test (Maven) + test-front (Vitest) → build-front → lint-front → static-analysis → analyse-dependances → build → backup → deploy, restreints à `main`. Le repo doit être marqué "trusted" (Settings → repo) pour autoriser les volumes Maven.
-⚠️ **Agent CI (LXC 111, 2 Go RAM)** : les steps `front/` (`build-front`/`lint-front`) et `static-analysis` (Checkstyle+PMD) restent entièrement sérialisés : jamais deux `npm ci` concurrents sur le workspace partagé (`ENOTEMPTY` sur `node_modules`), jamais `static-analysis` en parallèle d'un step `front/` (OOM), `MAVEN_OPTS: -Xmx768m` sur `static-analysis` (mémoire résiduelle des Testcontainers de `test`).
+`main` : la CI (`.github/workflows/ci.yml`) tourne à chaque push sur `main` seulement, jamais avant le merge : rejouer les commandes des jobs avant la PR. Aucun déploiement sans run vert : `/deploiement-prod` livre les JARs attestés (dev et prod). Règle du dépôt : push forcé et suppression de `main` interdits. Features : branche → PR → merge. Jobs : `tests-java`, `analyse-statique`, `front`, `dependances` (OSV), `secrets` (gitleaks), `workflows` (actionlint, zizmor), puis `construction` (JARs attestés). Actions épinglées par SHA, artefacts à rétention d'un jour (500 Mo de stockage).
+Runners GitHub (16 Go, Docker préinstallé) : plus de contrainte mémoire de l'ancien agent ; chaque job tourne sur une machine neuve (le build du front passe à `construction` par un artefact).
 
 ## Sauvegarde et restauration
 
@@ -76,7 +76,7 @@ SPRING_PROFILES_ACTIVE=dev|prod
 
 `BACKUP_INTERNAL_SECRET` : `backup-local.sh` le lit dans ce fichier et l'envoie via `Authorization: Bearer`. Absent → l'endpoint répond 403 (notifications de backup perdues, mais le dump continue). `INTEGRITY_INTERNAL_SECRET` : même mécanisme pour `aide-check.sh`/`update.sh` → `IntegriteAlerteController`. `update.sh` vérifie aussi, avant de régénérer la baseline AIDE, qu'aucun fichier hors livraison n'a été modifié — sinon baseline conservée et alerte `modifie`.
 
-**Rotation des secrets** : `scripts/rotation-secrets.sh` (`--db`/`--app-config`/`--backup`/`--integrite`/`--tous`, sur le LXC) sauvegarde le fichier, pose le nouveau secret, redémarre et restaure l'ancien en cas d'échec. Pour `APP_CONFIG_SECRET`, l'ancien secret passe dans `APP_CONFIG_SECRET_PRECEDENT` : `ConfigCipher` s'y replie au déchiffrement et `RechiffrementSecretConfig` (web, au démarrage) rechiffre `app_config` **et** `users.two_factor_secret` avec le nouveau, puis le script retire la variable. Procédure complète : [wiki Sécurité](https://codeberg.org/Kwaite/strapontin/wiki/S%C3%A9curit%C3%A9).
+**Rotation des secrets** : `scripts/rotation-secrets.sh` (`--db`/`--app-config`/`--backup`/`--integrite`/`--tous`, sur le LXC) sauvegarde le fichier, pose le nouveau secret, redémarre et restaure l'ancien en cas d'échec. Pour `APP_CONFIG_SECRET`, l'ancien secret passe dans `APP_CONFIG_SECRET_PRECEDENT` : `ConfigCipher` s'y replie au déchiffrement et `RechiffrementSecretConfig` (web, au démarrage) rechiffre `app_config` **et** `users.two_factor_secret` avec le nouveau, puis le script retire la variable. Procédure complète : [wiki Sécurité](https://github.com/Sietch-Tabr/strapontin/wiki/S%C3%A9curit%C3%A9).
 
 ## Configuration applicative (`app_config`)
 
@@ -109,7 +109,7 @@ Invite-only, TOTP 2FA optionnel, Spring Security session-based. Détail complet 
 
 Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, puis floue. Résolution UUID-first (`salle_sources`/`artiste_sources`) avant toute réconciliation floue ; un seul algorithme flou par entité (`core.CorrespondanceSalle`/`core.CorrespondanceArtiste`), partagé `sources`/`web`/`worker`. Point unique de résolution avant écriture : `PersisteurConcertsDb.resoudreOuCreerEvenement`. La résolution de salle filtre toujours par département ; tout rapprochement par position ne se fie qu'à une position fiable.
 
-Ordre de traitement, garde-fous et incidents : [`worker…/persister/CLAUDE.md`](java/worker/src/main/java/fr/strapontin/worker/persister/CLAUDE.md). Seuils : [`core…/core/CLAUDE.md`](java/core/src/main/java/fr/strapontin/core/CLAUDE.md). Justification des seuils : [wiki Sources-de-données](https://codeberg.org/Kwaite/strapontin/wiki/Sources-de-donn%C3%A9es).
+Ordre de traitement, garde-fous et incidents : [`worker…/persister/CLAUDE.md`](java/worker/src/main/java/fr/strapontin/worker/persister/CLAUDE.md). Seuils : [`core…/core/CLAUDE.md`](java/core/src/main/java/fr/strapontin/core/CLAUDE.md). Justification des seuils : [wiki Sources-de-données](https://github.com/Sietch-Tabr/strapontin/wiki/Sources-de-donn%C3%A9es).
 
 ## Modèle événement canonique
 
@@ -128,11 +128,12 @@ Commandes de test (à connaître même hors édition d'un fichier) : `mvn -f jav
 Seul l'outillage partagé de `.claude/` est versionné (liste blanche dans `.gitignore`, contrôlée en CI par `scripts/verifier-outillage.sh`) : jamais de données de prod, de configuration ou mémoire personnelle, ni d'accès à l'infrastructure. Ce dernier passe par `.claude/scripts/acces.local.sh`, fichier local créé depuis `acces.exemple.sh`.
 
 - `/deploy-dev` : Build Maven (avec tests) + scp JARs + restart LXC dev + tail logs
+- `/deploiement-prod` : lancé par l'utilisateur, déploie dev ou prod depuis les JARs attestés d'un run vert de `main` (sauvegardes, `update.sh`, contrôles)
 - `/test` : Tests Java (4 modules) + Vitest + analyse statique + E2E Playwright, résumé chiffré par suite
-- `/pre-pr` : Wiki + CLAUDE.md + changelog + README + commit docs + `tea pr create`
+- `/pre-pr` : Wiki + CLAUDE.md + changelog + README + commit docs + `gh pr create`
 - `/suivi-fiabilite` : Check delta 360° du suivi de fiabilité prod — santé/jobs/données/tickets, état dans la mémoire personnelle (prérequis locaux listés dans le skill)
 - `check-deps` : Mises à jour Maven/npm/stack infra + changelogs — auto en début de jalon (`"Tickets du jalon X.Y.Z à implémenter :"`, mises à jour sûres appliquées au jalon) ; résumé + proposition de ticket en invocation ad-hoc
-- `/check-pipeline` : Statut et journaux de la dernière pipeline Woodpecker sur `main`, via `woodpecker-cli` en local (contexte enregistré par `woodpecker-cli setup`, aucun token à passer, aucun accès au LXC de CI)
+- `/check-pipeline` : Statut et journaux de la dernière exécution de la CI sur `main`, via `gh run` (aucun jeton à passer)
 - `/ticket` : Création de ticket : doublon recherché, constat/analyse/attendu sans solution, étiquette et jalon vérifiés côté serveur
 - `/cloture-jalon` : Lancé par l'utilisateur uniquement : merge de la PR, pipeline, vérification prod, tag et release lisible, fermeture du jalon, nettoyage, wiki et mémoire
 - `/restauration-dev` : Base du dev remplacée par une copie de la prod, configuration du dev conservée (jamais `restore.sh`)

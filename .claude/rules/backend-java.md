@@ -7,7 +7,7 @@ paths:
 
 - Identifiants en français (`nombreUtilisateurs`, `calculerTotal`).
 - Logging : SLF4J, jamais `System.out`.
-- Commentaires : jamais de référence à un numéro de ticket Codeberg — le commentaire sert le code et le projet, pas l'historique de sa résolution ; les tickets sont référencés dans les messages de commit et les PR, jamais dans le code source.
+- Commentaires : jamais de référence à un numéro de ticket — le commentaire sert le code et le projet, pas l'historique de sa résolution ; les tickets sont référencés dans les messages de commit et les PR, jamais dans le code source.
 - Nommage tests : `<methode>_<scenario>_<resultatAttendu>`.
 
 ## Tests

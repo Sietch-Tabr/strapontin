@@ -4,7 +4,7 @@
 
 `estDoublonArtiste` : Jaro ≥ 0.95 (troncatures TM, ex. "aliz"/"alizee", "fawn"/"fawnn") | containment ratio ≥ 0.65 (variations longues, ex. "star academy"/"star academy 1") | égalité sans espaces (contraction de nom propre qu'une source omet, ex. "N'Dour"/"NDour") | préfixe de mot complet (le nom court, ≥ 2 mots, est un préfixe du nom long suivi d'une espace — ex. "earl sweatshirt" / "earl sweatshirt and mike", "jay z" / "jay z 30" — un co-tête d'affiche ou un suffixe de tournée ajouté par une seule source fait chuter le ratio de containment sous le seuil ; le garde-fou ≥ 2 mots exclut un prénom seul comme "mike" préfixe de "mike tyson"). `normaliserTexte` : `$` supprimé sans espace, `&` → `and`.
 
-→ Détails et justification des seuils : [wiki Sources-de-données](https://codeberg.org/Kwaite/strapontin/wiki/Sources-de-donn%C3%A9es)
+→ Détails et justification des seuils : [wiki Sources-de-données](https://github.com/Sietch-Tabr/strapontin/wiki/Sources-de-donn%C3%A9es)
 
 `core.Dedoublonner.heuresCompatibles` tolère un écart de 3 minutes entre deux heures avant de les considérer distinctes (fiches TM du même évènement de types `package`/`prestation`), très en dessous de tout écart matinée/soirée réel.
 
