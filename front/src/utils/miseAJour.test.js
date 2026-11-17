@@ -6,6 +6,7 @@ import {
   estInstallee,
   ETAPES,
   motifImpossible,
+  phraseEchec,
   presentationStatut,
   statutEtape,
 } from "./miseAJour.js";
@@ -147,6 +148,33 @@ describe("demandeTerminee", () => {
         empreinteEtat(null),
       ),
     ).toBe(true);
+  });
+});
+
+describe("phraseEchec", () => {
+  const donnees = (message) => ({
+    versionInstallee: "3.1.5",
+    etat: { message },
+  });
+
+  it("ajoute le point manquant entre le motif et la suite", () => {
+    expect(
+      phraseEchec(donnees("Le déploiement a échoué : retour automatique")),
+    ).toBe(
+      "La mise à jour a échoué : Le déploiement a échoué : retour automatique. L'application reste sur la version 3.1.5.",
+    );
+  });
+
+  it("garde la ponctuation existante", () => {
+    expect(phraseEchec(donnees("Sauvegarde impossible."))).toBe(
+      "La mise à jour a échoué : Sauvegarde impossible. L'application reste sur la version 3.1.5.",
+    );
+  });
+
+  it("tolère un motif absent", () => {
+    expect(phraseEchec(donnees(null))).toBe(
+      "La mise à jour a échoué. L'application reste sur la version 3.1.5.",
+    );
   });
 });
 
