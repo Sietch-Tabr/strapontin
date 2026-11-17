@@ -9,7 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.worker.WorkerFetchService;
+import fr.strapontin.worker.fetch.WorkerFetchService;
 import org.junit.jupiter.api.Test;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;

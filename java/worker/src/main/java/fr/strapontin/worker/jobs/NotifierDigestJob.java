@@ -4,8 +4,8 @@
  */
 package fr.strapontin.worker.jobs;
 
-import fr.strapontin.worker.AvertissementCanalPerduService;
-import fr.strapontin.worker.NotificationDigestService;
+import fr.strapontin.worker.notification.AvertissementCanalPerduService;
+import fr.strapontin.worker.notification.NotificationDigestService;
 import java.util.Map;
 import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -8,8 +8,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.worker.AvertissementCanalPerduService;
-import fr.strapontin.worker.NotificationDigestService;
+import fr.strapontin.worker.notification.AvertissementCanalPerduService;
+import fr.strapontin.worker.notification.NotificationDigestService;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.quartz.JobDataMap;
