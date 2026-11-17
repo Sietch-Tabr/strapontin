@@ -51,7 +51,7 @@ class MiseAJourTest {
     final Path jars = Files.createDirectories(racine.resolve("application"));
     Files.createDirectories(var.resolve("etat"));
     Files.createDirectories(var.resolve("demandes"));
-    VersionInstalleeTest.jar(jars.resolve("web.jar"), "build.version=3.1.5\n");
+    VersionInstalleeTest.jar(jars.resolve("web.jar"), "3.1.5");
     chemins = new Chemins(Map.of("APP_RACINE", racine.toString(), "VAR_RACINE", var.toString()));
     etat = new SuiviEtat(chemins.etatDir(), Clock.systemUTC());
     final SourceReleases sansRelease =
