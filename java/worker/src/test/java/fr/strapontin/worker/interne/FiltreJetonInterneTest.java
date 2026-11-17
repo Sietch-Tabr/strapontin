@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import fr.strapontin.core.JetonInterneWorker;
+import fr.strapontin.exploitation.JetonInterneWorker;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;

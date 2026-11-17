@@ -10,6 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.exploitation.Chemins;
+import fr.strapontin.exploitation.ExecuteurCommande;
+import fr.strapontin.exploitation.ExecuteurProcessus;
+import fr.strapontin.exploitation.FichierRelease;
+import fr.strapontin.exploitation.SortieCommande;
 import fr.strapontin.exploitation.Version;
 import java.io.IOException;
 import java.net.URI;
@@ -68,6 +72,7 @@ class InstallateurTest {
         Files.readAllBytes(VersionInstalleeTest.jar(dossier.resolve("nouveau.jar"), "3.2.0")));
     fichiersRelease.put("worker.jar", "nouveau worker".getBytes());
     fichiersRelease.put("mise-a-jour.jar", "nouvel installateur".getBytes());
+    fichiersRelease.put("exploitation-controle.jar", "nouveau contrôle".getBytes());
     final String script = "#!/bin/bash\necho ok\n";
     fichiersRelease.put(
         "exploitation.tar.gz",
@@ -92,9 +97,7 @@ class InstallateurTest {
           return Optional.empty();
         }
         final Map<String, Asset> assets = new HashMap<>();
-        for (final String nom :
-            List.of(
-                "SHA256SUMS", "web.jar", "worker.jar", "mise-a-jour.jar", "exploitation.tar.gz")) {
+        for (final String nom : FichierRelease.noms()) {
           if (!nom.equals("worker.jar") || !fichiersRelease.containsKey("sans-worker")) {
             assets.put(nom, new Asset(nom, URI.create("https://github.com/x/" + nom), 1));
           }
@@ -121,8 +124,7 @@ class InstallateurTest {
       return fichiersRelease.get(nom);
     }
     final StringBuilder sommes = new StringBuilder();
-    for (final String fichier :
-        List.of("web.jar", "worker.jar", "mise-a-jour.jar", "exploitation.tar.gz")) {
+    for (final String fichier : FichierRelease.nomsControles()) {
       final String valeur =
           sommeFausse && "web.jar".equals(fichier)
               ? "0".repeat(64)
@@ -177,10 +179,11 @@ class InstallateurTest {
     assertEquals(CIBLE, VersionInstallee.lire(jars.resolve("web.jar")));
     assertEquals(List.of("backup-local.sh", "backup.sh", "update.sh"), scripts);
     assertEquals("1", environnementUpdate.get("VERROU_HERITE"));
-    assertEquals(
-        List.of("web.jar", "worker.jar", "mise-a-jour.jar", "exploitation.tar.gz"), verifies);
+    assertEquals(FichierRelease.nomsControles(), verifies);
     assertEquals("nouveau worker", Files.readString(jars.resolve("worker.jar.new")));
     assertTrue(Files.exists(jars.resolve("mise-a-jour.jar.new")));
+    assertEquals(
+        "nouveau contrôle", Files.readString(jars.resolve("exploitation-controle.jar.new")));
     assertTrue(Files.exists(chemins.appExploitation().resolve("MANIFESTE.sha256")));
     assertTrue(Files.readString(chemins.etatDir().resolve("mise-a-jour.json")).contains("REUSSI"));
     assertFalse(Files.exists(chemins.telechargementsDir().resolve("3.2.0")));

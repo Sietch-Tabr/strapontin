@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.exploitation.Chemins;
 import fr.strapontin.exploitation.EtatMiseAJour;
+import fr.strapontin.exploitation.SortieCommande;
 import fr.strapontin.exploitation.Verrou;
 import fr.strapontin.exploitation.Version;
 import java.io.IOException;

@@ -19,6 +19,7 @@
     <modules>
         <module>exploitation-commun</module>
         <module>mise-a-jour</module>
+        <module>exploitation-controle</module>
         <module>core</module>
         <module>sources</module>
         <module>worker</module>

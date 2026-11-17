@@ -23,6 +23,12 @@
             <groupId>fr.strapontin</groupId>
             <artifactId>core</artifactId>
         </dependency>
+        <!-- Jeton de l'API interne du worker, partagé avec le web et le module de contrôle -->
+        <dependency>
+            <groupId>fr.strapontin</groupId>
+            <artifactId>exploitation-commun</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>fr.strapontin</groupId>
             <artifactId>sources</artifactId>

@@ -13,6 +13,7 @@ import fr.strapontin.exploitation.Version;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -46,6 +47,9 @@ class LecteurReleaseJsonTest {
     assertEquals("v3.2.0-dev.1", release.etiquette());
     assertTrue(release.preRelease());
     assertFalse(release.brouillon());
-    assertEquals(Set.copyOf(FichierRelease.noms()), release.assets().keySet());
+    // La réponse capturée précède l'ajout de exploitation-controle.jar au contrat.
+    final Set<String> attendus = new HashSet<>(FichierRelease.noms());
+    attendus.remove(FichierRelease.CONTROLE.nom());
+    assertEquals(attendus, release.assets().keySet());
   }
 }

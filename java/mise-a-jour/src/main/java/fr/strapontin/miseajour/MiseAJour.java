@@ -5,7 +5,9 @@
 package fr.strapontin.miseajour;
 
 import fr.strapontin.exploitation.Chemins;
+import fr.strapontin.exploitation.CommandeImpossibleException;
 import fr.strapontin.exploitation.Demande;
+import fr.strapontin.exploitation.ExecuteurProcessus;
 import fr.strapontin.exploitation.FichierEnvironnement;
 import fr.strapontin.exploitation.Verrou;
 import fr.strapontin.exploitation.VerrouOccupeException;
@@ -112,6 +114,7 @@ public final class MiseAJour {
     } catch (final VerrouOccupeException e) {
       return echec(etat, rapporteur, version, "Une autre opération d'exploitation est en cours", e);
     } catch (final InstallationException
+        | CommandeImpossibleException
         | ProvenanceException
         | IntegriteException
         | SourceInaccessibleException e) {
