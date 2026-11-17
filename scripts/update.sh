@@ -4,7 +4,7 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 
 # update.sh — redémarrage des services Strapontin après déploiement de nouveaux JARs
 # Usage : /opt/strapontin/exploitation/update.sh
-# Appelé par Woodpecker (prod) ou manuellement (dev) après le dépôt des scripts d'exploitation
+# Appelé par /deploiement-prod (prod) ou /deploy-dev (dev) après le dépôt des scripts d'exploitation
 # (deposer-exploitation.sh) et des JARs dans application/*.jar.new.
 
 . "$(dirname "$0")/chemins.sh"
@@ -101,7 +101,7 @@ if [ -f "$MANIFESTE" ]; then
     while read -r _ nom; do FICHIERS_DEPLOIEMENT+=("$APP_EXPLOITATION/$nom"); done < "$MANIFESTE"
 fi
 # Chemins réellement modifiés selon le rapport AIDE : ajoutés, supprimés, ou changés dans leur
-# contenu ou leurs droits. Un fichier recopié à l'identique (step Woodpecker backup) ne change
+# contenu ou leurs droits. Un fichier recopié à l'identique (livraison répétée à l'identique) ne change
 # que de dates (Mtime/Ctime/Atime/Inode) et n'est pas une modification.
 chemins_modifies() {
     awk '

@@ -354,27 +354,10 @@ pct exec "$VMID" -- bash -c "
 "
 
 # ---------------------------------------------------------------
-# 9. Clé SSH Woodpecker (prod uniquement)
+# 9. Vérifications finales
 # ---------------------------------------------------------------
 
-WOODPECKER_PRIVKEY=""
-if [ "$PROFIL" = "prod" ]; then
-    echo "[9] Génération clé SSH Woodpecker..."
-    pct exec "$VMID" -- bash -c "
-        mkdir -p /root/.ssh
-        ssh-keygen -t ed25519 -C 'woodpecker@strapontin' -f /root/.ssh/woodpecker_strapontin -N ''
-        cat /root/.ssh/woodpecker_strapontin.pub >> /root/.ssh/authorized_keys
-        chmod 700 /root/.ssh
-        chmod 600 /root/.ssh/authorized_keys
-    "
-    WOODPECKER_PRIVKEY=$(pct exec "$VMID" -- cat /root/.ssh/woodpecker_strapontin)
-fi
-
-# ---------------------------------------------------------------
-# 10. Vérifications finales
-# ---------------------------------------------------------------
-
-echo "[10] Vérifications..."
+echo "[9] Vérifications..."
 pct exec "$VMID" -- bash -c "
     echo '--- Java ---'
     java -version 2>&1
@@ -412,11 +395,4 @@ echo "  2. scp \"\$(ls -t java/web/target/web-*.jar | grep -v '.original' | head
 echo "     scp \"\$(ls -t java/worker/target/worker-*.jar | grep -v '.original' | head -1)\" root@${IP%%/*}:$APP_DIR/application/worker.jar.new"
 echo "  3. ssh root@${IP%%/*} '$APP_DIR/exploitation/update.sh'"
 echo "  4. Ouvrir http://${IP%%/*}:8080/setup"
-if [ "$PROFIL" = "prod" ]; then
-echo ""
-echo "  Secrets Woodpecker à configurer :"
-echo "    lxc_java_host = ${IP%%/*}"
-echo "    ssh_key       ="
-echo "$WOODPECKER_PRIVKEY"
-fi
 echo "================================================================"
