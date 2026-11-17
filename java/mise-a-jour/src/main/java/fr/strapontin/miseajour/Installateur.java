@@ -30,7 +30,7 @@ import java.util.stream.Stream;
 public final class Installateur {
 
   private static final System.Logger JOURNAL = System.getLogger("miseajour");
-  private static final int SORTIE_JOURNAL_MAX = 4000;
+  private static final int SORTIE_JOURNAL_MAX = 20_000;
 
   private final SourceReleases source;
   private final VerificateurProvenance provenance;

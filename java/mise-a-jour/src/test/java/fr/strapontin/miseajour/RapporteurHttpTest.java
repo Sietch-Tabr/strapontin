@@ -17,7 +17,10 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +38,7 @@ class RapporteurHttpTest {
   private URI adresse;
   private final List<String> corps = new ArrayList<>();
   private final List<String> autorisations = new ArrayList<>();
-  private int statut = 200;
+  private final Deque<Integer> statuts = new ArrayDeque<>();
 
   @BeforeEach
   void demarrer() throws IOException {
@@ -45,7 +48,7 @@ class RapporteurHttpTest {
         echange -> {
           corps.add(new String(echange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
           autorisations.add(echange.getRequestHeaders().getFirst("Authorization"));
-          echange.sendResponseHeaders(statut, -1);
+          echange.sendResponseHeaders(statuts.isEmpty() ? 200 : statuts.poll(), -1);
           echange.close();
         });
     serveur.start();
@@ -97,7 +100,7 @@ class RapporteurHttpTest {
 
   @Test
   void envoyer_applicationRefuse_neLevePas() {
-    statut = 403;
+    statuts.add(403);
     try (HttpClient client = HttpClient.newHttpClient()) {
       assertDoesNotThrow(
           () -> new RapporteurHttp(client, adresse, "secret").envoyer(true, "3.2.0", "ok"));
@@ -109,7 +112,43 @@ class RapporteurHttpTest {
     serveur.stop(0);
     try (HttpClient client = HttpClient.newHttpClient()) {
       assertDoesNotThrow(
-          () -> new RapporteurHttp(client, adresse, "secret").envoyer(false, "3.2.0", "x"));
+          () ->
+              new RapporteurHttp(client, adresse, "secret", 2, Duration.ZERO)
+                  .envoyer(false, "3.2.0", "x"));
     }
+  }
+
+  @Test
+  void envoyer_applicationQuiRedemarre_reprendJusquaLaReponse() {
+    statuts.add(503);
+    statuts.add(503);
+    try (HttpClient client = HttpClient.newHttpClient()) {
+      new RapporteurHttp(client, adresse, "secret", 5, Duration.ZERO)
+          .envoyer(false, "3.2.0", "retour arrière");
+    }
+
+    assertEquals(3, corps.size());
+  }
+
+  @Test
+  void envoyer_serveurToujoursIndisponible_sArreteApresLesTentatives() {
+    for (int i = 0; i < 10; i++) {
+      statuts.add(503);
+    }
+    try (HttpClient client = HttpClient.newHttpClient()) {
+      new RapporteurHttp(client, adresse, "secret", 4, Duration.ZERO).envoyer(false, "3.2.0", "x");
+    }
+
+    assertEquals(4, corps.size());
+  }
+
+  @Test
+  void envoyer_refusDefinitif_neReprendPas() {
+    statuts.add(403);
+    try (HttpClient client = HttpClient.newHttpClient()) {
+      new RapporteurHttp(client, adresse, "secret", 5, Duration.ZERO).envoyer(true, "3.2.0", "x");
+    }
+
+    assertEquals(1, corps.size());
   }
 }
