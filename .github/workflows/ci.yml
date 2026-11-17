@@ -1,11 +1,14 @@
 name: ci
 
-# Déclenché seulement par un push sur main (décision du projet) : aucune exécution avant le merge.
+# Aucun cache de dépendances : le workflow publie des releases, un cache empoisonné serait livré (audit zizmor).
+# Déclenché par un push sur main (aucune exécution avant le merge) ou sur un tag de version : tous les jobs
+# rejouent alors sur le commit étiqueté, puis le job publication crée la release.
 on:
   push:
     branches: [main]
+    tags: ['v*']
 
-# Jeton en lecture seule par défaut, élargi seulement dans le job qui atteste les JARs.
+# Jeton en lecture seule par défaut, élargi seulement pour l'attestation (construction) et la release (publication).
 permissions:
   contents: read
 
@@ -32,7 +35,6 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
       # Testcontainers utilise le Docker préinstallé du runner.
       - run: mvn -f java/pom.xml -pl core,sources,web,worker -am test
 
@@ -50,7 +52,6 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
       - run: >-
           mvn -f java/pom.xml -pl core,sources,web,worker -am
           compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests
@@ -70,8 +71,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: front/package-lock.json
+          package-manager-cache: false
       - run: sh scripts/verifier-outillage.sh
       - run: sh scripts/tester-avertissements-front.sh
       - run: cd front && sh ../scripts/avertissements-front.sh npm-ci npm ci
@@ -97,7 +97,6 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
       # Inventaire Maven puis analyse OSV (image épinglée dans le script, comme en local), bloquante.
       - run: bash scripts/analyse-dependances.sh local
 
@@ -151,7 +150,6 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: front
@@ -162,14 +160,67 @@ jobs:
           mkdir dist
           cp java/web/target/web-*.jar dist/web.jar
           cp java/worker/target/worker-*.jar dist/worker.jar
+          bash scripts/archive-exploitation.sh dist/exploitation.tar.gz
       # L'attestation de provenance n'existe pas en dépôt privé avec le plan gratuit : seulement en public.
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         if: ${{ github.event.repository.private == false }}
         with:
-          subject-path: dist/*.jar
+          subject-path: |
+            dist/*.jar
+            dist/exploitation.tar.gz
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: jars
-          path: dist/*.jar
+          path: |
+            dist/*.jar
+            dist/exploitation.tar.gz
           retention-days: 1
           if-no-files-found: error
+
+  publication:
+    name: publication
+    needs: [construction]
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ETIQUETTE: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: jars
+          path: dist
+      - name: Contrôler l'étiquette
+        run: |
+          # Une release ne vient que d'un commit de main, et son étiquette suit la version du pom
+          # (vX.Y.Z, ou vX.Y.Z-suffixe pour une pré-version).
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          revision=$(sed -n 's:.*<revision>\(.*\)</revision>.*:\1:p' java/pom.xml | head -1)
+          case "$ETIQUETTE" in
+            "v$revision" | "v$revision"-*) ;;
+            *) echo "Étiquette $ETIQUETTE incompatible avec la version $revision du pom" >&2; exit 1 ;;
+          esac
+          echo "REVISION=$revision" >> "$GITHUB_ENV"
+      - name: Écrire les notes
+        run: node scripts/notes-release.mjs "$REVISION" > notes.md
+      - name: Publier la release
+        run: |
+          (cd dist && sha256sum web.jar worker.jar exploitation.tar.gz > SHA256SUMS)
+          drapeau=""
+          case "$ETIQUETTE" in *-*) drapeau="--prerelease" ;; esac
+          # Brouillon d'abord, publication une fois tous les fichiers joints.
+          gh release create "$ETIQUETTE" --draft --verify-tag --title "$ETIQUETTE" \
+            --notes-file notes.md $drapeau \
+            dist/web.jar dist/worker.jar dist/exploitation.tar.gz dist/SHA256SUMS
+          gh release edit "$ETIQUETTE" --draft=false
