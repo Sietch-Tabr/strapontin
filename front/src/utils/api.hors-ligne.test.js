@@ -50,7 +50,12 @@ describe("appelApi : données gardées pour le hors ligne", () => {
     vi.setSystemTime(T0);
     cache = creerCacheHorsLigne({ stockage: stockageMemoire() });
     remplacerCacheHorsLigne(cache);
-    suivi = { lenteur: vi.fn(), donneesEnCache: vi.fn(), sansDonnees: vi.fn() };
+    suivi = {
+      lenteur: vi.fn(),
+      donneesEnCache: vi.fn(),
+      sansDonnees: vi.fn(),
+      injoignable: vi.fn(),
+    };
     brancherSuiviConnexion(suivi);
     reinitialiserEtatSansDonnees();
   });
@@ -241,7 +246,12 @@ describe("appelApi : aucune donnée gardée", () => {
     remplacerCacheHorsLigne(
       creerCacheHorsLigne({ stockage: stockageMemoire() }),
     );
-    suivi = { lenteur: vi.fn(), donneesEnCache: vi.fn(), sansDonnees: vi.fn() };
+    suivi = {
+      lenteur: vi.fn(),
+      donneesEnCache: vi.fn(),
+      sansDonnees: vi.fn(),
+      injoignable: vi.fn(),
+    };
     brancherSuiviConnexion(suivi);
     reinitialiserEtatSansDonnees();
   });
@@ -324,6 +334,148 @@ describe("appelApi : aucune donnée gardée", () => {
 
     expect(await reponse.json()).toEqual({ n: 1 });
     expect(suivi.sansDonnees).not.toHaveBeenCalled();
+  });
+});
+
+describe("appelApi : serveur injoignable", () => {
+  let suivi;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(T0);
+    remplacerCacheHorsLigne(
+      creerCacheHorsLigne({ stockage: stockageMemoire() }),
+    );
+    suivi = {
+      lenteur: vi.fn(),
+      donneesEnCache: vi.fn(),
+      sansDonnees: vi.fn(),
+      injoignable: vi.fn(),
+    };
+    brancherSuiviConnexion(suivi);
+    reinitialiserEtatSansDonnees();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  test("appelApi_reseauCoupe_signaleInjoignable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))),
+    );
+
+    await expect(appelApi("/api/admin/jobs")).rejects.toBeInstanceOf(TypeError);
+
+    expect(suivi.injoignable).toHaveBeenLastCalledWith(true);
+    expect(suivi.lenteur).not.toHaveBeenCalledWith(false);
+  });
+
+  test("appelApi_delaiDepasse_signaleInjoignable", async () => {
+    vi.stubGlobal("fetch", fetchSansReponse());
+
+    const attente = appelApi("/api/admin/jobs").catch((e) => e);
+    await vi.advanceTimersByTimeAsync(20_000);
+    await attente;
+
+    expect(suivi.injoignable).toHaveBeenLastCalledWith(true);
+  });
+
+  test("appelApi_reponse503_signaleInjoignable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response("", { status: 503 }))),
+    );
+
+    await appelApi("/api/admin/jobs");
+
+    expect(suivi.injoignable).toHaveBeenLastCalledWith(true);
+  });
+
+  test("appelApi_reponseApresEchec_efface_injoignable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+        .mockResolvedValueOnce(reponseJson({})),
+    );
+
+    await expect(appelApi("/api/admin/jobs")).rejects.toBeInstanceOf(TypeError);
+    await appelApi("/api/admin/jobs");
+
+    expect(suivi.injoignable.mock.calls).toEqual([[true], [false]]);
+  });
+
+  test("appelApi_reponseDErreur404_nEstPasInjoignable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response("", { status: 404 }))),
+    );
+
+    await appelApi("/api/admin/jobs");
+
+    expect(suivi.injoignable).not.toHaveBeenCalled();
+  });
+
+  test("appelApi_annulationParLAppelant_nEstPasInjoignable", async () => {
+    vi.stubGlobal("fetch", fetchSansReponse());
+    const controleur = new AbortController();
+
+    const attente = appelApi("/api/admin/jobs", {
+      signal: controleur.signal,
+    }).catch((e) => e);
+    controleur.abort();
+    await attente;
+
+    expect(suivi.injoignable).not.toHaveBeenCalled();
+  });
+
+  test("appelApi_requeteModifianteSansReponse_signaleInjoignable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))),
+    );
+
+    await expect(
+      appelApi("/api/admin/mise-a-jour", { method: "POST" }),
+    ).rejects.toBeInstanceOf(TypeError);
+
+    expect(suivi.injoignable).toHaveBeenLastCalledWith(true);
+  });
+
+  test("appelApi_arrierePlanLent_neSignaleAucuneLenteur", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise((resoudre) =>
+            setTimeout(() => resoudre(reponseJson({})), 6_000),
+          ),
+      ),
+    );
+
+    const attente = appelApi("/api/banniere/json", { arrierePlan: true });
+    await vi.advanceTimersByTimeAsync(6_000);
+    await attente;
+
+    expect(suivi.lenteur).not.toHaveBeenCalled();
+  });
+
+  test("appelApi_arrierePlanSansReponse_signaleQuandMemeInjoignable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))),
+    );
+
+    await expect(
+      appelApi("/api/banniere/json", { arrierePlan: true }),
+    ).rejects.toBeInstanceOf(TypeError);
+
+    expect(suivi.injoignable).toHaveBeenLastCalledWith(true);
+    expect(suivi.lenteur).not.toHaveBeenCalled();
   });
 });
 

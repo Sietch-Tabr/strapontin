@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  aDerniereReussite,
   corpsDemande,
   demandeTerminee,
+  detailVisible,
   empreinteEtat,
   estInstallee,
   ETAPES,
@@ -202,5 +204,72 @@ describe("estInstallee", () => {
       }),
     ).toBe(false);
     expect(estInstallee({ versionInstallee: "3.2.0", etat: null })).toBe(false);
+  });
+});
+
+describe("aDerniereReussite", () => {
+  it("est vrai pour une réussite datée", () => {
+    expect(
+      aDerniereReussite({
+        etat: { ...etat("REUSSI", "CONTROLE"), fin: "2026-11-17T21:27:39Z" },
+      }),
+    ).toBe(true);
+  });
+
+  it("est faux pour un échec, sans date ou sans état", () => {
+    expect(
+      aDerniereReussite({
+        etat: { ...etat("ECHEC", "CONTROLE"), fin: "2026-11-17T21:27:39Z" },
+      }),
+    ).toBe(false);
+    expect(
+      aDerniereReussite({ etat: { ...etat("REUSSI", "CONTROLE"), fin: null } }),
+    ).toBe(false);
+    expect(aDerniereReussite({ etat: null })).toBe(false);
+  });
+});
+
+describe("detailVisible", () => {
+  const base = { demandeEnAttente: false, enCours: false };
+
+  it("reste masqué pour une réussite relue après rechargement", () => {
+    expect(
+      detailVisible({ ...base, etat: etat("REUSSI", "CONTROLE") }, false),
+    ).toBe(false);
+  });
+
+  it("s'affiche pour la page qui a suivi l'installation", () => {
+    expect(
+      detailVisible({ ...base, etat: etat("REUSSI", "CONTROLE") }, true),
+    ).toBe(true);
+  });
+
+  it("s'affiche pour un échec, même après rechargement", () => {
+    expect(
+      detailVisible({ ...base, etat: etat("ECHEC", "DEPLOIEMENT") }, false),
+    ).toBe(true);
+  });
+
+  it("s'affiche pendant une mise à jour en cours", () => {
+    expect(
+      detailVisible(
+        { ...base, enCours: true, etat: etat("EN_COURS", "SAUVEGARDE") },
+        false,
+      ),
+    ).toBe(true);
+  });
+
+  it("reste masqué sans étape ou avec une demande en attente", () => {
+    expect(detailVisible({ ...base, etat: null }, true)).toBe(false);
+    expect(
+      detailVisible(
+        {
+          ...base,
+          demandeEnAttente: true,
+          etat: etat("ECHEC", "TELECHARGEMENT"),
+        },
+        true,
+      ),
+    ).toBe(false);
   });
 });

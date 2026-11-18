@@ -14,6 +14,72 @@ test.describe("Scénario: mise à jour depuis l'administration", () => {
       await expect(page.locator("section#jobs")).not.toBeVisible();
     });
 
+    const etatSimule = (resultat: string, message: string | null) => ({
+      versionInstallee: "3.2.0",
+      versionProposee: null,
+      demandeEnAttente: false,
+      enCours: false,
+      totpActif: false,
+      etat: {
+        resultat,
+        etape: "CONTROLE",
+        versionCible: "3.2.0",
+        debut: "2026-11-17T21:27:09Z",
+        fin: "2026-11-17T21:27:39Z",
+        message,
+      },
+    });
+
+    test("miseAJour_reussiteRelue_afficheUneLigneNeutreSansBoutonNiEtapes", async ({
+      page,
+    }) => {
+      await page.route("**/api/admin/mise-a-jour", (route) =>
+        route.fulfill({ json: etatSimule("REUSSI", null) }),
+      );
+
+      await page.goto("/admin#mise-a-jour");
+
+      await expect(
+        page.getByText("Dernière mise à jour : version 3.2.0 installée le"),
+      ).toBeVisible();
+      await expect(page.getByText("Avancement")).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "Recharger l'application" }),
+      ).toHaveCount(0);
+    });
+
+    test("miseAJour_echecRelu_gardeLeDetailDesEtapes", async ({ page }) => {
+      await page.route("**/api/admin/mise-a-jour", (route) =>
+        route.fulfill({
+          json: etatSimule("ECHEC", "Le téléchargement a échoué"),
+        }),
+      );
+
+      await page.goto("/admin#mise-a-jour");
+
+      await expect(page.getByText("Avancement")).toBeVisible();
+      await expect(
+        page.getByText("La mise à jour a échoué : Le téléchargement a échoué."),
+      ).toBeVisible();
+      await expect(page.getByText("Dernière mise à jour :")).toHaveCount(0);
+    });
+
+    test("miseAJour_serveurSansReponse_afficheLeBandeauInjoignable", async ({
+      page,
+    }) => {
+      await page.goto("/admin#mise-a-jour");
+      await expect(page.locator("section#mise-a-jour")).toBeVisible();
+      // Tout l'API est coupé, comme serveur arrêté : un seul appel en échec serait effacé par les
+      // autres, qui réussissent.
+      await page.route("**/api/**", (route) => route.abort());
+
+      await page.reload({ waitUntil: "domcontentloaded" });
+
+      await expect(page.getByText("Serveur injoignable")).toBeVisible({
+        timeout: 10000,
+      });
+    });
+
     test("miseAJour_api_exposeLesVersionsEtLEtat", async ({ request }) => {
       const rep = await request.get("/api/admin/mise-a-jour");
       expect(rep.status()).toBe(200);

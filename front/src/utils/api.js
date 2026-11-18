@@ -30,8 +30,16 @@ function stockageNavigateur() {
 }
 
 let cache = creerCacheHorsLigne({ stockage: stockageNavigateur() });
-let suivi = { lenteur() {}, donneesEnCache() {}, sansDonnees() {} };
+let suivi = {
+  lenteur() {},
+  donneesEnCache() {},
+  sansDonnees() {},
+  injoignable() {},
+};
 let appelsLents = 0;
+// Vrai depuis le dernier appel qui n'a obtenu aucune réponse de l'application (réseau coupé, délai
+// dépassé, 502/503/504 d'un proxy dont l'application ne répond plus) ; faux dès qu'une réponse arrive.
+let injoignable = false;
 // Vrai dès qu'une liste de l'utilisateur n'a pu être lue et qu'aucune copie n'existe : plus aucun
 // appel de liste n'attend alors le serveur, jusqu'au rechargement de la page.
 let sansDonnees = false;
@@ -55,6 +63,23 @@ export function brancherSuiviConnexion(nouveau) {
 /// Remet à zéro l'état « sans données » (tests).
 export function reinitialiserEtatSansDonnees() {
   sansDonnees = false;
+  injoignable = false;
+}
+
+function poserInjoignable(valeur) {
+  if (injoignable === valeur) return;
+  injoignable = valeur;
+  suivi.injoignable(valeur);
+}
+
+/// Une réponse a été reçue : l'application répond, sauf si c'est celle d'un proxy qui n'en a plus.
+function signalerReponse(statut) {
+  poserInjoignable(STATUTS_INDISPONIBLE.has(statut));
+}
+
+/// Un appel a échoué sans réponse ; l'annulation par l'appelant n'apprend rien sur le serveur.
+function signalerEchec(erreur) {
+  if (erreur?.name !== "AbortError") poserInjoignable(true);
 }
 
 /// Remplace le cache (tests).
@@ -126,12 +151,23 @@ function reponseDepuisCache(copie) {
 /// @param options options de `fetch`, plus `sansRepli` (jamais de copie : sonde de reconnexion)
 ///        et `delaiMs` (délai d'attente d'un GET)
 export async function appelApi(url, options = {}) {
-  const { sansRepli = false, delaiMs, ...init } = options;
+  const { sansRepli = false, arrierePlan = false, delaiMs, ...init } = options;
   const entetes = new Headers(init.headers);
   entetes.set(ENTETE_APPLICATION, VALEUR_ENTETE_APPLICATION);
   entetes.set(ENTETE_MODE_AFFICHAGE, lireModeAffichage());
   const methode = (init.method ?? "GET").toUpperCase();
-  if (methode !== "GET") return fetch(url, { ...init, headers: entetes });
+  if (methode !== "GET") {
+    return fetch(url, { ...init, headers: entetes }).then(
+      (reponse) => {
+        signalerReponse(reponse.status);
+        return reponse;
+      },
+      (erreur) => {
+        signalerEchec(erreur);
+        throw erreur;
+      },
+    );
+  }
 
   const cachable = !sansRepli && estCachable(url);
   const copie = cachable ? cache.lire(url) : null;
@@ -146,13 +182,16 @@ export async function appelApi(url, options = {}) {
     marquerSansDonnees();
     throw new TypeError("Hors ligne");
   }
-  const finirSuivi = suivreLenteur();
+  // Un appel d'arrière-plan (sonde, rafraîchissement périodique) ne signale jamais de lenteur :
+  // l'utilisateur ne l'a pas demandé.
+  const finirSuivi = arrierePlan ? () => {} : suivreLenteur();
   try {
     const reponse = await fetchAvecDelai(
       url,
       { ...init, headers: entetes },
       delai,
     );
+    signalerReponse(reponse.status);
     if (cachable) {
       if (reponse.status === 401) {
         cache.purger();
@@ -169,6 +208,7 @@ export async function appelApi(url, options = {}) {
     }
     return reponse;
   } catch (erreur) {
+    signalerEchec(erreur);
     if (erreur?.name !== "AbortError") {
       if (copie) return reponseDepuisCache(copie);
       if (cachable) marquerSansDonnees();
@@ -185,6 +225,7 @@ export async function serveurJoignable() {
   try {
     const reponse = await appelApi("/api/session", {
       sansRepli: true,
+      arrierePlan: true,
       delaiMs: DELAI_SONDE_MS,
       cache: "no-store",
     });

@@ -33,6 +33,11 @@
         </div>
       </div>
 
+      <p v-if="derniere" class="param-aide">
+        Dernière mise à jour : version {{ donnees.etat.versionCible }} installée
+        le {{ formaterInstant(donnees.etat.fin) }}.
+      </p>
+
       <div v-if="etapesVisibles" class="param-bloc">
         <h3 class="param-libelle">Avancement</h3>
         <p v-if="donnees.etat.versionCible" class="param-aide">
@@ -56,7 +61,11 @@
         >
           {{ phraseEchec(donnees) }}
         </p>
-        <div v-if="installee" class="alerte alerte-succes" role="status">
+        <div
+          v-if="installee && suiviParCettePage"
+          class="alerte alerte-succes"
+          role="status"
+        >
           <p>La version {{ donnees.versionInstallee }} est installée.</p>
           <button
             type="button"
@@ -87,7 +96,9 @@ defineOptions({ name: "AdminMiseAJour" });
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { appelApi, lireJson } from "../../utils/api.js";
 import {
+  aDerniereReussite,
   demandeTerminee,
+  detailVisible,
   empreinteEtat,
   estInstallee,
   ETAPES,
@@ -96,6 +107,7 @@ import {
   presentationStatut,
   statutEtape,
 } from "../../utils/miseAJour.js";
+import { formaterInstant } from "../../composables/useDates.js";
 import { useToasts } from "../../composables/useToasts.js";
 import EtatChargement from "../EtatChargement.vue";
 import DialogueReauthentification from "./DialogueReauthentification.vue";
@@ -111,6 +123,9 @@ const dialogueRef = ref(null);
 const chargement = ref(true);
 const donnees = ref(null);
 const redemarrage = ref(false);
+// Vrai dès que cette page a lancé ou repris le suivi d'une installation : seul cas où le message de
+// réussite et le bouton de rechargement ont un sens (après un rechargement, la page est à jour).
+const suiviParCettePage = ref(false);
 let minuterie = null;
 let relectures = 0;
 let empreinteAvant = null;
@@ -119,7 +134,15 @@ const motif = computed(() =>
   donnees.value ? motifImpossible(donnees.value) : null,
 );
 const etapesVisibles = computed(
-  () => !donnees.value?.demandeEnAttente && donnees.value?.etat?.etape,
+  () =>
+    donnees.value !== null &&
+    detailVisible(donnees.value, suiviParCettePage.value),
+);
+const derniere = computed(
+  () =>
+    donnees.value !== null &&
+    !etapesVisibles.value &&
+    aDerniereReussite(donnees.value),
 );
 const installee = computed(
   () => donnees.value !== null && estInstallee(donnees.value),
@@ -140,7 +163,10 @@ async function lire() {
 async function charger() {
   try {
     await lire();
-    if (donnees.value.enCours) suivre();
+    if (donnees.value.enCours) {
+      suiviParCettePage.value = true;
+      suivre();
+    }
   } catch (e) {
     if (e.name !== "AbortError") donnees.value = null;
   } finally {
@@ -182,6 +208,7 @@ function arreter() {
 
 async function apresDemande() {
   afficherToast("Mise à jour demandée.", "succes");
+  suiviParCettePage.value = true;
   empreinteAvant = empreinteEtat(donnees.value?.etat ?? null);
   await relire();
   suivre();

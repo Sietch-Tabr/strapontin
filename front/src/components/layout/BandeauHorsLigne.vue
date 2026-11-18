@@ -8,6 +8,14 @@
     visite ({{ anciennete }}). Elles seront remplacées dès que la connexion
     revient.
   </div>
+  <div
+    v-else-if="etatConnexion.injoignable"
+    class="alerte alerte-avertissement"
+    role="status"
+  >
+    Serveur injoignable : les données affichées peuvent ne pas être à jour.
+    Nouvelle tentative automatique.
+  </div>
   <div v-else-if="etatConnexion.lente" class="alerte alerte-info" role="status">
     Connexion lente : les données peuvent tarder à s'afficher.
   </div>
