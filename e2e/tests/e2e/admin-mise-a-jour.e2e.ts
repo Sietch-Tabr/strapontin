@@ -42,6 +42,26 @@ test.describe("Scénario: mise à jour depuis l'administration", () => {
     });
   });
 
+  // Routes internes du dev (profil dev seulement) : sans le secret partagé, rien ne passe, même avec
+  // une session administrateur.
+  test.describe("API interne de mise à jour du dev", () => {
+    test.use({ storageState: FICHIER_AUTH_ADMIN });
+
+    test("miseAJour_apiInterne_refuseSansJeton", async ({ request }) => {
+      const etat = await request.get("/api/interne/mise-a-jour-etat");
+      expect(etat.status()).toBe(403);
+      const demande = await request.post("/api/interne/mise-a-jour-demande");
+      expect(demande.status()).toBe(403);
+    });
+
+    test("miseAJour_apiInterne_refuseUnMauvaisJeton", async ({ request }) => {
+      const etat = await request.get("/api/interne/mise-a-jour-etat", {
+        headers: { Authorization: "Bearer mauvais" },
+      });
+      expect(etat.status()).toBe(403);
+    });
+  });
+
   test.describe("utilisateur sans droit d'administration", () => {
     test.use({ storageState: FICHIER_AUTH_USER });
 
