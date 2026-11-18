@@ -27,6 +27,13 @@ lancer aide-check.sh
 verifier test "$CODE" -ne 0
 verifier grep -q "exploitation-controle.jar absent" "$TMP/sortie"
 verifier test ! -e "$JOURNAL"
+# Pas de repli : une sauvegarde sans JAR échoue franchement plutôt que de ne rien dire.
+lancer backup.sh
+verifier test "$CODE" -ne 0
+verifier grep -q "exploitation-controle.jar absent" "$TMP/sortie"
+lancer backup-local.sh
+verifier test "$CODE" -ne 0
+verifier test ! -e "$JOURNAL"
 
 # 2. JAR livré : commande et arguments transmis au JAR, dans l'ordre.
 : > "$APP_JARS/exploitation-controle.jar"
@@ -37,6 +44,11 @@ lancer declencher-job.sh purger:concerts
 verifier grep -qx -- "-Xmx128m -jar $APP_JARS/exploitation-controle.jar declencher-job purger:concerts" "$JOURNAL"
 lancer declencher-job.sh --simulation-salles
 verifier grep -qx -- "-Xmx128m -jar $APP_JARS/exploitation-controle.jar declencher-job --simulation-salles" "$JOURNAL"
+lancer backup.sh
+verifier test "$CODE" = 0
+verifier grep -qx -- "-Xmx128m -jar $APP_JARS/exploitation-controle.jar backup" "$JOURNAL"
+lancer backup-local.sh
+verifier grep -qx -- "-Xmx128m -jar $APP_JARS/exploitation-controle.jar backup-local" "$JOURNAL"
 
 # 3. Le code de sortie du JAR est celui de l'enveloppe.
 CODE_JAVA=1 lancer declencher-job.sh purger:concerts
