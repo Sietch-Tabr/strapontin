@@ -76,7 +76,6 @@ jobs:
           compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests
       # Scripts d'exploitation déployés en production : leurs tests tournent avant tout déploiement.
       - run: bash scripts/tester-update.sh
-      - run: bash scripts/tester-sauvegardes.sh
       - run: bash scripts/tester-exploitation.sh
       - run: bash scripts/tester-verrou.sh
       - run: bash scripts/tester-preparer-mise-a-jour.sh
@@ -174,6 +173,9 @@ jobs:
           cp java/mise-a-jour/target/mise-a-jour-*.jar dist/mise-a-jour.jar
           cp java/exploitation-controle/target/exploitation-controle-*.jar dist/exploitation-controle.jar
           bash scripts/archive-exploitation.sh dist/exploitation.tar.gz
+      # La restauration est contrôlée avec le vrai JAR, avec de faux su et systemctl devant le PATH.
+      - name: Tester la restauration avec le JAR construit
+        run: JAR_CONTROLE=dist/exploitation-controle.jar bash scripts/tester-sauvegardes.sh
       # Le module de mise à jour lit la version installée dans le manifeste du JAR : il doit valoir la
       # version du pom (un écart ferait échouer toute mise à jour à sa première étape).
       - name: Contrôler la version des JARs
