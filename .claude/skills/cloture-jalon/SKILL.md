@@ -53,6 +53,10 @@ La CI ne déploie rien. Appliquer les étapes de `/deploiement-prod` pour la pro
   ```bash
   curl -s --max-time 20 -o /dev/null -w '%{http_code}\n' https://strapontin.kwaite.fr/api/admin/jobs
   ```
+- Garanties propres à la prod, constatées par la réponse HTTP réelle depuis le LXC, sans proxy, et non déduites de l'absence d'erreur dans les journaux : les routes réservées au profil dev (`GET /api/interne/mise-a-jour-etat`, `POST /api/interne/mise-a-jour-demande`) répondent 401 comme toute route inconnue de l'API (pas 200, qui serait la page d'accueil servie en repli) ; les endpoints internes qui existent (`/api/interne/backup-statut`, `integrite-statut`, `mise-a-jour-statut`) répondent 403 sans jeton :
+  ```bash
+  acces prod exec "curl -s -o /dev/null -w '%{http_code}\n' -H 'X-Requested-With: strapontin' http://localhost:8080/api/interne/mise-a-jour-etat"
+  ```
 - JARs réellement déployés : `acces prod exec "ls -la --time-style=full-iso /opt/strapontin/application/"`, dates de `web.jar` et `worker.jar` égales à celle du déploiement, et SHA-256 identiques à ceux de l'artefact attesté.
 - Migrations Flyway appliquées sans échec (`flyway_schema_history`, aucune ligne `success = false`).
 - Contrôle d'intégrité AIDE : aucune ligne `error` « contrôle d'intégrité — modification détectée » dans `logs_admin` (colonne `ts`) depuis le déploiement.
@@ -68,15 +72,21 @@ git tag -a v<version> -m "v<version>" && git push origin v<version>
 git rev-parse v<version>^{commit}   # doit égaler origin/main
 ```
 
-GitHub ne crée aucune release au push d'un tag : la créer directement.
+**Ne pas créer la release à la main : la CI la publie.** Le push du tag relance `ci.yml` ; son job `publication` (après `construction`) vérifie que l'étiquette suit `<revision>` du pom et que le commit est dans `main`, écrit les notes avec `scripts/notes-release.mjs` (entrée de la version dans `front/src/pages/changelogVersions.js`, note fixe pour une pré-version d'essai), puis crée la release en brouillon avec ses six fichiers (`web.jar`, `worker.jar`, `mise-a-jour.jar`, `exploitation-controle.jar`, `exploitation.tar.gz`, `SHA256SUMS`) et la publie ; une étiquette à suffixe devient une pré-release. Une release créée à la main ferait doublon, ou ferait échouer le job.
 
-Les notes s'adressent aux utilisateurs et aux admins : reprendre l'entrée de la version dans `front/src/pages/changelogVersions.js` (changements visibles, regroupés par thème, formulés pour eux), sans numéros de ticket ou de PR ni jargon interne. Un lien vers la PR ou la roadmap ne remplace pas ce contenu.
+Attendre la fin du run du tag, puis le constater :
 
 ```bash
-gh release create v<version> --verify-tag --title "v<version>" --notes-file <notes.md>
+gh run list --workflow ci --limit 5 --json databaseId,headBranch,status,conclusion   # le run dont headBranch vaut v<version>
+gh run watch <id> --exit-status
+gh release list --limit 5
+gh release view v<version> --json tagName,isDraft,isPrerelease,body,assets \
+  --jq '[.tagName,.isDraft,.isPrerelease,(.body|length),(.assets|length)]'
 ```
 
-Vérifier ensuite qu'il n'existe qu'une release pour le tag et que son corps n'est pas vide : `gh release view v<version> --json tagName,body --jq '[.tagName,(.body|length)]'`. Une erreur de `gh` n'est jamais une conclusion : relire l'état avant de relancer. Une release transitoire du dev se marque `--prerelease` et se supprime à la validation de la prod (`gh release delete <tag> --yes`, sans `--cleanup-tag`).
+Attendu : une seule release pour le tag, ni brouillon ni (sauf suffixe) pré-release, corps non vide (les notes s'adressent aux utilisateurs et aux admins : changements visibles, par thème, sans numéro de ticket ou de PR ni jargon interne), six fichiers. Comparer ensuite `SHA256SUMS` de la release aux empreintes des JARs déployés en prod (`gh release download v<version> -p SHA256SUMS -O -`) : la construction est reproductible, elles doivent être identiques ; sinon le signaler.
+
+Job `publication` en échec ou release incomplète : **s'arrêter** et le signaler. Ne créer ou corriger la release à la main que sur instruction de l'utilisateur, sans laisser de brouillon. Une erreur de `gh` n'est jamais une conclusion : relire l'état avant de relancer. Une release transitoire du dev (pré-release) se supprime à la validation de la prod (`gh release delete <tag> --yes`, sans `--cleanup-tag`).
 
 ## 6. Jalon
 
