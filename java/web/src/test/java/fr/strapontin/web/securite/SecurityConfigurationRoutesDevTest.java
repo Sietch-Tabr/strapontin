@@ -6,6 +6,7 @@ package fr.strapontin.web.securite;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,7 +18,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -26,7 +26,7 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 
 /**
  * Autorisations de {@link SecurityConfiguration} contrôlées sur la vraie chaîne de sécurité (sans
- * base de données) : une route refusée l'est avant d'atteindre l'application (401 ou 403), une
+ * base de données ; la protection CSRF de Spring reste active, les POST portent un jeton) : une route refusée l'est avant d'atteindre l'application (401 ou 403), une
  * route autorisée la traverse (ici 404 : aucun contrôleur dans ce contexte). Les routes de mise à
  * jour du dev ne sont autorisées que sur le profil {@code dev} : ailleurs, elles se comportent
  * comme toute route inconnue de l'API, au lieu de tomber dans le repli de l'application (200,
@@ -70,7 +70,6 @@ class SecurityConfigurationRoutesDevTest {
     try {
       return http.authorizeHttpRequests(
               auth -> SecurityConfiguration.configurerAutorisations(auth, profilDev))
-          .csrf(AbstractHttpConfigurer::disable)
           .build();
     } catch (final Exception e) {
       throw new IllegalStateException(e);
@@ -100,7 +99,7 @@ class SecurityConfigurationRoutesDevTest {
     final MockMvc mvc = mvc(ChaineSansProfilDev.class);
 
     assertTrue(refusee(statut(mvc, get("/api/interne/mise-a-jour-etat"))));
-    assertTrue(refusee(statut(mvc, post("/api/interne/mise-a-jour-demande"))));
+    assertTrue(refusee(statut(mvc, post("/api/interne/mise-a-jour-demande").with(csrf()))));
     assertTrue(refusee(statut(mvc, get("/api/zzz"))));
   }
 
@@ -118,14 +117,14 @@ class SecurityConfigurationRoutesDevTest {
     final MockMvc mvc = mvc(ChaineProfilDev.class);
 
     assertEquals(404, statut(mvc, get("/api/interne/mise-a-jour-etat")));
-    assertEquals(404, statut(mvc, post("/api/interne/mise-a-jour-demande")));
+    assertEquals(404, statut(mvc, post("/api/interne/mise-a-jour-demande").with(csrf())));
   }
 
   @Test
   void profilDev_lesMethodesNonPrevues_restentRefusees() throws Exception {
     final MockMvc mvc = mvc(ChaineProfilDev.class);
 
-    assertTrue(refusee(statut(mvc, post("/api/interne/mise-a-jour-etat"))));
+    assertTrue(refusee(statut(mvc, post("/api/interne/mise-a-jour-etat").with(csrf()))));
     assertTrue(refusee(statut(mvc, get("/api/interne/mise-a-jour-demande"))));
   }
 
@@ -135,9 +134,9 @@ class SecurityConfigurationRoutesDevTest {
         new Class<?>[] {ChaineSansProfilDev.class, ChaineProfilDev.class}) {
       final MockMvc mvc = mvc(configuration);
 
-      assertEquals(404, statut(mvc, post("/api/interne/backup-statut")));
-      assertEquals(404, statut(mvc, post("/api/interne/integrite-statut")));
-      assertEquals(404, statut(mvc, post("/api/interne/mise-a-jour-statut")));
+      assertEquals(404, statut(mvc, post("/api/interne/backup-statut").with(csrf())));
+      assertEquals(404, statut(mvc, post("/api/interne/integrite-statut").with(csrf())));
+      assertEquals(404, statut(mvc, post("/api/interne/mise-a-jour-statut").with(csrf())));
       contexte.close();
     }
   }
