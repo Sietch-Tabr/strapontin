@@ -167,6 +167,23 @@ test.describe("Scénario: données gardées — connexion lente", () => {
   });
 });
 
+test.describe("Scénario: appels d'arrière-plan", () => {
+  test("arrierePlan_banniereLente_neSignalePasDeLenteur", async ({ page }) => {
+    await page.route("**/api/banniere/json", async (route) => {
+      await new Promise((resoudre) => setTimeout(resoudre, 6000));
+      await route.continue();
+    });
+
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("main")).toBeVisible();
+    await page.waitForTimeout(7000);
+
+    await expect(
+      page.getByText("Connexion lente", { exact: false }),
+    ).toHaveCount(0);
+  });
+});
+
 test.describe("Scénario: données gardées — effacement", () => {
   // Un autre compte sur le même appareil passe par la page de connexion : rien du précédent
   // ne doit rester lisible.

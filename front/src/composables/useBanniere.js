@@ -40,7 +40,7 @@ function lancerMinuterie(val) {
 // Échec réseau : ignoré (best-effort), on garde l'état affiché tel quel.
 async function fetcherBanniere() {
   try {
-    const rep = await appelApi("/api/banniere/json");
+    const rep = await appelApi("/api/banniere/json", { arrierePlan: true });
     const texte = rep.ok ? await rep.text() : "";
     const data = parseJsonOuNull(texte);
     banniere.value = data;

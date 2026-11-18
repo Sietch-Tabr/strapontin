@@ -113,6 +113,36 @@ export function phraseEchec(donnees) {
 }
 
 /**
+ * Indique si le dernier état est une réussite à résumer en une ligne neutre (version et instant),
+ * hors de la page qui a suivi l'installation.
+ *
+ * @param {{ etat: { resultat: string, versionCible: string, fin: string | null } | null }} donnees
+ *   réponse de l'API
+ * @returns {boolean} vrai si le dernier état est une réussite datée
+ */
+export function aDerniereReussite(donnees) {
+  const etat = donnees.etat;
+  return etat?.resultat === "REUSSI" && !!etat.versionCible && !!etat.fin;
+}
+
+/**
+ * Indique si le détail des étapes doit être affiché : pendant et juste après le suivi d'une
+ * installation par cette page, ou pour un échec (conservé jusqu'à la prochaine demande). Une
+ * réussite relue plus tard se réduit à une ligne.
+ *
+ * @param {{ demandeEnAttente: boolean, enCours: boolean, etat: { etape: string | null, resultat: string } | null }} donnees
+ *   réponse de l'API
+ * @param {boolean} suiviParCettePage vrai si cette page a suivi l'installation en cours
+ * @returns {boolean} vrai si les étapes sont affichées
+ */
+export function detailVisible(donnees, suiviParCettePage) {
+  if (donnees.demandeEnAttente || !donnees.etat?.etape) return false;
+  return (
+    suiviParCettePage || donnees.enCours || donnees.etat.resultat === "ECHEC"
+  );
+}
+
+/**
  * Indique la version cible installée et vérifiée.
  *
  * @param {{ versionInstallee: string, etat: { resultat: string, versionCible: string } | null }} donnees

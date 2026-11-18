@@ -10,6 +10,10 @@ export const etatConnexion = reactive({
   // Une liste de l'utilisateur n'a pu être lue et aucune copie n'existe : l'application n'a rien
   // à afficher et montre l'écran hors ligne.
   sansDonnees: false,
+  // Un appel n'a obtenu aucune réponse de l'application (serveur arrêté, réseau coupé, délai
+  // dépassé) : effacé dès qu'une réponse arrive. Distinct de `lente`, qui dit seulement qu'un
+  // appel patiente.
+  injoignable: false,
 });
 
 let branche = false;
@@ -29,6 +33,9 @@ export function initialiserSuiviConnexion() {
     },
     sansDonnees: (valeur) => {
       etatConnexion.sansDonnees = valeur;
+    },
+    injoignable: (valeur) => {
+      etatConnexion.injoignable = valeur;
     },
   });
 }
