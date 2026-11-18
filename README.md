@@ -36,7 +36,7 @@ Ne ratez plus les concerts de vos artistes préférés. Strapontin agrège autom
 **Comptes**
 
 - Accès sur invitation, double authentification (TOTP) facultative
-- Administration : santé des sources, anomalies à traiter, référentiel des salles et artistes, communication aux utilisateurs
+- Administration : santé des sources, anomalies à traiter, référentiel des salles et artistes, communication aux utilisateurs, mise à jour de l'application depuis une release publiée (provenance vérifiée, sauvegarde préalable, retour arrière automatique)
 
 ## Stack
 
@@ -47,7 +47,7 @@ Ne ratez plus les concerts de vos artistes préférés. Strapontin agrège autom
 - [PostgreSQL 18](https://www.postgresql.org/) + [Flyway 13](https://flywaydb.org/) : persistance et migrations
 - [Resend](https://resend.com/) : emails ; Web Push (VAPID) : notifications
 - Wikidata, OpenStreetMap et Deezer : noms canoniques et position des salles
-- [Maven](https://maven.apache.org/) : monorepo (`core`, `sources`, `web`, `worker`)
+- [Maven](https://maven.apache.org/) : monorepo (`core`, `sources`, `web`, `worker`, et `exploitation-commun`, `mise-a-jour`, `exploitation-controle` pour l'exploitation du serveur)
 
 ## Installation
 
