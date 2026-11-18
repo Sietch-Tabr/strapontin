@@ -28,7 +28,7 @@ Dans un dossier vide du scratchpad (les artefacts expirent au bout d'un jour), `
 
 ```bash
 gh run download <id> -n jars -D <dossier>
-for j in web worker mise-a-jour; do
+for j in web worker mise-a-jour exploitation-controle; do
   gh attestation verify <dossier>/$j.jar --repo "$DEPOT" \
     --signer-workflow "$DEPOT/.github/workflows/ci.yml" --format json \
     --jq '.[0].verificationResult.signature.certificate.sourceRepositoryDigest'
@@ -37,7 +37,7 @@ done
 
 Chaque commande doit sortir avec le code 0 et afficher le SHA de `git rev-parse HEAD`. Sinon : ne rien livrer.
 
-Contrôle final après `update.sh` : `sha256sum` de `web.jar`, `worker.jar` et `mise-a-jour.jar` sur le LXC égal à celui des fichiers de l'artefact attesté.
+Contrôle final après `update.sh` : `sha256sum` de `web.jar`, `worker.jar`, `mise-a-jour.jar` et `exploitation-controle.jar` sur le LXC égal à celui des fichiers de l'artefact attesté.
 
 ## 3. Sauvegardes (prod)
 
@@ -56,6 +56,7 @@ SSH=ssh SCP=scp HOST=root@<ip>
 scp <dossier>/web.jar    "$HOST":/opt/strapontin/application/web.jar.new
 scp <dossier>/worker.jar "$HOST":/opt/strapontin/application/worker.jar.new
 scp <dossier>/mise-a-jour.jar "$HOST":/opt/strapontin/application/mise-a-jour.jar.new
+scp <dossier>/exploitation-controle.jar "$HOST":/opt/strapontin/application/exploitation-controle.jar.new
 ssh "$HOST" /opt/strapontin/exploitation/update.sh
 ```
 

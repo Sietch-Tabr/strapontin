@@ -49,7 +49,7 @@ jobs:
           key: maven-${{ github.job }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: maven-${{ github.job }}-
       # Testcontainers utilise le Docker préinstallé du runner.
-      - run: mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am test
+      - run: mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour,exploitation-controle -am test
 
   analyse-statique:
     name: analyse-statique
@@ -72,7 +72,7 @@ jobs:
           key: maven-${{ github.job }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: maven-${{ github.job }}-
       - run: >-
-          mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour -am
+          mvn -f java/pom.xml -pl core,sources,web,worker,exploitation-commun,mise-a-jour,exploitation-controle -am
           compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests
       # Scripts d'exploitation déployés en production : leurs tests tournent avant tout déploiement.
       - run: bash scripts/tester-update.sh
@@ -80,6 +80,7 @@ jobs:
       - run: bash scripts/tester-exploitation.sh
       - run: bash scripts/tester-verrou.sh
       - run: bash scripts/tester-preparer-mise-a-jour.sh
+      - run: bash scripts/tester-controle.sh
 
   front:
     name: front
@@ -164,20 +165,21 @@ jobs:
         with:
           name: front
           path: java/web/src/main/resources/static
-      - run: mvn -f java/pom.xml -pl web,worker,mise-a-jour -am package -DskipTests
+      - run: mvn -f java/pom.xml -pl web,worker,mise-a-jour,exploitation-controle -am package -DskipTests
       - name: Rassembler les JARs
         run: |
           mkdir dist
           cp java/web/target/web-*.jar dist/web.jar
           cp java/worker/target/worker-*.jar dist/worker.jar
           cp java/mise-a-jour/target/mise-a-jour-*.jar dist/mise-a-jour.jar
+          cp java/exploitation-controle/target/exploitation-controle-*.jar dist/exploitation-controle.jar
           bash scripts/archive-exploitation.sh dist/exploitation.tar.gz
       # Le module de mise à jour lit la version installée dans le manifeste du JAR : il doit valoir la
       # version du pom (un écart ferait échouer toute mise à jour à sa première étape).
       - name: Contrôler la version des JARs
         run: |
           revision=$(sed -n 's:.*<revision>\(.*\)</revision>.*:\1:p' java/pom.xml | head -1)
-          for jar in web worker mise-a-jour; do
+          for jar in web worker mise-a-jour exploitation-controle; do
             unzip -p "dist/$jar.jar" META-INF/MANIFEST.MF | tr -d '\r' \
               | grep -qx "Implementation-Version: $revision" \
               || { echo "dist/$jar.jar : Implementation-Version différente de $revision" >&2; exit 1; }
@@ -237,11 +239,11 @@ jobs:
         run: node scripts/notes-release.mjs "$REVISION" > notes.md
       - name: Publier la release
         run: |
-          (cd dist && sha256sum web.jar worker.jar mise-a-jour.jar exploitation.tar.gz > SHA256SUMS)
+          (cd dist && sha256sum web.jar worker.jar mise-a-jour.jar exploitation-controle.jar exploitation.tar.gz > SHA256SUMS)
           drapeau=""
           case "$ETIQUETTE" in *-*) drapeau="--prerelease" ;; esac
           # Brouillon d'abord, publication une fois tous les fichiers joints.
           gh release create "$ETIQUETTE" --draft --verify-tag --title "$ETIQUETTE" \
             --notes-file notes.md $drapeau \
-            dist/web.jar dist/worker.jar dist/mise-a-jour.jar dist/exploitation.tar.gz dist/SHA256SUMS
+            dist/web.jar dist/worker.jar dist/mise-a-jour.jar dist/exploitation-controle.jar dist/exploitation.tar.gz dist/SHA256SUMS
           gh release edit "$ETIQUETTE" --draft=false

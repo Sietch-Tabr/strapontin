@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.sun.net.httpserver.HttpServer;
+import fr.strapontin.exploitation.AppelInterne;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -113,42 +114,8 @@ class RapporteurHttpTest {
     try (HttpClient client = HttpClient.newHttpClient()) {
       assertDoesNotThrow(
           () ->
-              new RapporteurHttp(client, adresse, "secret", 2, Duration.ZERO)
+              new RapporteurHttp(new AppelInterne(client, 2, Duration.ZERO), adresse, "secret")
                   .envoyer(false, "3.2.0", "x"));
     }
-  }
-
-  @Test
-  void envoyer_applicationQuiRedemarre_reprendJusquaLaReponse() {
-    statuts.add(503);
-    statuts.add(503);
-    try (HttpClient client = HttpClient.newHttpClient()) {
-      new RapporteurHttp(client, adresse, "secret", 5, Duration.ZERO)
-          .envoyer(false, "3.2.0", "retour arrière");
-    }
-
-    assertEquals(3, corps.size());
-  }
-
-  @Test
-  void envoyer_serveurToujoursIndisponible_sArreteApresLesTentatives() {
-    for (int i = 0; i < 10; i++) {
-      statuts.add(503);
-    }
-    try (HttpClient client = HttpClient.newHttpClient()) {
-      new RapporteurHttp(client, adresse, "secret", 4, Duration.ZERO).envoyer(false, "3.2.0", "x");
-    }
-
-    assertEquals(4, corps.size());
-  }
-
-  @Test
-  void envoyer_refusDefinitif_neReprendPas() {
-    statuts.add(403);
-    try (HttpClient client = HttpClient.newHttpClient()) {
-      new RapporteurHttp(client, adresse, "secret", 5, Duration.ZERO).envoyer(true, "3.2.0", "x");
-    }
-
-    assertEquals(1, corps.size());
   }
 }

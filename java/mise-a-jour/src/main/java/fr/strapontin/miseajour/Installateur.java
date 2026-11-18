@@ -7,7 +7,9 @@ package fr.strapontin.miseajour;
 import fr.strapontin.exploitation.Chemins;
 import fr.strapontin.exploitation.EcritureAtomique;
 import fr.strapontin.exploitation.Etape;
+import fr.strapontin.exploitation.ExecuteurCommande;
 import fr.strapontin.exploitation.FichierRelease;
+import fr.strapontin.exploitation.SortieCommande;
 import fr.strapontin.exploitation.Version;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -165,11 +167,7 @@ public final class Installateur {
   private void deposerJars(final Map<String, Telechargement> fichiers) {
     etat.etape(Etape.INSTALLATION);
     try {
-      for (final String nom :
-          List.of(
-              FichierRelease.WEB.nom(),
-              FichierRelease.WORKER.nom(),
-              FichierRelease.MISE_A_JOUR.nom())) {
+      for (final String nom : FichierRelease.nomsJars()) {
         EcritureAtomique.copier(
             fichiers.get(nom).fichier(),
             chemins.appJars().resolve(nom + ".new"),

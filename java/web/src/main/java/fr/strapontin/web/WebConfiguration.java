@@ -7,7 +7,7 @@ package fr.strapontin.web;
 import fr.strapontin.core.AccesAppConfig;
 import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.core.CadenceurAppelsPartage;
-import fr.strapontin.core.JetonInterneWorker;
+import fr.strapontin.exploitation.JetonInterneWorker;
 import fr.strapontin.sources.eventim.EventimSource;
 import fr.strapontin.sources.http.IdentiteHttp;
 import fr.strapontin.sources.ticketmaster.TicketmasterSource;

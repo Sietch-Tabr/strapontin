@@ -4,7 +4,7 @@
  */
 package fr.strapontin.worker.interne;
 
-import fr.strapontin.core.JetonInterneWorker;
+import fr.strapontin.exploitation.JetonInterneWorker;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

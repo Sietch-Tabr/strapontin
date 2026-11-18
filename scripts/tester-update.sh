@@ -111,14 +111,18 @@ verifier test "$CODE" = 0
 verifier grep -q "DÉRIVE corrigée" "$TMP/sortie"
 verifier cmp -s "$APP_EXPLOITATION/systemd/strapontin-web.service" "$UNITES_DIR/strapontin-web.service"
 
-# 6. Module de mise à jour livré (.new) : mis en place après un déploiement réussi, absent sans lui,
+# 6. Outils d'exploitation livrés (.new : mise à jour, commandes de contrôle) : mis en place après un déploiement réussi, absent sans lui,
 # donc sans effet pour les livraisons qui ne le portent pas (cas 1 à 5).
 preparer
-echo m1 > "$APP_JARS/mise-a-jour.jar"; echo m2 > "$APP_JARS/mise-a-jour.jar.new"
+for outil in mise-a-jour exploitation-controle; do
+    echo m1 > "$APP_JARS/$outil.jar"; echo m2 > "$APP_JARS/$outil.jar.new"
+done
 lancer
 verifier test "$CODE" = 0
-verifier test "$(cat "$APP_JARS/mise-a-jour.jar")" = m2
-verifier test ! -e "$APP_JARS/mise-a-jour.jar.new"
+for outil in mise-a-jour exploitation-controle; do
+    verifier test "$(cat "$APP_JARS/$outil.jar")" = m2
+    verifier test ! -e "$APP_JARS/$outil.jar.new"
+done
 verifier test "$(cat "$AIDE_BASE/aide.db")" = base-1
 
 # 7a. Préparation de la mise à jour depuis l'administration : à chaque déploiement, avant le
@@ -139,11 +143,15 @@ verifier test "$(cat "$APP_JARS/web.jar")" = v2
 
 # 7. Rollback : le module de mise à jour n'est pas remplacé, son .new reste pour la livraison suivante.
 preparer
-echo m1 > "$APP_JARS/mise-a-jour.jar"; echo m2 > "$APP_JARS/mise-a-jour.jar.new"
+for outil in mise-a-jour exploitation-controle; do
+    echo m1 > "$APP_JARS/$outil.jar"; echo m2 > "$APP_JARS/$outil.jar.new"
+done
 SANTE=down lancer
 verifier test "$CODE" = 1
-verifier test "$(cat "$APP_JARS/mise-a-jour.jar")" = m1
-verifier test -e "$APP_JARS/mise-a-jour.jar.new"
+for outil in mise-a-jour exploitation-controle; do
+    verifier test "$(cat "$APP_JARS/$outil.jar")" = m1
+    verifier test -e "$APP_JARS/$outil.jar.new"
+done
 
 if [ "$echecs" -ne 0 ]; then
     echo "$echecs contrôle(s) en échec" >&2

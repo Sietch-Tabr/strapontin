@@ -7,6 +7,7 @@ package fr.strapontin.web.miseajour;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import fr.strapontin.exploitation.FichierRelease;
 import fr.strapontin.exploitation.Version;
 import java.time.Clock;
 import java.time.Duration;
@@ -14,6 +15,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.ExpectedCount;
@@ -31,9 +33,11 @@ import tools.jackson.databind.json.JsonMapper;
  */
 class ReleasesGithubTest {
 
+  // Tous les fichiers du contrat : un fichier ajouté au contrat est donc ajouté ici sans y penser.
   private static final String ASSETS =
-      "[{\"name\":\"web.jar\"},{\"name\":\"worker.jar\"},{\"name\":\"mise-a-jour.jar\"},"
-          + "{\"name\":\"exploitation.tar.gz\"},{\"name\":\"SHA256SUMS\"}]";
+      FichierRelease.noms().stream()
+          .map(nom -> "{\"name\":\"" + nom + "\"}")
+          .collect(Collectors.joining(",", "[", "]"));
 
   /** Horloge réglable pour vérifier la durée de vie du cache. */
   private static final class HorlogeMobile extends Clock {
