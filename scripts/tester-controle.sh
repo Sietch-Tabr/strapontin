@@ -33,6 +33,9 @@ verifier test "$CODE" -ne 0
 verifier grep -q "exploitation-controle.jar absent" "$TMP/sortie"
 lancer backup-local.sh
 verifier test "$CODE" -ne 0
+lancer rotation-secrets.sh --tous
+verifier test "$CODE" -ne 0
+verifier grep -q "exploitation-controle.jar absent" "$TMP/sortie"
 verifier test ! -e "$JOURNAL"
 
 # 2. JAR livré : commande et arguments transmis au JAR, dans l'ordre.
@@ -49,6 +52,8 @@ verifier test "$CODE" = 0
 verifier grep -qx -- "-Xmx128m -jar $APP_JARS/exploitation-controle.jar backup" "$JOURNAL"
 lancer backup-local.sh
 verifier grep -qx -- "-Xmx128m -jar $APP_JARS/exploitation-controle.jar backup-local" "$JOURNAL"
+lancer rotation-secrets.sh --db --backup
+verifier grep -qx -- "-Xmx128m -jar $APP_JARS/exploitation-controle.jar rotation-secrets --db --backup" "$JOURNAL"
 
 # 3. Le code de sortie du JAR est celui de l'enveloppe.
 CODE_JAVA=1 lancer declencher-job.sh purger:concerts
