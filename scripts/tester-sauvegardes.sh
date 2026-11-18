@@ -10,6 +10,9 @@ set -euo pipefail
 RACINE="$(cd "$(dirname "$0")" && pwd)"
 [ -n "${JAR_CONTROLE:-}" ] && [ -f "$JAR_CONTROLE" ] \
     || { echo "ERREUR : JAR_CONTROLE doit désigner le JAR exploitation-controle construit" >&2; exit 1; }
+# Le java du PATH (celui qui a construit le JAR), pas /usr/bin/java de chemins.sh, qui est celui du LXC :
+# sur un poste ou un runner, c'est parfois un JDK plus ancien que celui du JAR.
+export JAVA="${JAVA:-$(command -v java)}"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 export VERROU_DIR="$TMP/verrou" APP_JARS="$TMP/application"
