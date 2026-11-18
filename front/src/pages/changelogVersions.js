@@ -4,6 +4,26 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.2.0 — 18 novembre 2026",
+    categories: [
+      {
+        categorie: "Administration",
+        items: [
+          "Un nouvel onglet « Mise à jour » permet à un administrateur d'installer la dernière version publiée depuis l'application. Il vérifie que les fichiers viennent bien du dépôt du projet, sauvegarde la base avant d'installer, affiche l'avancement étape par étape, revient seul à la version précédente en cas d'échec et prévient par e-mail du résultat.",
+          "L'installation demande le mot de passe et le code de double authentification de l'administrateur. Sans double authentification activée, le bouton reste inactif et l'onglet l'explique.",
+          "Une fois la mise à jour terminée, l'onglet propose de recharger l'application ; au rechargement suivant, il se réduit à une ligne « Dernière mise à jour ».",
+        ],
+      },
+      {
+        categorie: "Application",
+        items: [
+          "Quand le serveur est arrêté ou ne répond plus, un bandeau « Serveur injoignable » l'indique, distinct de « Connexion lente » ; il disparaît dès que le serveur répond.",
+          "Les vérifications faites en arrière-plan (par exemple celle de l'annonce de l'administrateur) ne déclenchent plus à tort le bandeau « Connexion lente ».",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.1.5 — 16 novembre 2026",
     categories: [
       {
