@@ -37,6 +37,15 @@ import org.springframework.session.security.SpringSessionBackedSessionRegistry;
 @EnableWebSecurity
 public class SecurityConfiguration {
 
+  // Endpoints des scripts et modules du serveur : chacun contrôle son secret
+  // partagé (JetonInterne). La demande de mise à jour n'existe que sur le dev.
+  private static final String[] ROUTES_INTERNES_POST = {
+    "/api/interne/backup-statut",
+    "/api/interne/integrite-statut",
+    "/api/interne/mise-a-jour-statut",
+    "/api/interne/mise-a-jour-demande"
+  };
+
   private final ConfigService configService;
 
   /**
@@ -160,11 +169,9 @@ public class SecurityConfiguration {
         .permitAll()
         .requestMatchers(HttpMethod.POST, "/api/webhooks/resend")
         .permitAll()
-        .requestMatchers(HttpMethod.POST, "/api/interne/backup-statut")
+        .requestMatchers(HttpMethod.POST, ROUTES_INTERNES_POST)
         .permitAll()
-        .requestMatchers(HttpMethod.POST, "/api/interne/integrite-statut")
-        .permitAll()
-        .requestMatchers(HttpMethod.POST, "/api/interne/mise-a-jour-statut")
+        .requestMatchers(HttpMethod.GET, "/api/interne/mise-a-jour-etat")
         .permitAll()
         .requestMatchers(HttpMethod.POST, "/api/auth/totp")
         .authenticated()

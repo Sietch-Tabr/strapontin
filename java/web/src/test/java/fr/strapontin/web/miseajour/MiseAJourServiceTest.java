@@ -130,6 +130,24 @@ class MiseAJourServiceTest {
   }
 
   @Test
+  void demanderVersionProposee_deposeLaVersionProposeeSansLaNommer() throws IOException {
+    final String version = service.demanderVersionProposee("api-dev");
+
+    assertEquals("3.2.0", version);
+    assertEquals(1, demandesDeposees().size());
+  }
+
+  @Test
+  void demanderVersionProposee_aucuneVersion_leveUneErreur400() {
+    when(releases.plusRecente(Version.analyser("3.1.5"))).thenReturn(Optional.empty());
+
+    final ErreurMetier erreur =
+        assertThrows(ErreurMetier.class, () -> service.demanderVersionProposee("api-dev"));
+
+    assertEquals(400, erreur.getStatus());
+  }
+
+  @Test
   void demander_versionNonProposee_refuseSansRienDeposer() throws IOException {
     final ErreurMetier erreur =
         assertThrows(ErreurMetier.class, () -> service.demander("9.9.9", "kwaite"));

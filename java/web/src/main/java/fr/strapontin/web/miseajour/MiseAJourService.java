@@ -92,6 +92,23 @@ public class MiseAJourService {
   }
 
   /**
+   * Dépose la demande d'installation de la version proposée, sans la nommer.
+   *
+   * @param demandeur origine de la demande, pour le journal du module
+   * @return la version demandée
+   * @throws ErreurMetier 400 aucune version proposée, 409 déjà en cours, 500
+   */
+  public String demanderVersionProposee(final String demandeur) {
+    final String version =
+        releases
+            .plusRecente(installee())
+            .map(Version::toString)
+            .orElseThrow(() -> new ErreurMetier("Aucune version n'est proposée."));
+    demander(version, demandeur);
+    return version;
+  }
+
+  /**
    * Dépose la demande d'installation d'une version proposée.
    *
    * @param version version voulue
