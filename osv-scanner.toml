@@ -1,12 +1,5 @@
 # Exceptions à l'analyse des vulnérabilités (scripts/analyse-dependances.sh, étape CI
 # analyse-dependances). Chaque exception porte une échéance courte et sa raison ; elle se réexamine
 # à chaque jalon (check-deps) et se retire dès que la cause disparaît.
-
-[[IgnoredVulns]]
-id = "GHSA-fc5q-39xc-vjpf"
-effectiveUntil = 2026-11-27
-reason = """picomatch 4.0.7 (déni de service par expression régulière sur des extglobs répétés), dernière \
-version publiée, sans correctif ; avis publié le 19/10/2026, remonté par OSV le 17/11. Dépendance de \
-construction du front (stylelint, vite, vitest, tinyglobby, plugin de vue-router non utilisé), motifs de glob \
-fixés par le projet, jamais fournis par un utilisateur, absente du bundle livré (aucune occurrence dans \
-static/). À reprendre quand l'amont publie un correctif."""
+#
+# Aucune exception en cours. Le fichier reste : le script le passe au scanner (--config).
