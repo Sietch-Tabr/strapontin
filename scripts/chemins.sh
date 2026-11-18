@@ -62,13 +62,3 @@ poser_env() {
     rm -f "$temporaire"
 }
 
-# Environnement de l'instance (dev ou prod), d'après SPRING_PROFILES_ACTIVE : identifie ses
-# sauvegardes, qui partagent le dossier du NAS avec celles de l'autre environnement.
-environnement() {
-    local profil
-    profil="${ENVIRONNEMENT:-$(lire_env SPRING_PROFILES_ACTIVE)}"
-    case "$profil" in
-        dev | prod) echo "$profil" ;;
-        *) echo "ERREUR : SPRING_PROFILES_ACTIVE absent ou inconnu dans $ENV_FICHIER" >&2; return 1 ;;
-    esac
-}
