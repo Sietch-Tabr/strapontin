@@ -8,6 +8,8 @@ import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -38,21 +40,26 @@ import org.springframework.session.security.SpringSessionBackedSessionRegistry;
 public class SecurityConfiguration {
 
   // Endpoints des scripts et modules du serveur : chacun contrôle son secret
-  // partagé (JetonInterne). La demande de mise à jour n'existe que sur le dev.
+  // partagé (JetonInterne).
   private static final String[] ROUTES_INTERNES_POST = {
-    "/api/interne/backup-statut",
-    "/api/interne/integrite-statut",
-    "/api/interne/mise-a-jour-statut",
-    "/api/interne/mise-a-jour-demande"
+    "/api/interne/backup-statut", "/api/interne/integrite-statut", "/api/interne/mise-a-jour-statut"
   };
 
+  // Mise à jour du dev sans interface : ces routes et leurs autorisations n'existent
+  // que sur le profil dev. Ailleurs, elles répondent 401 comme toute route inconnue.
+  private static final String ROUTE_DEMANDE_DEV = "/api/interne/mise-a-jour-demande";
+  private static final String ROUTE_ETAT_DEV = "/api/interne/mise-a-jour-etat";
+
   private final ConfigService configService;
+  private final boolean profilDev;
 
   /**
    * @param configService origine publique ({@link ProtectionCsrfFilter})
+   * @param environment profils actifs : les routes du dev exigent {@code dev}
    */
-  public SecurityConfiguration(final ConfigService configService) {
+  public SecurityConfiguration(final ConfigService configService, final Environment environment) {
     this.configService = configService;
+    this.profilDev = environment.acceptsProfiles(Profiles.of("dev"));
   }
 
   /**
@@ -97,7 +104,7 @@ public class SecurityConfiguration {
         .addFilterAfter(totpGuardFilter, UsernamePasswordAuthenticationFilter.class)
         // Après l'autorisation : un appel non authentifié reste un 401, pas un 403.
         .addFilterAfter(new ProtectionCsrfFilter(configService), AuthorizationFilter.class)
-        .authorizeHttpRequests(this::configurerAutorisations)
+        .authorizeHttpRequests(auth -> configurerAutorisations(auth, profilDev))
         // Jeton CSRF de Spring désactivé : protection assurée par ProtectionCsrfFilter
         // (Fetch Metadata, Origin, en-tête applicatif), sans état côté serveur.
         .csrf(AbstractHttpConfigurer::disable)
@@ -136,7 +143,27 @@ public class SecurityConfiguration {
                 "Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()"));
   }
 
-  private void configurerAutorisations(
+  /**
+   * Règles d'accès, dans l'ordre où Spring les évalue : accès libre,
+   * routes du seul profil dev, puis protection de tout le reste.
+   *
+   * @param auth registre des règles
+   * @param profilDev vrai sur le profil {@code dev}
+   */
+  /* package-private : les tests contrôlent la vraie chaîne d'autorisations. */
+  static void configurerAutorisations(
+      final AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry
+          auth,
+      final boolean profilDev) {
+    autoriserSansSession(auth);
+    if (profilDev) {
+      auth.requestMatchers(HttpMethod.POST, ROUTE_DEMANDE_DEV).permitAll();
+      auth.requestMatchers(HttpMethod.GET, ROUTE_ETAT_DEV).permitAll();
+    }
+    proteger(auth);
+  }
+
+  private static void autoriserSansSession(
       final AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry
           auth) {
     auth.requestMatchers(
@@ -170,10 +197,13 @@ public class SecurityConfiguration {
         .requestMatchers(HttpMethod.POST, "/api/webhooks/resend")
         .permitAll()
         .requestMatchers(HttpMethod.POST, ROUTES_INTERNES_POST)
-        .permitAll()
-        .requestMatchers(HttpMethod.GET, "/api/interne/mise-a-jour-etat")
-        .permitAll()
-        .requestMatchers(HttpMethod.POST, "/api/auth/totp")
+        .permitAll();
+  }
+
+  private static void proteger(
+      final AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry
+          auth) {
+    auth.requestMatchers(HttpMethod.POST, "/api/auth/totp")
         .authenticated()
         .requestMatchers(HttpMethod.POST, "/api/client/erreur")
         .authenticated()
