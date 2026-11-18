@@ -35,6 +35,9 @@ lancer backup-local.sh
 verifier test "$CODE" -ne 0
 lancer rotation-secrets.sh --tous
 verifier test "$CODE" -ne 0
+lancer restore.sh /x.sql.gz
+verifier test "$CODE" -ne 0
+verifier grep -q "exploitation-controle.jar absent" "$TMP/sortie"
 verifier grep -q "exploitation-controle.jar absent" "$TMP/sortie"
 verifier test ! -e "$JOURNAL"
 
@@ -52,6 +55,9 @@ verifier test "$CODE" = 0
 verifier grep -qx -- "-Xmx128m -jar $APP_JARS/exploitation-controle.jar backup" "$JOURNAL"
 lancer backup-local.sh
 verifier grep -qx -- "-Xmx128m -jar $APP_JARS/exploitation-controle.jar backup-local" "$JOURNAL"
+lancer restore.sh /sauvegardes/strapontin-prod_20261118_000000.sql.gz
+verifier test "$CODE" = 0
+verifier grep -qx -- "-Xmx128m -jar $APP_JARS/exploitation-controle.jar restore /sauvegardes/strapontin-prod_20261118_000000.sql.gz" "$JOURNAL"
 lancer rotation-secrets.sh --db --backup
 verifier grep -qx -- "-Xmx128m -jar $APP_JARS/exploitation-controle.jar rotation-secrets --db --backup" "$JOURNAL"
 

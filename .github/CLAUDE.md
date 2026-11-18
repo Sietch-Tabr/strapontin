@@ -4,7 +4,7 @@
 
 ## Jobs
 
-`tests-java`, `analyse-statique`, `front`, `dependances` (OSV), `secrets` (gitleaks), `construction` (JARs web, worker, mise-a-jour et exploitation-controle, archive d'exploitation, attestés ; `Implementation-Version` de leur manifeste contrôlée, le module de mise à jour la lit), `publication` (release, sur tag seulement : le commit est dans `main`, l'étiquette est `v<revision>` ou `v<revision>-suffixe`, notes tirées du changelog, ou note fixe pour une pré-version d'essai (sans entrée de changelog ni de Roadmap) ; brouillon puis publication, pré-release si suffixe).
+`tests-java`, `analyse-statique`, `front`, `dependances` (OSV), `secrets` (gitleaks), `construction` (JARs web, worker, mise-a-jour et exploitation-controle, archive d'exploitation, `tester-sauvegardes.sh` avec le JAR construit, attestés ; `Implementation-Version` de leur manifeste contrôlée, le module de mise à jour la lit), `publication` (release, sur tag seulement : le commit est dans `main`, l'étiquette est `v<revision>` ou `v<revision>-suffixe`, notes tirées du changelog, ou note fixe pour une pré-version d'essai (sans entrée de changelog ni de Roadmap) ; brouillon puis publication, pré-release si suffixe).
 
 ## Règles
 
