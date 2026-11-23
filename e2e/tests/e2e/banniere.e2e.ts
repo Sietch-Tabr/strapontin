@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
+import { ouvrirSection } from "./helpers/sections.js";
 
 test.use({ storageState: FICHIER_AUTH_ADMIN });
 
@@ -8,12 +9,7 @@ async function ouvrirOngletCommunication(
   page: import("@playwright/test").Page,
 ) {
   await page.goto("/admin");
-  const selecteur = page.locator("select.param-onglets-mobile");
-  if (await selecteur.isVisible()) {
-    await selecteur.selectOption("#communication");
-  } else {
-    await page.locator('a[href="#communication"]').click();
-  }
+  await ouvrirSection(page, "communication");
 }
 
 async function publierBanniere(
