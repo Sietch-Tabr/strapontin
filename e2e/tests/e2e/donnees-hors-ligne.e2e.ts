@@ -154,6 +154,9 @@ test.describe("Scénario: données gardées — connexion lente", () => {
     page,
   }) => {
     await visiterEnLigne(page, "/spectacles");
+    // La copie est écrite après l'affichage : sans elle, l'appel attend 15 s au lieu de 5 s et
+    // dépasse le délai de l'attente ci-dessous.
+    await expect.poll(() => nbEntreesGardees(page)).toBeGreaterThanOrEqual(1);
     await page.route("**/api/spectacles**", () => {
       // Ne répond jamais.
     });
