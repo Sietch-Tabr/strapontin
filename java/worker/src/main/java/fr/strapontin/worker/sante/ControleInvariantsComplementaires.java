@@ -30,6 +30,8 @@ final class ControleInvariantsComplementaires {
   private static final String JUMEAU = "jumeau";
   private static final String SALLE = "salle";
   private static final int MIN_FICHES_EN_ABSENCE = 3;
+  // Environ deux jours de cycles : une fiche suivie que sa source ne renvoie plus a pu changer.
+  private static final int SEUIL_FICHE_SUIVIE_EN_ABSENCE = 20;
   // Au-delà : théâtre à plusieurs salles internes, créneaux doubles légitimes.
   private static final int SEUIL_CRENEAUX_SALLE_MULTIPLE =
       FusionSeancesDeuxSourcesService.SEUIL_CRENEAUX_SALLE_MULTIPLE;
@@ -100,7 +102,40 @@ final class ControleInvariantsComplementaires {
         + publication.publier("envois_push_en_panne", TYPE_ENTITE_GLOBAL, envoisPushEnPanne())
         + publication.publier("seance_dans_deux_salles", EVENEMENT, seancesDansDeuxSalles())
         + publication.publier("creneau_double_meme_source", EVENEMENT, creneauxDoublesMemeSource())
-        + publication.publier("salle_fiches_en_absence", SALLE, sallesAvecFichesEnAbsence());
+        + publication.publier("salle_fiches_en_absence", SALLE, sallesAvecFichesEnAbsence())
+        + publication.publier("fiche_suivie_en_absence", EVENEMENT, fichesSuiviesEnAbsence());
+  }
+
+  // Fiche à venir suivie par un utilisateur que ses sources ne renvoient plus depuis environ
+  // deux jours : son heure ou sa salle, figées à la dernière lecture, ne sont plus garanties
+  // (la salle entière n'est signalée qu'à partir de plusieurs fiches).
+  private Map<UUID, Map<String, Object>> fichesSuiviesEnAbsence() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT e.id, e.artiste_norm, e.date::text AS date, e.heure::text AS heure,
+               coalesce(s.nom, '?') AS salle, e.absences_consecutives,
+               (SELECT count(*) FROM user_matches um WHERE um.concert_id = e.id) AS suivis,
+               (SELECT string_agg(DISTINCT o.source::text, ', ') FROM observations o
+                 WHERE o.evenement_id = e.id) AS sources
+        FROM evenements e LEFT JOIN salles s ON s.id = e.salle_id
+        WHERE e.date >= CURRENT_DATE AND e.suppression_suggeree_le IS NULL
+          AND e.maintenu_le IS NULL AND e.absences_consecutives >= :seuil
+          AND EXISTS (SELECT 1 FROM user_matches um WHERE um.concert_id = e.id)
+        """,
+        Map.of("seuil", SEUIL_FICHE_SUIVIE_EN_ABSENCE),
+        rs -> {
+          final Map<String, Object> details = new LinkedHashMap<>();
+          details.put("artisteNorm", rs.getString("artiste_norm"));
+          details.put(DATE, rs.getString(DATE));
+          details.put("heure", rs.getString("heure"));
+          details.put(SALLE, rs.getString(SALLE));
+          details.put("sources", rs.getString("sources"));
+          details.put("absences", rs.getInt("absences_consecutives"));
+          details.put("suivis", rs.getLong("suivis"));
+          anomalies.put(rs.getObject("id", UUID.class), details);
+        });
+    return anomalies;
   }
 
   // Plusieurs fiches d'une salle au seuil « à vérifier » : signalées avant les

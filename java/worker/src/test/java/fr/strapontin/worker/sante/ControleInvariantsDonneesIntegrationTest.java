@@ -840,6 +840,55 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     assertEquals(List.of(), actifs());
   }
 
+  private UUID suivre(final String artiste) {
+    final UUID id =
+        jdbc.queryForObject(
+            "SELECT id FROM evenements WHERE artiste_norm = :artiste",
+            Map.of("artiste", artiste),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials)"
+            + " VALUES ('suiveur', 'suiveur', 'suiveur@test.fr', true) ON CONFLICT DO NOTHING",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_matches (user_id, concert_id) VALUES ('suiveur', CAST(:id AS uuid))",
+        Map.of("id", id.toString()));
+    return id;
+  }
+
+  @Test
+  void verifier_ficheSuivieEnAbsenceDepuisDeuxJours_signaleLaFichePuisSeReferme() {
+    final UUID salle = creerSalle();
+    evenement(salle, "kpop demon hunters", "92");
+    final UUID fiche = suivre("kpop demon hunters");
+    jdbc.update("UPDATE evenements SET absences_consecutives = 21", Map.of());
+
+    controle.verifier();
+    assertEquals(List.of("fiche_suivie_en_absence"), actifs());
+
+    jdbc.update("UPDATE evenements SET absences_consecutives = 0", Map.of());
+    controle.verifier();
+    assertEquals(List.of(), actifs(), "la fiche rafraîchie referme le signalement " + fiche);
+  }
+
+  @Test
+  void verifier_ficheEnAbsenceSansSuiveurOuRecemmentAbsente_neSignaleRien() {
+    final UUID salle = creerSalle();
+    evenement(salle, "sans suiveur", "92");
+    evenement(salle, "suivie recente", "92");
+    suivre("suivie recente");
+    jdbc.update(
+        "UPDATE evenements SET absences_consecutives = 21 WHERE artiste_norm = 'sans suiveur'",
+        Map.of());
+    jdbc.update(
+        "UPDATE evenements SET absences_consecutives = 3 WHERE artiste_norm = 'suivie recente'",
+        Map.of());
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
   @Test
   void verifier_deuxFichesEnAbsenceOuFichesMaintenues_neSignaleRien() {
     final UUID salle = creerSalle();
