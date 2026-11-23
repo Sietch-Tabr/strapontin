@@ -31,7 +31,7 @@ utilisation() {
 [ "$NOUVELLE" -gt "$ANCIENNE" ] || { echo "ERREUR : la nouvelle version doit être supérieure à l'ancienne" >&2; exit 1; }
 
 etat_cluster() {
-    pg_lsclusters --no-header | awk -v v="$1" '$1 == v && $2 == "main" { print $3 " (port " $4 ", " $5 ")" }'
+    pg_lsclusters --no-header | awk -v v="$1" '$1 == v && $2 == "main" { print $4 " (port " $3 ", " $5 ")" }'
 }
 
 verifier() {

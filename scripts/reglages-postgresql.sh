@@ -54,7 +54,7 @@ version_cluster() {
         echo "$PG_VERSION"
         return 0
     fi
-    pg_lsclusters --no-header | awk '$2 == "main" && $4 == "5432" { print $1; exit }'
+    pg_lsclusters --no-header | awk '$2 == "main" && $3 == "5432" { print $1; exit }'
 }
 
 fichier_conf() {

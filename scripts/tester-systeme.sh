@@ -41,6 +41,20 @@ verifier bash -c "grep -q \"shared_preload_libraries = 'pg_stat_statements'\" '$
 # Aucun paramètre de requête n'est journalisé.
 verifier bash -c "grep -q '^log_parameter_max_length = 0' '$RACINE/reglages-postgresql.sh'"
 
+# La version du cluster se lit dans pg_lsclusters (colonnes : version, cluster, port, statut).
+cat > "$FAUX/pg_lsclusters" <<'FAUX_LS'
+#!/bin/bash
+echo "18  main    5433 down   postgres /var/lib/postgresql/18/main /var/log/postgresql/postgresql-18-main.log"
+echo "19  main    5432 online postgres /var/lib/postgresql/19/main /var/log/postgresql/postgresql-19-main.log"
+FAUX_LS
+chmod +x "$FAUX/pg_lsclusters"
+version_lue() {
+    env -u PG_VERSION -u PG_CONF_D PSQL_ADMIN="$FAUX/psql" \
+        FAUX_SOURCE=/etc/postgresql/19/main/conf.d/strapontin.conf \
+        bash "$RACINE/reglages-postgresql.sh" verifier
+}
+verifier version_lue
+
 # --- durcissement-acces.sh verifier ------------------------------------------------------------
 cat > "$FAUX/sshd" <<'FAUX_SSHD'
 #!/bin/bash
