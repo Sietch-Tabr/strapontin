@@ -6,7 +6,6 @@ package fr.strapontin.core;
 
 import java.text.Normalizer;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,10 +21,13 @@ import java.util.regex.Pattern;
 public final class Normalisation {
 
   private static final Pattern ACCENTS = Pattern.compile("[\\u0300-\\u036f]");
-  private static final Pattern APOSTROPHES = Pattern.compile("[‘’`]");
-  private static final Pattern TIRETS = Pattern.compile("[-–—]");
-  private static final Pattern NON_ALPHANUM = Pattern.compile("[^a-z0-9\\s]");
-  private static final Pattern ESPACES_MULTIPLES = Pattern.compile("\\s+");
+  // Accents (marques combinantes) et « $ » : supprimés sans espace.
+  private static final Pattern ACCENTS_ET_DOLLAR = Pattern.compile("[\\u0300-\\u036f$]");
+  // Toute suite de caractères hors [a-z0-9] (ponctuation, apostrophes, tirets, espaces) devient
+  // une seule espace.
+  private static final Pattern SEPARATEURS = Pattern.compile("[^a-z0-9]+");
+  private static final Pattern SAINT = Pattern.compile("\\bsaint\\b");
+  private static final Pattern SAINTE = Pattern.compile("\\bsainte\\b");
   private static final Pattern SEP_NORMALISER_CASSE = Pattern.compile("\\s+|-");
   private static final Pattern NON_ALPHANUM_STRICT = Pattern.compile("[^a-z0-9]");
   // Cinq chiffres en tête (« 93200–93380 » compris), ou un département seul.
@@ -36,26 +38,13 @@ public final class Normalisation {
           "sous");
 
   /**
-   * Sigles stylistiques TM : "$" utilisé comme "S" dans les noms d'artiste (ex.
-   * "Chri$tian"). Supprimé sans espace pour éviter un artiste_norm parasite
-   * ("chri tian" au lieu de "christian").
+   * Esperluette entourée de séparateurs (espace, apostrophe, tiret) → "and" (ex.
+   * "Katia & Marielle" → "Katia and Marielle"). Harmonise avec la version
+   * littérale pour que les deux fetches TM produisent le même norm. Les
+   * apostrophes et tirets voisins sont déjà des espaces dans la forme
+   * normalisée : ils comptent ici comme telles.
    */
-  private static final Pattern DOLLAR = Pattern.compile("\\$");
-
-  /**
-   * Esperluette entourée d'espaces → "and" (ex. "Katia & Marielle" → "Katia and
-   * Marielle"). Harmonise avec la version littérale pour que les deux fetches
-   * TM produisent le même norm.
-   */
-  private static final Pattern ESPERLUETTE = Pattern.compile(" & ");
-
-  /**
-   * Caractères non décomposables par NFD : NFD retourne le même codepoint, le
-   * pattern NON_ALPHANUM les supprime entièrement. Ces substitutions les
-   * remplacent avant NFD.
-   */
-  private static final Map<Character, String> SUBSTITUTIONS_NFD =
-      Map.of('ø', "o", 'Ø', "o", 'ł', "l", 'Ł', "l", 'đ', "d", 'Đ', "d", 'ŋ', "n", 'Ŋ', "n");
+  private static final Pattern ESPERLUETTE = Pattern.compile("[ ‘’`\\-–—]&[ ‘’`\\-–—]");
 
   private Normalisation() {}
 
@@ -68,18 +57,64 @@ public final class Normalisation {
    * @return le texte normalisé, éventuellement vide
    */
   public static String normaliserTexte(final String texte) {
-    String texteNorm = texte.toLowerCase(Locale.ROOT);
-    for (final Map.Entry<Character, String> e : SUBSTITUTIONS_NFD.entrySet()) {
-      texteNorm = texteNorm.replace(String.valueOf(e.getKey()), e.getValue());
+    if (estDejaNormalise(texte)) {
+      return texte;
     }
+    String texteNorm = substituerNonDecomposables(texte.toLowerCase(Locale.ROOT));
     texteNorm = Normalizer.normalize(texteNorm, Normalizer.Form.NFD);
-    texteNorm = ACCENTS.matcher(texteNorm).replaceAll("");
-    texteNorm = APOSTROPHES.matcher(texteNorm).replaceAll(" ");
-    texteNorm = TIRETS.matcher(texteNorm).replaceAll(" ");
-    texteNorm = DOLLAR.matcher(texteNorm).replaceAll("");
+    texteNorm = ACCENTS_ET_DOLLAR.matcher(texteNorm).replaceAll("");
     texteNorm = ESPERLUETTE.matcher(texteNorm).replaceAll(" and ");
-    texteNorm = NON_ALPHANUM.matcher(texteNorm).replaceAll(" ");
-    return ESPACES_MULTIPLES.matcher(texteNorm).replaceAll(" ").trim();
+    return SEPARATEURS.matcher(texteNorm).replaceAll(" ").trim();
+  }
+
+  // Minuscules et chiffres séparés par des espaces simples, sans espace en tête ni en queue :
+  // la normalisation n'y change rien.
+  private static boolean estDejaNormalise(final String texte) {
+    final int longueur = texte.length();
+    char precedent = ' ';
+    for (int i = 0; i < longueur; i++) {
+      final char c = texte.charAt(i);
+      final boolean alphanum = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+      if (!alphanum && (c != ' ' || precedent == ' ')) {
+        return false;
+      }
+      precedent = c;
+    }
+    return longueur == 0 || precedent != ' ';
+  }
+
+  // Caractères non décomposables par NFD (NFD les laisse tels quels et la suite les supprimerait) :
+  // remplacés avant NFD.
+  private static String substituerNonDecomposables(final String texte) {
+    final int longueur = texte.length();
+    int i = 0;
+    while (i < longueur && substitut(texte.charAt(i)) == null) {
+      i++;
+    }
+    if (i == longueur) {
+      return texte;
+    }
+    final StringBuilder resultat = new StringBuilder(longueur + 4).append(texte, 0, i);
+    for (; i < longueur; i++) {
+      final char c = texte.charAt(i);
+      final String remplacement = substitut(c);
+      if (remplacement == null) {
+        resultat.append(c);
+      } else {
+        resultat.append(remplacement);
+      }
+    }
+    return resultat.toString();
+  }
+
+  private static String substitut(final char c) {
+    return switch (c) {
+      case 'ø', 'Ø' -> "o";
+      case 'ł', 'Ł' -> "l";
+      case 'đ', 'Đ' -> "d";
+      case 'ŋ', 'Ŋ' -> "n";
+      default -> null;
+    };
   }
 
   /**
@@ -90,8 +125,30 @@ public final class Normalisation {
    *     caractère valide)
    */
   public static String normaliserSalleCle(final String nom) {
+    final String ascii = cleDepuisAscii(nom);
+    if (ascii != null) {
+      return ascii;
+    }
     final String nfd = Normalizer.normalize(nom.toLowerCase(Locale.ROOT), Normalizer.Form.NFD);
     return NON_ALPHANUM_STRICT.matcher(ACCENTS.matcher(nfd).replaceAll("")).replaceAll("");
+  }
+
+  // Clé d'un nom ASCII, en une passe ; null si le nom contient un caractère non ASCII.
+  private static String cleDepuisAscii(final String nom) {
+    final int longueur = nom.length();
+    final StringBuilder cle = new StringBuilder(longueur);
+    for (int i = 0; i < longueur; i++) {
+      final char c = nom.charAt(i);
+      if (c > 127) {
+        return null;
+      }
+      if (c >= 'A' && c <= 'Z') {
+        cle.append((char) (c + ('a' - 'A')));
+      } else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+        cle.append(c);
+      }
+    }
+    return cle.toString();
   }
 
   /**
@@ -103,7 +160,11 @@ public final class Normalisation {
    * @return la ville normalisée, éventuellement vide
    */
   public static String normaliserVille(final String ville) {
-    return normaliserTexte(ville).replaceAll("\\bsaint\\b", "st").replaceAll("\\bsainte\\b", "ste");
+    final String normalisee = normaliserTexte(ville);
+    if (!normalisee.contains("saint")) {
+      return normalisee;
+    }
+    return SAINTE.matcher(SAINT.matcher(normalisee).replaceAll("st")).replaceAll("ste");
   }
 
   /**
