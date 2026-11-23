@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # planifier-mise-a-jour-systeme.sh — planifie la mise à jour système hebdomadaire d'un LXC depuis
-# l'hôte Proxmox (root) : une minuterie systemd de l'hôte lance system-update.sh (snapshot, apt
+# l'hôte Proxmox (root) : une minuterie systemd de l'hôte lance system-update.sh (sauvegarde vzdump, apt
 # upgrade, contrôle des services et de la santé de l'application, retour arrière indiqué).
 # Le retard est contrôlé de son côté, dans le LXC, par controle-systeme.sh.
 # Usage (hôte Proxmox) : bash planifier-mise-a-jour-systeme.sh <VMID> [OnCalendar]

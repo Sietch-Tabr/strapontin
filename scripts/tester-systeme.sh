@@ -129,7 +129,7 @@ for script in reglages-postgresql.sh durcissement-acces.sh controle-systeme.sh m
     planifier-mise-a-jour-systeme.sh provision.sh update.sh; do
     verifier bash -n "$RACINE/$script"
 done
-# La migration refuse sans snapshot et sans versions cohérentes.
+# La migration refuse sans sauvegarde du LXC et sans versions cohérentes.
 refuser bash "$RACINE/migrer-postgresql.sh" migrer 18 19
 refuser bash "$RACINE/migrer-postgresql.sh" verifier 19 18
 

@@ -7,11 +7,12 @@ set -euo pipefail
 # autre port : il n'est supprimé que par « supprimer-ancien ».
 # Usage (root, sur le LXC) :
 #   migrer-postgresql.sh verifier <ancienne> <nouvelle>        état des clusters et des paquets
-#   migrer-postgresql.sh migrer <ancienne> <nouvelle>          migration (snapshot Proxmox exigé)
+#   migrer-postgresql.sh migrer <ancienne> <nouvelle>          migration (sauvegarde du LXC exigée)
 #   migrer-postgresql.sh supprimer-ancien <ancienne> <nouvelle>
 #
-# Avant « migrer », prendre un snapshot du LXC depuis Proxmox (pct snapshot <VMID> avant-pg<nouvelle>),
-# seul retour arrière complet, puis exporter SNAPSHOT_FAIT=oui. Les services applicatifs sont
+# Avant « migrer », sauvegarder le LXC depuis Proxmox (vzdump <VMID> --mode snapshot --storage local
+# --compress zstd ; « pct snapshot » est impossible avec le dossier du NAS monté), seul retour arrière
+# complet (pct stop <VMID> ; pct restore <VMID> <archive> --force), puis exporter SAUVEGARDE_LXC_FAITE=oui. Les services applicatifs sont
 # arrêtés pendant la migration (quelques minutes d'indisponibilité).
 
 . "$(dirname "$0")/chemins.sh"
@@ -55,8 +56,8 @@ attendre_sante() {
 }
 
 migrer() {
-    [ "${SNAPSHOT_FAIT:-}" = "oui" ] \
-        || { echo "ERREUR : snapshot Proxmox exigé avant la migration (SNAPSHOT_FAIT=oui)" >&2; exit 1; }
+    [ "${SAUVEGARDE_LXC_FAITE:-}" = "oui" ] \
+        || { echo "ERREUR : sauvegarde vzdump du LXC exigée avant la migration (SAUVEGARDE_LXC_FAITE=oui)" >&2; exit 1; }
     verifier
     prendre_verrou "migration-postgresql"
     trap liberer_verrou EXIT
@@ -70,7 +71,7 @@ migrer() {
     PG_VERSION="$NOUVELLE" bash "$EXPLOITATION/reglages-postgresql.sh" appliquer
     echo "[migration] redémarrage des services applicatifs"
     systemctl start strapontin-web strapontin-worker
-    attendre_sante || { echo "ERREUR : l'application ne répond pas après la migration (snapshot à restaurer)" >&2; exit 1; }
+    attendre_sante || { echo "ERREUR : l'application ne répond pas après la migration (sauvegarde vzdump à restaurer)" >&2; exit 1; }
     pg_lsclusters
     echo "[migration] terminée ; contrôler l'application puis lancer « supprimer-ancien »"
 }

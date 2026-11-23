@@ -5,26 +5,26 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 # system-update.sh — mise à jour système du LXC strapontin
 # À exécuter depuis le HOST Proxmox (192.168.1.99) en tant que root
 #
-# Ordre : snapshot → apt upgrade → vérifier services → healthcheck
-# En cas d'échec : rollback via la commande affichée
+# Ordre : sauvegarde vzdump → apt upgrade → vérifier services → healthcheck
+# En cas d'échec : retour arrière via la commande affichée
+# Pas de « pct snapshot » : un LXC dont un dossier du NAS est monté (mp0, bind) n'a pas cette
+# fonction. vzdump en mode snapshot exclut le montage et ne coupe pas le conteneur.
 
 VMID="${1:?Usage: system-update.sh <VMID>}"
 # Port de l'actuator du web (le port applicatif sert la SPA et répond 200 à tout chemin inconnu).
 PORT_WEB_SANTE="${PORT_WEB_SANTE:-9090}"
-DATE=$(date +%Y%m%d)
-NOM_SNAPSHOT="pre-sysupdate-${DATE}"
+STOCKAGE_SAUVEGARDE="${STOCKAGE_SAUVEGARDE:-local}"
+DOSSIER_SAUVEGARDE="${DOSSIER_SAUVEGARDE:-/var/lib/vz/dump}"
 
 echo "=== Mise à jour système LXC $VMID ==="
 
-# 1. Snapshot Proxmox avant toute modification
-echo "[1/4] Snapshot : $NOM_SNAPSHOT..."
-if pct listsnapshot "$VMID" | grep -q "^.*${NOM_SNAPSHOT}"; then
-    echo "  Snapshot du jour déjà présent, ignoré"
-else
-    pct snapshot "$VMID" "$NOM_SNAPSHOT" --description "Avant apt upgrade ${DATE}"
-    echo "  Snapshot créé — rollback disponible :"
-    echo "    pct rollback $VMID $NOM_SNAPSHOT"
-fi
+# 1. Sauvegarde Proxmox avant toute modification (les deux plus récentes sont conservées)
+echo "[1/4] Sauvegarde vzdump..."
+vzdump "$VMID" --mode snapshot --storage "$STOCKAGE_SAUVEGARDE" --compress zstd \
+    --prune-backups keep-last=2 > /dev/null
+ARCHIVE="$(ls -t "$DOSSIER_SAUVEGARDE"/vzdump-lxc-"$VMID"-*.tar.zst | head -1)"
+echo "  Archive : $ARCHIVE"
+RETOUR_ARRIERE="pct set $VMID --protection 0; pct stop $VMID; pct restore $VMID $ARCHIVE --force"
 
 # 2. apt update + upgrade (hors paquets blacklistés dans 50unattended-upgrades)
 echo "[2/4] apt update + upgrade..."
@@ -60,7 +60,7 @@ if [ "$TOUT_OK" -eq 0 ]; then
     echo "" >&2
     echo "ERREUR : un ou plusieurs services sont inactifs" >&2
     echo "Pour restaurer l'état précédent :" >&2
-    echo "  pct rollback $VMID $NOM_SNAPSHOT" >&2
+    echo "  $RETOUR_ARRIERE" >&2
     exit 1
 fi
 
@@ -77,13 +77,13 @@ if [ "$RETRIES" -eq 0 ]; then
     echo "" >&2
     echo "ERREUR : healthcheck échoué après mise à jour" >&2
     echo "Pour restaurer l'état précédent :" >&2
-    echo "  pct rollback $VMID $NOM_SNAPSHOT" >&2
+    echo "  $RETOUR_ARRIERE" >&2
     exit 1
 fi
 
 echo ""
 echo "=== Mise à jour système réussie ==="
 echo ""
-echo "Snapshot conservé : $NOM_SNAPSHOT"
-echo "Supprimer après 48h si tout est stable :"
-echo "  pct delsnapshot $VMID $NOM_SNAPSHOT"
+echo "Sauvegarde conservée : $ARCHIVE"
+echo "Retour arrière, si besoin :"
+echo "  $RETOUR_ARRIERE"
