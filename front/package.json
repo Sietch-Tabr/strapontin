@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@unplugin-pwa/vite": "0.0.6",
+    "@unplugin-pwa/vite": "0.0.8",
     "@vitejs/plugin-vue": "^6.0.11",
     "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
