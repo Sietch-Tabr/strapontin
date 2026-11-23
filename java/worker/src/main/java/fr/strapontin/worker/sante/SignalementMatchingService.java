@@ -6,14 +6,17 @@ package fr.strapontin.worker.sante;
 
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -27,7 +30,8 @@ public class SignalementMatchingService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SignalementMatchingService.class);
 
-  // Type -> clé des détails qui identifie ce que l'administrateur a tranché.
+  // Type -> clé des détails qui identifie précisément ce que l'administrateur a tranché. Un
+  // type absent de cette liste est identifié par l'empreinte de ses détails textuels.
   private static final Map<String, String> CLES_DECISION_CONSERVEE =
       Map.of(
           "creneau_double_meme_source", "jumeau",
@@ -100,7 +104,10 @@ public class SignalementMatchingService {
   private boolean decisionDejaPrise(
       final String type, final UUID entiteId, final Map<String, Object> details) {
     final String cle = CLES_DECISION_CONSERVEE.get(type);
-    if (cle == null || details == null || details.get(cle) == null) {
+    if (cle == null) {
+      return decisionDejaPriseParEmpreinte(type, entiteId, details);
+    }
+    if (details == null || details.get(cle) == null) {
       return false;
     }
     final Long nombre =
@@ -117,6 +124,44 @@ public class SignalementMatchingService {
                 .addValue("valeur", String.valueOf(details.get(cle))),
             Long.class);
     return nombre != null && nombre > 0;
+  }
+
+  // Empreinte : valeurs textuelles des détails, sans leur ordre (sourceA et sourceB
+  // s'inversent d'une nuit à l'autre) ni les mesures numériques (une distance varie).
+  private boolean decisionDejaPriseParEmpreinte(
+      final String type, final UUID entiteId, final Map<String, Object> details) {
+    final String empreinte = empreinte(details);
+    final List<String> decisions =
+        jdbc.queryForList(
+            """
+            SELECT coalesce(details::text, '{}') FROM signalements_matching
+            WHERE type = :type AND entite_id = CAST(:entiteId AS uuid) AND resolu_manuellement
+            """,
+            new MapSqlParameterSource()
+                .addValue(CLE_TYPE, type)
+                .addValue("entiteId", entiteId.toString()),
+            String.class);
+    return decisions.stream().anyMatch(json -> empreinte.equals(empreinte(lireDetails(json))));
+  }
+
+  private Map<String, Object> lireDetails(final String json) {
+    try {
+      return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+    } catch (JacksonException e) {
+      LOG.warn("Détails de signalement illisibles : {}", e.getMessage());
+      return null;
+    }
+  }
+
+  private static String empreinte(final Map<String, Object> details) {
+    if (details == null) {
+      return "";
+    }
+    return details.values().stream()
+        .filter(String.class::isInstance)
+        .map(String.class::cast)
+        .sorted()
+        .collect(Collectors.joining("|"));
   }
 
   /**
