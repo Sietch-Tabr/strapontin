@@ -66,6 +66,11 @@ final class ControleInvariantsComplementaires {
           AND (sa.id <> sb.id OR NOT EXISTS (
             SELECT 1 FROM observations o1 JOIN observations o2 ON o2.source = o1.source
             WHERE o1.evenement_id = e1.id AND o2.evenement_id = e2.id))
+          AND NOT (sa.id <> sb.id AND EXISTS (
+            SELECT 1 FROM observations o1
+            JOIN observations o2 ON o2.source = o1.source AND o2.url <> o1.url
+            WHERE o1.evenement_id = e1.id AND o2.evenement_id = e2.id
+              AND o1.source = 'eventim'))
           AND NOT EXISTS (
             SELECT 1 FROM salles_paires_distinctes d
             WHERE d.salle_a = LEAST(sa.id, sb.id) AND d.salle_b = GREATEST(sa.id, sb.id))

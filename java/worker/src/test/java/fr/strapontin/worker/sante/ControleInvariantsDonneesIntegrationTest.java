@@ -163,6 +163,19 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     assertEquals(List.of("seance_dans_deux_salles"), actifs());
   }
 
+  // Casse-Noisette : un musical et un ballet au titre identique, deux produits Eventim distincts.
+  @Test
+  void verifier_memeTitreDansDeuxSallesProchesAvecDeuxProduitsEventim_neSignaleRien() {
+    final UUID boussole = salleAvecPosition("la boussole", 48.8650, 2.3680);
+    final UUID treizieme = salleAvecPosition("le 13e art", 48.8630, 2.3700);
+    observer(evenementHeure(boussole, "casse noisette", "16:00"), "eventim");
+    observer(evenementHeure(treizieme, "casse noisette", "15:00"), "eventim");
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
   // Théâtre de l'Essaïon : deux salles internes, des spectacles différents au même créneau.
   @Test
   void verifier_salleAvecPlusieursCreneauxDoubles_neSignaleAucunCreneauDouble() {
