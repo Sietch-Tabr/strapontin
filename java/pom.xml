@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.2</version>
+        <version>4.2.0</version>
         <relativePath/>
     </parent>
 
@@ -39,9 +39,8 @@
         <revision>3.2.1</revision>
         <java.version>27</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- Versions plus récentes que celles du BOM Spring Boot 4.1.1 (Flyway 12.4.0, Caffeine 3.2.4) -->
+        <!-- Versions plus récentes que celles du BOM Spring Boot 4.2.0 (Flyway 12.11.0, Logback 1.6.6) -->
         <flyway.version>13.13.0</flyway.version>
-        <caffeine.version>3.3.1</caffeine.version>
         <!-- Versions non gérées par le BOM -->
         <bouncycastle.version>1.87</bouncycastle.version>
         <webpush.version>1.3.0</webpush.version>

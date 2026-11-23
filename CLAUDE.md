@@ -2,7 +2,7 @@
 
 ## Architecture — monorepo Maven
 
-`java/{core,sources,web,worker,exploitation-commun,mise-a-jour,exploitation-controle}` (BOM parent `java/pom.xml`, Java 27, Spring Boot 4.1.2) — `core` : normalisation/dédup/types partagés ; `exploitation-commun` : bibliothèque des modules d'exploitation (versions, chemins, verrou, contrat de mise à jour) ; `mise-a-jour` : mise à jour depuis l'admin, root, sans Spring ; `exploitation-controle` : commandes d'exploitation, root ; `sources` : clients TM/Eventim/Deezer ; `web` : REST API + Vue SPA (8080) ; `worker` : Quartz (8081). `scripts/` : provisionnement/déploiement/sauvegarde — noms auto-descriptifs sauf `restore-test.sh` (test de restauration à la demande, jamais en CI, voir section Sauvegarde).
+`java/{core,sources,web,worker,exploitation-commun,mise-a-jour,exploitation-controle}` (BOM parent `java/pom.xml`, Java 27, Spring Boot 4.2.0) — `core` : normalisation/dédup/types partagés ; `exploitation-commun` : bibliothèque des modules d'exploitation (versions, chemins, verrou, contrat de mise à jour) ; `mise-a-jour` : mise à jour depuis l'admin, root, sans Spring ; `exploitation-controle` : commandes d'exploitation, root ; `sources` : clients TM/Eventim/Deezer ; `web` : REST API + Vue SPA (8080) ; `worker` : Quartz (8081). `scripts/` : provisionnement/déploiement/sauvegarde — noms auto-descriptifs sauf `restore-test.sh` (test de restauration à la demande, jamais en CI, voir section Sauvegarde).
 
 ## Architecture module web — couche service/repository
 
@@ -20,7 +20,7 @@ Historique jalon par jalon : [wiki Roadmap](https://github.com/Sietch-Tabr/strap
 
 ## Stack technique
 
-- **Spring Boot 4.1.2** + **Vue 3 + Vite 8** (`front/` → `static/`) — port 8080. Thymeleaf et HTMX supprimés.
+- **Spring Boot 4.2.0** + **Vue 3 + Vite 8** (`front/` → `static/`) — port 8080. Thymeleaf et HTMX supprimés.
 - **Vitest 5** (`front/vitest.config.js`, #781) : tests unitaires des fonctions pures partagées entre composants (`front/src/utils/`), sans montage de composant ni jsdom.
 - `npm run build`/`npm ci` n'émettent aucun avertissement (dette déclarée vide) : [`front/CLAUDE.md`](front/CLAUDE.md).
 - **Spring Security 7** — auth session, TOTP 2FA optionnel (limitation de débit en fenêtre glissante, `securite.LimiteurDebit`) ; `anyRequest().authenticated()` — non-API sans session → redirect `/login`, API → 401 JSON
