@@ -30,8 +30,8 @@ public class SignalementMatchingService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SignalementMatchingService.class);
 
-  // Type -> clé des détails qui identifie précisément ce que l'administrateur a tranché. Un
-  // type absent de cette liste est identifié par l'empreinte de ses détails textuels.
+  // Type -> clé des détails qui identifie précisément ce que l'administrateur
+  // a tranché. Un type absent est identifié par l'empreinte de ses détails.
   private static final Map<String, String> CLES_DECISION_CONSERVEE =
       Map.of(
           "creneau_double_meme_source", "jumeau",
@@ -42,6 +42,7 @@ public class SignalementMatchingService {
   // Au-delà, un contrôle est en régression plutôt qu'à traiter.
   private static final int SEUIL_VOLUME_ANORMAL = 200;
   private static final String CLE_TYPE = "type";
+  private static final String CLE_ENTITE_ID = "entiteId";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
@@ -89,7 +90,7 @@ public class SignalementMatchingService {
           new MapSqlParameterSource()
               .addValue(CLE_TYPE, type)
               .addValue("entiteType", entiteType)
-              .addValue("entiteId", entiteId.toString())
+              .addValue(CLE_ENTITE_ID, entiteId.toString())
               .addValue("confiance", confiance)
               .addValue("details", detailsJson));
     } catch (JacksonException e) {
@@ -119,15 +120,15 @@ public class SignalementMatchingService {
             """,
             new MapSqlParameterSource()
                 .addValue(CLE_TYPE, type)
-                .addValue("entiteId", entiteId.toString())
+                .addValue(CLE_ENTITE_ID, entiteId.toString())
                 .addValue("cle", cle)
                 .addValue("valeur", String.valueOf(details.get(cle))),
             Long.class);
     return nombre != null && nombre > 0;
   }
 
-  // Empreinte : valeurs textuelles des détails, sans leur ordre (sourceA et sourceB
-  // s'inversent d'une nuit à l'autre) ni les mesures numériques (une distance varie).
+  // Empreinte : valeurs textuelles des détails, sans leur ordre (sourceA et
+  // sourceB s'inversent d'une nuit à l'autre) ni les mesures numériques.
   private boolean decisionDejaPriseParEmpreinte(
       final String type, final UUID entiteId, final Map<String, Object> details) {
     final String empreinte = empreinte(details);
@@ -139,7 +140,7 @@ public class SignalementMatchingService {
             """,
             new MapSqlParameterSource()
                 .addValue(CLE_TYPE, type)
-                .addValue("entiteId", entiteId.toString()),
+                .addValue(CLE_ENTITE_ID, entiteId.toString()),
             String.class);
     return decisions.stream().anyMatch(json -> empreinte.equals(empreinte(lireDetails(json))));
   }
@@ -149,7 +150,7 @@ public class SignalementMatchingService {
       return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
     } catch (JacksonException e) {
       LOG.warn("Détails de signalement illisibles : {}", e.getMessage());
-      return null;
+      return Map.of();
     }
   }
 
@@ -179,7 +180,7 @@ public class SignalementMatchingService {
         """,
         new MapSqlParameterSource()
             .addValue(CLE_TYPE, type)
-            .addValue("entiteId", entiteId.toString()));
+            .addValue(CLE_ENTITE_ID, entiteId.toString()));
   }
 
   /**

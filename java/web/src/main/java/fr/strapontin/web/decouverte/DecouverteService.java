@@ -273,16 +273,17 @@ public class DecouverteService {
       final LocalDate aujourd8,
       final Map<String, Object> params) {
     final StringBuilder where =
-        new StringBuilder(150).append("c.date >= :aujourd8 AND c.disponible = true");
+        new StringBuilder(400).append("c.date >= :aujourd8 AND c.disponible = true");
     params.put("aujourd8", aujourd8);
     if (!deptsActifs.isEmpty()) {
       where.append(" AND c.dept = ANY(:depts)");
       params.put(CLE_DEPTS, deptsActifs.toArray(String[]::new));
     }
     if (!rechercheNorm.isEmpty()) {
-      // L'artiste et la salle de la vue viennent de la meilleure observation de la fiche : une
-      // fiche ne peut correspondre que si l'une de ses observations correspond. Ce préfiltre,
-      // servi par les index trigramme d'observations, évite d'évaluer la vue pour chaque fiche.
+      // L'artiste et la salle de la vue viennent de la meilleure observation :
+      // une fiche ne correspond que si l'une de ses observations correspond.
+      // Ce préfiltre, servi par les index trigramme, évite d'évaluer la vue
+      // pour chaque fiche.
       where.append(
           " AND c.id IN (SELECT o.evenement_id FROM observations o"
               + " WHERE o.artiste_brut ILIKE :q OR o.salle_brut ILIKE :q)"

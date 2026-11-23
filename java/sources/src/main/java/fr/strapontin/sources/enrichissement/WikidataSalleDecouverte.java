@@ -78,9 +78,9 @@ final class WikidataSalleDecouverte {
           // Bâtiment ou structure détruit : l'ancien site, pas le lieu actuel.
           "Q19860854");
 
-  // Une œuvre d'art visuelle (sculpture, statue, peinture) n'est jamais un lieu de spectacle, quel
-  // que soit son nom. La classe et toutes ses sous-classes sont écartées (P31/P279*) : un
-  // monument, un théâtre ou une église n'en font pas partie.
+  // Une œuvre d'art visuelle (sculpture, statue, peinture) n'est jamais un
+  // lieu de spectacle. La classe et ses sous-classes sont écartées
+  // (P31/P279*) : un monument, un théâtre ou une église n'en font pas partie.
   /* package-private : réutilisé par WikidataSalleSource (même package). */
   static final String CLASSE_OEUVRE_VISUELLE = "Q4502142";
 

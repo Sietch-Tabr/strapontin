@@ -23,8 +23,7 @@ public final class Normalisation {
   private static final Pattern ACCENTS = Pattern.compile("[\\u0300-\\u036f]");
   // Accents (marques combinantes) et « $ » : supprimés sans espace.
   private static final Pattern ACCENTS_ET_DOLLAR = Pattern.compile("[\\u0300-\\u036f$]");
-  // Toute suite de caractères hors [a-z0-9] (ponctuation, apostrophes, tirets, espaces) devient
-  // une seule espace.
+  // Toute suite hors [a-z0-9] (ponctuation, tirets, espaces) devient une espace.
   private static final Pattern SEPARATEURS = Pattern.compile("[^a-z0-9]+");
   private static final Pattern SAINT = Pattern.compile("\\bsaint\\b");
   private static final Pattern SAINTE = Pattern.compile("\\bsainte\\b");
@@ -57,64 +56,14 @@ public final class Normalisation {
    * @return le texte normalisé, éventuellement vide
    */
   public static String normaliserTexte(final String texte) {
-    if (estDejaNormalise(texte)) {
+    if (TexteRapide.estDejaNormalise(texte)) {
       return texte;
     }
-    String texteNorm = substituerNonDecomposables(texte.toLowerCase(Locale.ROOT));
+    String texteNorm = TexteRapide.substituerNonDecomposables(texte.toLowerCase(Locale.ROOT));
     texteNorm = Normalizer.normalize(texteNorm, Normalizer.Form.NFD);
     texteNorm = ACCENTS_ET_DOLLAR.matcher(texteNorm).replaceAll("");
     texteNorm = ESPERLUETTE.matcher(texteNorm).replaceAll(" and ");
     return SEPARATEURS.matcher(texteNorm).replaceAll(" ").trim();
-  }
-
-  // Minuscules et chiffres séparés par des espaces simples, sans espace en tête ni en queue :
-  // la normalisation n'y change rien.
-  private static boolean estDejaNormalise(final String texte) {
-    final int longueur = texte.length();
-    char precedent = ' ';
-    for (int i = 0; i < longueur; i++) {
-      final char c = texte.charAt(i);
-      final boolean alphanum = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
-      if (!alphanum && (c != ' ' || precedent == ' ')) {
-        return false;
-      }
-      precedent = c;
-    }
-    return longueur == 0 || precedent != ' ';
-  }
-
-  // Caractères non décomposables par NFD (NFD les laisse tels quels et la suite les supprimerait) :
-  // remplacés avant NFD.
-  private static String substituerNonDecomposables(final String texte) {
-    final int longueur = texte.length();
-    int i = 0;
-    while (i < longueur && substitut(texte.charAt(i)) == null) {
-      i++;
-    }
-    if (i == longueur) {
-      return texte;
-    }
-    final StringBuilder resultat = new StringBuilder(longueur + 4).append(texte, 0, i);
-    for (; i < longueur; i++) {
-      final char c = texte.charAt(i);
-      final String remplacement = substitut(c);
-      if (remplacement == null) {
-        resultat.append(c);
-      } else {
-        resultat.append(remplacement);
-      }
-    }
-    return resultat.toString();
-  }
-
-  private static String substitut(final char c) {
-    return switch (c) {
-      case 'ø', 'Ø' -> "o";
-      case 'ł', 'Ł' -> "l";
-      case 'đ', 'Đ' -> "d";
-      case 'ŋ', 'Ŋ' -> "n";
-      default -> null;
-    };
   }
 
   /**
@@ -125,30 +74,12 @@ public final class Normalisation {
    *     caractère valide)
    */
   public static String normaliserSalleCle(final String nom) {
-    final String ascii = cleDepuisAscii(nom);
+    final String ascii = TexteRapide.cleDepuisAscii(nom);
     if (ascii != null) {
       return ascii;
     }
     final String nfd = Normalizer.normalize(nom.toLowerCase(Locale.ROOT), Normalizer.Form.NFD);
     return NON_ALPHANUM_STRICT.matcher(ACCENTS.matcher(nfd).replaceAll("")).replaceAll("");
-  }
-
-  // Clé d'un nom ASCII, en une passe ; null si le nom contient un caractère non ASCII.
-  private static String cleDepuisAscii(final String nom) {
-    final int longueur = nom.length();
-    final StringBuilder cle = new StringBuilder(longueur);
-    for (int i = 0; i < longueur; i++) {
-      final char c = nom.charAt(i);
-      if (c > 127) {
-        return null;
-      }
-      if (c >= 'A' && c <= 'Z') {
-        cle.append((char) (c + ('a' - 'A')));
-      } else if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
-        cle.append(c);
-      }
-    }
-    return cle.toString();
   }
 
   /**

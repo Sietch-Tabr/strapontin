@@ -27,10 +27,12 @@ final class ControleInvariantsComplementaires {
   private static final String TYPE_ENTITE_GLOBAL = "invariant";
   private static final String EVENEMENT = "evenement";
   private static final String DATE = "date";
+  private static final String COLONNE_ARTISTE_NORM = "artiste_norm";
+  private static final String CLE_HEURE = "heure";
   private static final String JUMEAU = "jumeau";
   private static final String SALLE = "salle";
   private static final int MIN_FICHES_EN_ABSENCE = 3;
-  // Environ deux jours de cycles : une fiche suivie que sa source ne renvoie plus a pu changer.
+  // Environ deux jours de cycles sans que la source renvoie la fiche suivie.
   private static final int SEUIL_FICHE_SUIVIE_EN_ABSENCE = 20;
   // Au-delà : théâtre à plusieurs salles internes, créneaux doubles légitimes.
   private static final int SEUIL_CRENEAUX_SALLE_MULTIPLE =
@@ -106,9 +108,9 @@ final class ControleInvariantsComplementaires {
         + publication.publier("fiche_suivie_en_absence", EVENEMENT, fichesSuiviesEnAbsence());
   }
 
-  // Fiche à venir suivie par un utilisateur que ses sources ne renvoient plus depuis environ
-  // deux jours : son heure ou sa salle, figées à la dernière lecture, ne sont plus garanties
-  // (la salle entière n'est signalée qu'à partir de plusieurs fiches).
+  // Fiche à venir suivie que ses sources ne renvoient plus depuis environ
+  // deux jours : son heure et sa salle, figées à la dernière lecture, ne sont
+  // plus garanties (une salle n'est signalée qu'à partir de plusieurs fiches).
   private Map<UUID, Map<String, Object>> fichesSuiviesEnAbsence() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(
@@ -126,9 +128,9 @@ final class ControleInvariantsComplementaires {
         Map.of("seuil", SEUIL_FICHE_SUIVIE_EN_ABSENCE),
         rs -> {
           final Map<String, Object> details = new LinkedHashMap<>();
-          details.put("artisteNorm", rs.getString("artiste_norm"));
+          details.put("artisteNorm", rs.getString(COLONNE_ARTISTE_NORM));
           details.put(DATE, rs.getString(DATE));
-          details.put("heure", rs.getString("heure"));
+          details.put(CLE_HEURE, rs.getString(CLE_HEURE));
           details.put(SALLE, rs.getString(SALLE));
           details.put("sources", rs.getString("sources"));
           details.put("absences", rs.getInt("absences_consecutives"));
@@ -182,7 +184,7 @@ final class ControleInvariantsComplementaires {
         rs -> {
           anomalies.put(
               UUID.fromString(rs.getString("id")),
-              Map.of("artisteNorm", rs.getString("artiste_norm"), DATE, rs.getString(DATE)));
+              Map.of("artisteNorm", rs.getString(COLONNE_ARTISTE_NORM), DATE, rs.getString(DATE)));
         });
     return anomalies;
   }
@@ -211,7 +213,7 @@ final class ControleInvariantsComplementaires {
                 UUID.fromString(rs.getString("id")),
                 Map.of(
                     "artisteNorm",
-                    rs.getString("artiste_norm"),
+                    rs.getString(COLONNE_ARTISTE_NORM),
                     DATE,
                     rs.getString(DATE),
                     "annuleePar",
@@ -295,7 +297,7 @@ final class ControleInvariantsComplementaires {
               rs.getObject("recent", UUID.class),
               Map.of(
                   "artiste",
-                  rs.getString("artiste_norm"),
+                  rs.getString(COLONNE_ARTISTE_NORM),
                   DATE,
                   rs.getString(DATE),
                   memeSalle ? "salle" : "salles",

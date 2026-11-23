@@ -46,13 +46,10 @@ public class IntegriteAlerteController {
   }
 
   /**
-   * Notifie l'app du statut AIDE (détail : CLAUDE.md, Sécurité
-   * admin/sessions) ou d'un écart du contrôle du système
-   * ({@code scripts/controle-systeme.sh} : réglages PostgreSQL, accès
-   * réseau, mises à jour en retard).
+   * Notifie l'app du statut AIDE ou d'un écart du contrôle du système
+   * (détail : CLAUDE.md, scripts d'exploitation).
    * @param statut {@code ok}, {@code modifie} ou {@code ecart_systeme}
    * @param detail sortie résumée d'{@code aide --check} ou lignes d'écart
-   *     du contrôle du système (optionnel)
    * @param authorization header Bearer INTEGRITY_INTERNAL_SECRET
    * @return 200 si traité, 403 si le token est absent/invalide
    */

@@ -33,7 +33,7 @@ public class SiteLeTriton extends SourceSiteSalle {
 
   private static final Logger LOG = LoggerFactory.getLogger(SiteLeTriton.class);
 
-  // Le site ajoute un suffixe numérique (« -2 ») quand le titre et la date existent déjà.
+  // Suffixe numérique (« -2 ») ajouté par le site à un titre et une date déjà vus.
   private static final Pattern DATE_DANS_ADRESSE =
       Pattern.compile("(\\d{4}-\\d{2}-\\d{2})(?:-\\d+)?$");
   private static final Pattern MOTIF_HEURE = Pattern.compile("(\\d{1,2})h(\\d{2})?");
