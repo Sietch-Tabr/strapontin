@@ -39,3 +39,7 @@
 **okhttp/Resend (Kotlin Multiplatform)** : l'artefact `com.squareup.okhttp3:okhttp` est vide côté JVM depuis okhttp 5.0.0 ; resend-java (≥ 4.28.0) dépend directement de `okhttp-jvm`, dont la version est seulement gérée dans le pom parent. Revérifier par `dependency:tree` à chaque montée de Resend qu'aucun `okhttp` vide n'est tiré (un oubli côté worker a déjà causé un `NoClassDefFoundError` silencieux sur tout email worker).
 
 **Jackson 3 uniquement** (`tools.jackson`, `JsonMapper` autoconfiguré par Spring Boot, aucun bean maison) : les `RestClient` des sources retiennent Jackson 3 dans le runtime web/worker, le module `sources` en dépend pour que ses tests désérialisent avec la même pile ; seules les annotations restent dans `com.fasterxml.jackson.annotation`.
+
+**3.2.1 : pagination par lieu** : `EventimLieuxFetcher.parcourirPages` s'arrête sur une page qui ne contient aucun produit reçu (`PageProduitsEventim.estVide()` compte `nbProduits`, avant mappage) ou à `totalPages`, jamais sur une page dont tous les produits sont écartés par `ProduitSpectacle` : un lieu dont les premières pages sont des visites de musée (Institut du Monde Arabe, 34 pages dont 4 de musée) atteint ses spectacles, et `chute_resultats_salle` ne tombe à 0 que s'il n'en reste vraiment aucun.
+
+**3.2.1 : Le Triton** : l'adresse d'une fiche porte parfois un suffixe de doublon après la date (`...-2027-01-21-2`) ; `SiteLeTriton` lit la date malgré ce suffixe et journalise en WARN toute fiche de l'agenda qu'il ignore faute de date lisible.
