@@ -82,6 +82,31 @@ class DeriveVolumeFetchServiceTest {
   }
 
   @Test
+  void verifier_deuxPicsPeriodiquesDansLHistorique_neSignalePasUnVolumeNormal() {
+    // Moyenne 2 500 (seuil 1 750) : le cycle normal à 1 600 serait signalé à tort.
+    stubHistorique(List.of(4_000, 1_600, 1_700, 4_100, 1_650));
+
+    service.verifier("fetch:salles:all", 1_600, Instant.now());
+
+    verify(logsAdminWorker, never())
+        .inserer(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.anyMap());
+  }
+
+  @Test
+  void verifier_vraieChuteAvecPicsDansLHistorique_signaleUnWarn() {
+    stubHistorique(List.of(4_000, 1_600, 1_700, 4_100, 1_650));
+
+    service.verifier("fetch:salles:all", 600, Instant.now());
+
+    verify(logsAdminWorker)
+        .inserer(
+            org.mockito.ArgumentMatchers.eq("warn"),
+            org.mockito.ArgumentMatchers.eq("derive-volume"),
+            contains("fetch:salles:all"),
+            org.mockito.ArgumentMatchers.anyMap());
+  }
+
+  @Test
   void verifier_moyenneTropFaible_neSignalePasMemeAvecChuteRelativeImportante() {
     stubHistorique(List.of(2, 2, 2, 2, 2));
 

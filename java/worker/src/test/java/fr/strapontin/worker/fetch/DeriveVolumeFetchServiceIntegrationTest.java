@@ -18,7 +18,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
- * Dérive de volume sur base réelle : un retry ciblé n'entre pas dans la moyenne de référence et
+ * Dérive de volume sur base réelle : un retry ciblé n'entre pas dans la référence de comparaison et
  * n'est pas comparé à un cycle complet.
  *
  * @since 3.0.6
@@ -58,14 +58,14 @@ class DeriveVolumeFetchServiceIntegrationTest extends AbstractWorkerIntegrationT
   }
 
   @Test
-  void enregistrerStatJob_retryCiblesPrecedents_nAbaissentPasLaMoyenneDeReference() {
+  void enregistrerStatJob_retryCiblesPrecedents_nAbaissentPasLaReferenceDeComparaison() {
     for (int i = 0; i < 5; i++) {
       cycleComplet(700);
     }
     stats.enregistrerStatJob("fetch:region", 10, new ResultatPersistance(57, 0), null, true);
     stats.enregistrerStatJob("fetch:region", 10, new ResultatPersistance(144, 0), null, true);
 
-    // Une vraie chute reste détectée, comparée à 700 et non à une moyenne tirée vers le bas.
+    // Une vraie chute reste détectée, comparée à 700 et non à une référence tirée vers le bas.
     cycleComplet(300);
 
     assertEquals(1, avertissementsDerive());
