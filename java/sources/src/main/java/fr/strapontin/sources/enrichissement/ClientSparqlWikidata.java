@@ -141,11 +141,11 @@ final class ClientSparqlWikidata {
         .body(Map.class);
   }
 
-  // Type de l'exception d'origine : le message d'une requête annulée au délai de lecture est
-  // opaque (« get », « Request cancelled »).
+  // Type de l'exception d'origine : le message d'une requête annulée au
+  // délai de lecture est opaque (« get », « Request cancelled »).
   private static String causeRacine(final Throwable erreur) {
     Throwable cause = erreur;
-    while (cause.getCause() != null && cause.getCause() != cause) {
+    while (cause.getCause() != null) {
       cause = cause.getCause();
     }
     return cause.getClass().getSimpleName();
