@@ -49,9 +49,16 @@ export function useSession() {
     }
   }
 
+  // Les concerts « nouveaux » viennent d'être marqués vus : le serveur en compte zéro, inutile de
+  // relire toute la session pour le savoir.
+  function reinitialiserNouveau() {
+    if (session.value) session.value = { ...session.value, nbNouveau: 0 };
+  }
+
   return {
     session: readonly(session),
     chargement: readonly(chargement),
     chargerSession,
+    reinitialiserNouveau,
   };
 }

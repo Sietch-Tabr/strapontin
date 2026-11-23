@@ -215,7 +215,7 @@ import DialogueConfirmation from "../components/DialogueConfirmation.vue";
 import { useRoute, useRouter } from "vue-router";
 import { formaterAvecHeure } from "../composables/useDates.js";
 import { useToasts } from "../composables/useToasts.js";
-import { useSession } from "../composables/useSession.js";
+import { useSession, sessionInitialisee } from "../composables/useSession.js";
 import {
   choixExplicite,
   indisponiblesAffiches,
@@ -226,7 +226,7 @@ import {
 const route = useRoute();
 const router = useRouter();
 const { afficherToast } = useToasts();
-const { chargerSession } = useSession();
+const { chargerSession, reinitialiserNouveau } = useSession();
 
 const donnees = shallowRef(null);
 const dialogueConfirmation = ref(null);
@@ -421,16 +421,16 @@ async function marquerVus() {
       signal: controleurComposant.signal,
     });
     await rep.arrayBuffer();
+    if (rep.ok) reinitialiserNouveau();
   } catch (_) {
     // un badge « nouveau » resté un cycle de plus n'est pas grave
   }
-  chargerSession();
 }
 
 onMounted(async () => {
   const listeAffichee = await charger();
   if (listeAffichee) marquerVus();
-  else chargerSession();
+  else if (!sessionInitialisee.value) chargerSession();
   await scrollVersAncre();
 });
 
