@@ -141,6 +141,16 @@ final class ClientSparqlWikidata {
         .body(Map.class);
   }
 
+  // Type de l'exception d'origine : le message d'une requête annulée au délai de lecture est
+  // opaque (« get », « Request cancelled »).
+  private static String causeRacine(final Throwable erreur) {
+    Throwable cause = erreur;
+    while (cause.getCause() != null && cause.getCause() != cause) {
+      cause = cause.getCause();
+    }
+    return cause.getClass().getSimpleName();
+  }
+
   /**
    * Exécute une requête SPARQL avec retry sur 429 (Retry-After +
    * backoff) et 503 (×3). Retourne une map vide si toutes les
@@ -188,7 +198,7 @@ final class ClientSparqlWikidata {
         dormir(1000L * tentativesTransitoires);
       } catch (Exception e) {
         compteurBilan.enregistrerErreur();
-        LOG.warn("Wikidata SPARQL erreur : {}", e.getMessage());
+        LOG.warn("Wikidata SPARQL erreur ({}) : {}", causeRacine(e), e.getMessage());
         return Map.of();
       }
     }
