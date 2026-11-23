@@ -126,9 +126,12 @@ appliquer() {
     verifier
 }
 
-# Une directive sshd en vigueur (sshd -T, clés en minuscules).
+# Une directive sshd en vigueur (sshd -T, clés en minuscules). sshd affiche « without-password »
+# pour « prohibit-password », son alias historique.
 valeur_sshd() {
-    sshd -T | awk -v cle="$(echo "$1" | tr 'A-Z' 'a-z')" '$1 == cle { print $2; exit }'
+    local sortie
+    sortie="$(sshd -T)"
+    awk -v cle="$(echo "$1" | tr 'A-Z' 'a-z')" '$1 == cle { print ($2 == "without-password" ? "prohibit-password" : $2); exit }' <<< "$sortie"
 }
 
 verifier() {
@@ -148,7 +151,9 @@ verifier() {
         echo "[ECART] fail2ban : la prison sshd n'est pas active"
         ecarts=$((ecarts + 1))
     fi
-    if nft list chain inet "$TABLE_NFT" entree 2> /dev/null | grep -q 'policy drop'; then
+    # Sortie capturée : « grep -q » ferme le tube et ferait échouer nft sous pipefail.
+    chaine="$(nft list chain inet "$TABLE_NFT" entree 2> /dev/null || true)"
+    if grep -q 'policy drop' <<< "$chaine"; then
         echo "[OK]    nftables entree en refus par défaut"
     else
         echo "[ECART] nftables : la chaîne $TABLE_NFT/entree n'est pas en refus par défaut"

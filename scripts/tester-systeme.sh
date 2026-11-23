@@ -67,10 +67,13 @@ FAUX_F2B
 cat > "$FAUX/nft" <<'FAUX_NFT'
 #!/bin/bash
 echo "type filter hook input priority filter; policy ${FAUX_NFT_POLITIQUE:-drop};"
+# Longue sortie après la politique : un « grep -q » en fin de tube ferait échouer nft (SIGPIPE).
+i=0
+while [ "$i" -lt 20000 ]; do i=$((i + 1)); echo "tcp dport $i accept"; done
 FAUX_NFT
 chmod +x "$FAUX/sshd" "$FAUX/fail2ban-client" "$FAUX/nft"
 BON="$TMP/sshd-bon.txt"
-printf 'passwordauthentication no\nkbdinteractiveauthentication no\npermitrootlogin prohibit-password\nx11forwarding no\nmaxauthtries 3\nlogingracetime 30\n' > "$BON"
+printf 'passwordauthentication no\nkbdinteractiveauthentication no\npermitrootlogin without-password\nx11forwarding no\nmaxauthtries 3\nlogingracetime 30\n' > "$BON"
 MAUVAIS="$TMP/sshd-mauvais.txt"
 sed 's/^passwordauthentication no/passwordauthentication yes/' "$BON" > "$MAUVAIS"
 acces() { SSHD_CONF="$TMP/sshd.conf" bash "$RACINE/durcissement-acces.sh" verifier; }
