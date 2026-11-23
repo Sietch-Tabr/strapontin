@@ -129,6 +129,9 @@ for script in reglages-postgresql.sh durcissement-acces.sh controle-systeme.sh m
     planifier-mise-a-jour-systeme.sh provision.sh update.sh; do
     verifier bash -n "$RACINE/$script"
 done
+# La sonde de santé de la migration passe par « localhost » : la production refuse l'actuator par IP.
+verifier grep -q 'http://localhost:\$PORT_WEB_SANTE/actuator/health' "$RACINE/migrer-postgresql.sh"
+refuser grep -q '127.0.0.1:\$PORT_WEB_SANTE' "$RACINE/migrer-postgresql.sh"
 # La migration refuse sans sauvegarde du LXC et sans versions cohérentes.
 refuser bash "$RACINE/migrer-postgresql.sh" migrer 18 19
 refuser bash "$RACINE/migrer-postgresql.sh" verifier 19 18

@@ -48,7 +48,8 @@ verifier() {
 
 attendre_sante() {
     local essais=60
-    until curl -sf --max-time 5 "http://127.0.0.1:$PORT_WEB_SANTE/actuator/health" | grep -q '"status":"UP"'; do
+    # Par le nom « localhost » : la production refuse l'accès à l'actuator par adresse IP.
+    until curl -sf --max-time 5 "http://localhost:$PORT_WEB_SANTE/actuator/health" | grep -q '"status":"UP"'; do
         essais=$((essais - 1))
         [ "$essais" -gt 0 ] || return 1
         sleep 3
