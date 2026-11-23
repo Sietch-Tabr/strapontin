@@ -280,7 +280,13 @@ public class DecouverteService {
       params.put(CLE_DEPTS, deptsActifs.toArray(String[]::new));
     }
     if (!rechercheNorm.isEmpty()) {
-      where.append(" AND (c.artiste ILIKE :q OR c.salle ILIKE :q)");
+      // L'artiste et la salle de la vue viennent de la meilleure observation de la fiche : une
+      // fiche ne peut correspondre que si l'une de ses observations correspond. Ce préfiltre,
+      // servi par les index trigramme d'observations, évite d'évaluer la vue pour chaque fiche.
+      where.append(
+          " AND c.id IN (SELECT o.evenement_id FROM observations o"
+              + " WHERE o.artiste_brut ILIKE :q OR o.salle_brut ILIKE :q)"
+              + " AND (c.artiste ILIKE :q OR c.salle ILIKE :q)");
       params.put("q", "%" + rechercheNorm + "%");
     }
     FiltreConcertsBuilder.appliquerMois(where, params, mois);
