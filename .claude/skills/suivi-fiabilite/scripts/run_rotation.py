@@ -29,7 +29,8 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from lot_rotation import COLONNE_CURSEUR
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # lancement possible avec python3 -I
+from lot_rotation import COLONNE_CURSEUR  # noqa: E402
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROTATION_DIR = SCRIPT_DIR / "rotation"

@@ -63,7 +63,11 @@ def main() -> int:
         "rm -f /tmp/eventim_produits.py"
     )
     resultat = subprocess.run(
-        [str(ACCES), "prod", "exec", commande], capture_output=True, text=True, timeout=90
+        [str(ACCES), "prod", "exec", commande],
+        capture_output=True,
+        text=True,
+        timeout=90,
+        stdin=subprocess.DEVNULL,
     )
     try:
         donnees = json.loads(resultat.stdout.strip().splitlines()[-1])
@@ -79,9 +83,10 @@ def main() -> int:
     renvoyes = {p["id"] for p in donnees["produits"]}
     for identifiant in args.ids:
         print(f"produit {identifiant} : {'TROUVE' if identifiant in renvoyes else 'absent'}")
-    if any(i not in renvoyes for i in args.ids):
-        print("Attention : 50 produits au plus, triés par date. Un « absent » ne prouve rien tant que "
-              "--du/--au ne sont pas resserrés sur la date du concert.")
+    tronque = donnees["total"] is not None and donnees["total"] > len(donnees["produits"])
+    if tronque and any(i not in renvoyes for i in args.ids):
+        print(f"Attention : {len(donnees['produits'])} produits renvoyés sur {donnees['total']}, triés par date. "
+              "Un « absent » ne prouve rien tant que --du/--au ne sont pas resserrés sur la date du concert.")
     return 0
 
 
