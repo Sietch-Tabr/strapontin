@@ -43,7 +43,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
  */
 public abstract class AbstractWebIntegrationTest {
 
-  protected static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
+  protected static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:19");
 
   static {
     postgres.start();

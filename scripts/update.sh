@@ -90,6 +90,8 @@ aligner_installation() {
         cp "$APP_EXPLOITATION/aide.conf" "$AIDE_CONF"
     fi
     [ "$unite_changee" = true ] && systemctl daemon-reload
+    # Minuterie du contrôle du système : activée aussi sur un LXC provisionné avant sa livraison.
+    systemctl enable --now strapontin-controle-systeme.timer > /dev/null 2>&1 || true
     return 0
 }
 

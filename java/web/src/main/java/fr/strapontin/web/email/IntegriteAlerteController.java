@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class IntegriteAlerteController {
 
   private static final String STATUT_MODIFIE = "modifie";
+  private static final String STATUT_ECART_SYSTEME = "ecart_systeme";
 
   private final EmailAlerteService emailAlerteService;
   private final LogAdminService logAdminService;
@@ -46,9 +47,12 @@ public class IntegriteAlerteController {
 
   /**
    * Notifie l'app du statut AIDE (détail : CLAUDE.md, Sécurité
-   * admin/sessions).
-   * @param statut {@code ok} ou {@code modifie}
-   * @param detail sortie résumée d'{@code aide --check} (optionnel)
+   * admin/sessions) ou d'un écart du contrôle du système
+   * ({@code scripts/controle-systeme.sh} : réglages PostgreSQL, accès
+   * réseau, mises à jour en retard).
+   * @param statut {@code ok}, {@code modifie} ou {@code ecart_systeme}
+   * @param detail sortie résumée d'{@code aide --check} ou lignes d'écart
+   *     du contrôle du système (optionnel)
    * @param authorization header Bearer INTEGRITY_INTERNAL_SECRET
    * @return 200 si traité, 403 si le token est absent/invalide
    */
@@ -60,7 +64,10 @@ public class IntegriteAlerteController {
     if (!JetonInterne.estValide(integriteSecret, authorization)) {
       return JetonInterne.refus();
     }
-    if (STATUT_MODIFIE.equals(statut)) {
+    if (STATUT_ECART_SYSTEME.equals(statut)) {
+      logAdminService.logAdmin(
+          "error", "web", "contrôle du système — écart détecté", Map.of("detail", detail));
+    } else if (STATUT_MODIFIE.equals(statut)) {
       logAdminService.logAdmin(
           "error", "web", "contrôle d'intégrité — modification détectée", Map.of("detail", detail));
       emailAlerteService.envoyerAlerteIntegrite(detail);
