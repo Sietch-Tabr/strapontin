@@ -59,7 +59,7 @@
              bouncycastle.version, vérifiées avec ce classpath exact. -->
         <sigstore-java.version>2.4.0</sigstore-java.version>
         <!-- Guava tiré par sigstore-java en 33.4.8-android (GHSA-xxph-c9ww-hj94, corrigé en 33.7.2) -->
-        <guava.version>33.7.2-android</guava.version>
+        <guava.version>33.8.0-android</guava.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
         <!-- Propriété dédiée à l'agent JaCoCo, distincte de argLine : le module worker fixe déjà
