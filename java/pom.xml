@@ -40,7 +40,7 @@
         <java.version>27</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Versions plus récentes que celles du BOM Spring Boot 4.1.1 (Flyway 12.4.0, Caffeine 3.2.4) -->
-        <flyway.version>13.9.0</flyway.version>
+        <flyway.version>13.13.0</flyway.version>
         <caffeine.version>3.3.1</caffeine.version>
         <!-- Versions non gérées par le BOM -->
         <bouncycastle.version>1.87</bouncycastle.version>
