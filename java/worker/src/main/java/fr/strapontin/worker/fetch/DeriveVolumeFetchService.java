@@ -27,8 +27,9 @@ public class DeriveVolumeFetchService {
   private static final Logger LOG = LoggerFactory.getLogger(DeriveVolumeFetchService.class);
 
   /**
-   * Nombre d'exécutions réussies récentes sur lesquelles porte la moyenne
-   * glissante.
+   * Nombre d'exécutions réussies récentes sur lesquelles porte la médiane
+   * glissante. La médiane ignore les cycles périodiques de relecture des gros
+   * lieux, qui gonfleraient une moyenne au-dessus du volume normal.
    */
   private static final int NB_EXECUTIONS_MOYENNE = 5;
 
@@ -40,7 +41,7 @@ public class DeriveVolumeFetchService {
   private static final double SEUIL_DERIVE = 0.30;
 
   /**
-   * Sous cette moyenne, l'écart relatif n'est plus discriminant (ex. 1 -> 0
+   * Sous cette médiane, l'écart relatif n'est plus discriminant (ex. 1 -> 0
    * concert est un repli de 100% sans rien d'anormal) — aucune comparaison
    * n'est faite en dessous de ce volume moyen.
    */
@@ -60,7 +61,7 @@ public class DeriveVolumeFetchService {
   }
 
   /**
-   * Compare le volume du cycle qui vient de réussir à la moyenne de ses
+   * Compare le volume du cycle qui vient de réussir à la médiane de ses
    * {@value #NB_EXECUTIONS_MOYENNE} dernières exécutions réussies.
    * @param typeJob type de job (ex. "fetch:region")
    * @param volumeCourant insertions + mises à jour du cycle qui réussit
@@ -72,32 +73,40 @@ public class DeriveVolumeFetchService {
       return;
     }
 
-    final double moyenne = historique.stream().mapToInt(Integer::intValue).average().orElse(0);
-    if (moyenne < VOLUME_MOYEN_MIN_SIGNIFICATIF) {
+    final double mediane = calculerMediane(historique);
+    if (mediane < VOLUME_MOYEN_MIN_SIGNIFICATIF) {
       return;
     }
-    if (volumeCourant >= moyenne * (1 - SEUIL_DERIVE)) {
+    if (volumeCourant >= mediane * (1 - SEUIL_DERIVE)) {
       return;
     }
 
     LOG.warn(
-        "derive:volume typeJob={} volume={} moyenne{}={}",
+        "derive:volume typeJob={} volume={} mediane{}={}",
         typeJob,
         volumeCourant,
         NB_EXECUTIONS_MOYENNE,
-        moyenne);
+        mediane);
     logsAdminWorker.inserer(
         "warn",
         "derive-volume",
-        "volume du cycle significativement inférieur à la moyenne récente typeJob="
+        "volume du cycle significativement inférieur à la médiane récente typeJob="
             + typeJob
             + " volume="
             + volumeCourant
-            + " moyenne"
+            + " mediane"
             + NB_EXECUTIONS_MOYENNE
             + "="
-            + moyenne,
-        Map.of("typeJob", typeJob, "volume", volumeCourant, "moyenneRecente", moyenne));
+            + mediane,
+        Map.of("typeJob", typeJob, "volume", volumeCourant, "medianeRecente", mediane));
+  }
+
+  private static double calculerMediane(final List<Integer> volumes) {
+    final List<Integer> tries = volumes.stream().sorted().toList();
+    final int milieu = tries.size() / 2;
+    return tries.size() % 2 == 1
+        ? tries.get(milieu)
+        : (tries.get(milieu - 1) + tries.get(milieu)) / 2.0;
   }
 
   private List<Integer> lireVolumesRecents(final String typeJob, final Instant avant) {

@@ -55,12 +55,19 @@ def main() -> int:
         raise SystemExit(f"accès non configuré : {ACCES} introuvable")
     parametres = json.dumps({"terme": args.terme, "du": args.du, "au": args.au})
     code = base64.b64encode(SCRIPT_DISTANT.encode()).decode()
+    # Paramètres en base64 : une apostrophe dans le terme casserait les guillemets du shell distant.
+    parametres_b64 = base64.b64encode(parametres.encode()).decode()
     commande = (
         f"echo {code} | base64 -d > /tmp/eventim_produits.py && "
-        f"python3 /tmp/eventim_produits.py '{parametres}'; rm -f /tmp/eventim_produits.py"
+        f"python3 /tmp/eventim_produits.py \"$(echo {parametres_b64} | base64 -d)\"; "
+        "rm -f /tmp/eventim_produits.py"
     )
     resultat = subprocess.run(
-        [str(ACCES), "prod", "exec", commande], capture_output=True, text=True, timeout=90
+        [str(ACCES), "prod", "exec", commande],
+        capture_output=True,
+        text=True,
+        timeout=90,
+        stdin=subprocess.DEVNULL,
     )
     try:
         donnees = json.loads(resultat.stdout.strip().splitlines()[-1])
@@ -76,6 +83,10 @@ def main() -> int:
     renvoyes = {p["id"] for p in donnees["produits"]}
     for identifiant in args.ids:
         print(f"produit {identifiant} : {'TROUVE' if identifiant in renvoyes else 'absent'}")
+    tronque = donnees["total"] is not None and donnees["total"] > len(donnees["produits"])
+    if tronque and any(i not in renvoyes for i in args.ids):
+        print(f"Attention : {len(donnees['produits'])} produits renvoyés sur {donnees['total']}, triés par date. "
+              "Un « absent » ne prouve rien tant que --du/--au ne sont pas resserrés sur la date du concert.")
     return 0
 
 

@@ -79,4 +79,15 @@ class IntegriteAlerteControllerTest {
     verify(logAdminService).logAdmin(eq("error"), eq("web"), anyString(), anyMap());
     verify(emailAlerteService).envoyerAlerteIntegrite("web.jar : md5 modifié");
   }
+
+  @Test
+  void signalerStatut_ecartSysteme_loggeErrorSansAlerteDIntegrite() {
+    final ResponseEntity<Map<String, Object>> reponse =
+        controller.signalerStatut("ecart_systeme", "[ECART] jit", "Bearer " + SECRET);
+
+    assertEquals(HttpStatus.OK, reponse.getStatusCode());
+    verify(logAdminService)
+        .logAdmin(eq("error"), eq("web"), eq("contrôle du système — écart détecté"), anyMap());
+    verify(emailAlerteService, never()).envoyerAlerteIntegrite(anyString());
+  }
 }

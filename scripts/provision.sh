@@ -53,7 +53,7 @@ DEPOT_SCRIPTS="$(cd "$(dirname "$0")" && pwd)"
 APP_USER="strapontin"
 DB_NAME="strapontin"
 JAVA_VERSION="27"
-PG_VERSION="18"
+PG_VERSION="19"
 NAS_MOUNT_PATH="/mnt/synology/backup/Strapontin"
 
 echo "=== Provisionnement LXC $VMID ($HOSTNAME) — stack Java v2.0.0 ==="
@@ -225,7 +225,7 @@ pct exec "$VMID" -- bash -c "
 "
 
 # ---------------------------------------------------------------
-# 6. PostgreSQL 18
+# 6. PostgreSQL 19
 # ---------------------------------------------------------------
 
 echo "[6] Installation PostgreSQL $PG_VERSION..."
@@ -259,16 +259,8 @@ pct exec "$VMID" -- bash -c "
     systemctl reload postgresql
 "
 
-echo "[6] Tuning postgresql.conf..."
-pct exec "$VMID" -- bash -c "
-    PG_CONF=/etc/postgresql/${PG_VERSION}/main/postgresql.conf
-    sed -i 's/^#*shared_buffers\s*=.*/shared_buffers = 400MB/' \$PG_CONF
-    sed -i 's/^#*work_mem\s*=.*/work_mem = 16MB/' \$PG_CONF
-    sed -i 's/^#*effective_cache_size\s*=.*/effective_cache_size = 2GB/' \$PG_CONF
-    sed -i 's/^#*statement_timeout\s*=.*/statement_timeout = 30s/' \$PG_CONF
-    sed -i 's/^#*idle_in_transaction_session_timeout\s*=.*/idle_in_transaction_session_timeout = 30s/' \$PG_CONF
-    systemctl restart postgresql
-"
+# Les réglages (mémoire, délais, pg_stat_statements) sont posés plus bas par
+# reglages-postgresql.sh, une fois les scripts d'exploitation livrés : une seule définition, contrôlée.
 
 # ---------------------------------------------------------------
 # 7. Utilisateur applicatif + arborescence (FHS, voir scripts/chemins.sh)
@@ -340,7 +332,7 @@ pct exec "$VMID" -- bash -c "
 # La sauvegarde NAS quotidienne n'est planifiée qu'en prod : sur le dev, ses minuteries
 # rattrapent un passage manqué à chaque démarrage (Persistent=true) ; elle se lance à la
 # demande (systemctl start strapontin-backup.service).
-MINUTERIES="strapontin-backup-local.timer strapontin-integrity.timer"
+MINUTERIES="strapontin-backup-local.timer strapontin-integrity.timer strapontin-controle-systeme.timer"
 [ "$PROFIL" = "prod" ] && MINUTERIES="strapontin-backup.timer $MINUTERIES"
 pct exec "$VMID" -- bash -c "systemctl daemon-reload && systemctl enable strapontin-web strapontin-worker $MINUTERIES && systemctl start $MINUTERIES"
 
@@ -355,6 +347,13 @@ pct exec "$VMID" -- bash -c "
     chmod 700 /root/.ssh
     chmod 600 /root/.ssh/authorized_keys
 "
+
+echo "[8] Réglages PostgreSQL (une seule définition, contrôlée)..."
+pct exec "$VMID" -- bash "$APP_DIR/exploitation/reglages-postgresql.sh" appliquer
+
+# Après la clé SSH : le mot de passe est refusé ensuite, une clé absente fermerait l'accès.
+echo "[8] Accès réseau : sshd, fail2ban, nftables..."
+pct exec "$VMID" -- bash "$APP_DIR/exploitation/durcissement-acces.sh" appliquer
 
 # ---------------------------------------------------------------
 # 9. Vérifications finales

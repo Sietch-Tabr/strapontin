@@ -46,6 +46,31 @@ class SiteLeTritonTest {
                 c -> c.artiste().equals("Antonio Barcelona") && c.date().equals("2026-11-05")));
   }
 
+  private static String fiche(final String adresse) {
+    return "<article class=\"crow\"><a class=\"crow__main\" href=\""
+        + adresse
+        + "\"></a><h3 class=\"crow__title\">Antonio Barcelona</h3>"
+        + "<div class=\"crow__when\">jeudi 21 janvier 20h30</div></article>";
+  }
+
+  @Test
+  void extraire_adresseAvecSuffixeDeDoublon_litLaDateDeLaFiche() {
+    final List<ConcertBrut> lus =
+        SiteLeTriton.extraire(fiche("https://letriton.com/concert/antonio-barcelona-2027-01-21-2"));
+
+    assertEquals(1, lus.size());
+    assertEquals("2027-01-21", lus.getFirst().date());
+    assertEquals("20:30", lus.getFirst().heure());
+    assertEquals(
+        "https://letriton.com/concert/antonio-barcelona-2027-01-21-2", lus.getFirst().url());
+  }
+
+  @Test
+  void extraire_adresseSansDate_ignoreLaFiche() {
+    assertTrue(
+        SiteLeTriton.extraire(fiche("https://letriton.com/concert/antonio-barcelona")).isEmpty());
+  }
+
   @Test
   void extraire_chaqueConcert_serattacheALaSalleDuSite() {
     for (final ConcertBrut concert : concerts) {

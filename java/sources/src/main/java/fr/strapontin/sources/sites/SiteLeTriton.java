@@ -15,6 +15,8 @@ import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Programmation du Triton (Les Lilas) : une fiche par concert dans la
@@ -29,7 +31,11 @@ public class SiteLeTriton extends SourceSiteSalle {
   /* package-private : utilisée par les tests. */
   static final LieuSite LIEU = new LieuSite("Le Triton", "Les Lilas", "93", null);
 
-  private static final Pattern DATE_DANS_ADRESSE = Pattern.compile("(\\d{4}-\\d{2}-\\d{2})$");
+  private static final Logger LOG = LoggerFactory.getLogger(SiteLeTriton.class);
+
+  // Suffixe numérique (« -2 ») ajouté par le site à un titre et une date déjà vus.
+  private static final Pattern DATE_DANS_ADRESSE =
+      Pattern.compile("(\\d{4}-\\d{2}-\\d{2})(?:-\\d+)?$");
   private static final Pattern MOTIF_HEURE = Pattern.compile("(\\d{1,2})h(\\d{2})?");
 
   /**
@@ -61,12 +67,9 @@ public class SiteLeTriton extends SourceSiteSalle {
       }
       final String adresse = lien.attr("href");
       final Matcher date = DATE_DANS_ADRESSE.matcher(adresse);
-      if (!date.find()) {
-        continue;
-      }
-      final LocalDate jour = dateOuNull(date.group(1));
+      final LocalDate jour = date.find() ? dateOuNull(date.group(1)) : null;
       if (jour == null) {
-        // Adresse dont la fin ressemble à une date invalide : fiche ignorée.
+        LOG.warn("Site Le Triton : fiche ignorée, aucune date lisible dans l'adresse {}", adresse);
         continue;
       }
       concerts.add(

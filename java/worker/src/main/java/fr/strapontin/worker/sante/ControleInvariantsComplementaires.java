@@ -27,9 +27,13 @@ final class ControleInvariantsComplementaires {
   private static final String TYPE_ENTITE_GLOBAL = "invariant";
   private static final String EVENEMENT = "evenement";
   private static final String DATE = "date";
+  private static final String COLONNE_ARTISTE_NORM = "artiste_norm";
+  private static final String CLE_HEURE = "heure";
   private static final String JUMEAU = "jumeau";
   private static final String SALLE = "salle";
   private static final int MIN_FICHES_EN_ABSENCE = 3;
+  // Environ deux jours de cycles sans que la source renvoie la fiche suivie.
+  private static final int SEUIL_FICHE_SUIVIE_EN_ABSENCE = 20;
   // Au-delà : théâtre à plusieurs salles internes, créneaux doubles légitimes.
   private static final int SEUIL_CRENEAUX_SALLE_MULTIPLE =
       FusionSeancesDeuxSourcesService.SEUIL_CRENEAUX_SALLE_MULTIPLE;
@@ -66,6 +70,11 @@ final class ControleInvariantsComplementaires {
           AND (sa.id <> sb.id OR NOT EXISTS (
             SELECT 1 FROM observations o1 JOIN observations o2 ON o2.source = o1.source
             WHERE o1.evenement_id = e1.id AND o2.evenement_id = e2.id))
+          AND NOT (sa.id <> sb.id AND EXISTS (
+            SELECT 1 FROM observations o1
+            JOIN observations o2 ON o2.source = o1.source AND o2.url <> o1.url
+            WHERE o1.evenement_id = e1.id AND o2.evenement_id = e2.id
+              AND o1.source = 'eventim'))
           AND NOT EXISTS (
             SELECT 1 FROM salles_paires_distinctes d
             WHERE d.salle_a = LEAST(sa.id, sb.id) AND d.salle_b = GREATEST(sa.id, sb.id))
@@ -95,7 +104,40 @@ final class ControleInvariantsComplementaires {
         + publication.publier("envois_push_en_panne", TYPE_ENTITE_GLOBAL, envoisPushEnPanne())
         + publication.publier("seance_dans_deux_salles", EVENEMENT, seancesDansDeuxSalles())
         + publication.publier("creneau_double_meme_source", EVENEMENT, creneauxDoublesMemeSource())
-        + publication.publier("salle_fiches_en_absence", SALLE, sallesAvecFichesEnAbsence());
+        + publication.publier("salle_fiches_en_absence", SALLE, sallesAvecFichesEnAbsence())
+        + publication.publier("fiche_suivie_en_absence", EVENEMENT, fichesSuiviesEnAbsence());
+  }
+
+  // Fiche à venir suivie que ses sources ne renvoient plus depuis environ
+  // deux jours : son heure et sa salle, figées à la dernière lecture, ne sont
+  // plus garanties (une salle n'est signalée qu'à partir de plusieurs fiches).
+  private Map<UUID, Map<String, Object>> fichesSuiviesEnAbsence() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT e.id, e.artiste_norm, e.date::text AS date, e.heure::text AS heure,
+               coalesce(s.nom, '?') AS salle, e.absences_consecutives,
+               (SELECT count(*) FROM user_matches um WHERE um.concert_id = e.id) AS suivis,
+               (SELECT string_agg(DISTINCT o.source::text, ', ') FROM observations o
+                 WHERE o.evenement_id = e.id) AS sources
+        FROM evenements e LEFT JOIN salles s ON s.id = e.salle_id
+        WHERE e.date >= CURRENT_DATE AND e.suppression_suggeree_le IS NULL
+          AND e.maintenu_le IS NULL AND e.absences_consecutives >= :seuil
+          AND EXISTS (SELECT 1 FROM user_matches um WHERE um.concert_id = e.id)
+        """,
+        Map.of("seuil", SEUIL_FICHE_SUIVIE_EN_ABSENCE),
+        rs -> {
+          final Map<String, Object> details = new LinkedHashMap<>();
+          details.put("artisteNorm", rs.getString(COLONNE_ARTISTE_NORM));
+          details.put(DATE, rs.getString(DATE));
+          details.put(CLE_HEURE, rs.getString(CLE_HEURE));
+          details.put(SALLE, rs.getString(SALLE));
+          details.put("sources", rs.getString("sources"));
+          details.put("absences", rs.getInt("absences_consecutives"));
+          details.put("suivis", rs.getLong("suivis"));
+          anomalies.put(rs.getObject("id", UUID.class), details);
+        });
+    return anomalies;
   }
 
   // Plusieurs fiches d'une salle au seuil « à vérifier » : signalées avant les
@@ -142,7 +184,7 @@ final class ControleInvariantsComplementaires {
         rs -> {
           anomalies.put(
               UUID.fromString(rs.getString("id")),
-              Map.of("artisteNorm", rs.getString("artiste_norm"), DATE, rs.getString(DATE)));
+              Map.of("artisteNorm", rs.getString(COLONNE_ARTISTE_NORM), DATE, rs.getString(DATE)));
         });
     return anomalies;
   }
@@ -171,7 +213,7 @@ final class ControleInvariantsComplementaires {
                 UUID.fromString(rs.getString("id")),
                 Map.of(
                     "artisteNorm",
-                    rs.getString("artiste_norm"),
+                    rs.getString(COLONNE_ARTISTE_NORM),
                     DATE,
                     rs.getString(DATE),
                     "annuleePar",
@@ -255,7 +297,7 @@ final class ControleInvariantsComplementaires {
               rs.getObject("recent", UUID.class),
               Map.of(
                   "artiste",
-                  rs.getString("artiste_norm"),
+                  rs.getString(COLONNE_ARTISTE_NORM),
                   DATE,
                   rs.getString(DATE),
                   memeSalle ? "salle" : "salles",

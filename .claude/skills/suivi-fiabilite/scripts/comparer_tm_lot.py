@@ -13,6 +13,7 @@ en cas d'erreur. Cadence : 300 ms entre deux appels.
 
 import argparse
 import json
+import sys
 import re
 import time
 import unicodedata
@@ -21,6 +22,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # lancement possible avec python3 -I
 import lot_rotation as lot
 
 DELAI_SECONDES = 0.3

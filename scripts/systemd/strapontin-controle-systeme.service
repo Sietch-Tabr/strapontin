@@ -1,0 +1,8 @@
+[Unit]
+Description=Strapontin — contrôle du système (PostgreSQL, accès réseau, mises à jour)
+After=network.target strapontin-web.service postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/strapontin/exploitation/controle-systeme.sh

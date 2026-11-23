@@ -64,4 +64,96 @@ class SignalementMatchingServiceIntegrationTest extends AbstractWorkerIntegratio
             Long.class);
     assertEquals(2L, nb, "un signalement résolu n'empêche pas un nouveau signalement");
   }
+
+  private long compter(final UUID entiteId) {
+    return jdbc.queryForObject(
+        "SELECT COUNT(*) FROM signalements_matching WHERE entite_id = CAST(:id AS uuid)",
+        Map.of("id", entiteId.toString()),
+        Long.class);
+  }
+
+  private void resoudreManuellement(final UUID entiteId) {
+    jdbc.update(
+        "UPDATE signalements_matching SET resolu_le = now(), resolu_manuellement = true"
+            + " WHERE entite_id = CAST(:id AS uuid)",
+        Map.of("id", entiteId.toString()));
+  }
+
+  @Test
+  void signaler_dispersionTraiteeALaMainSourcesInverseesEtDistanceDifferente_neRecreeRien() {
+    final UUID salle = UUID.randomUUID();
+    service.signaler(
+        "dispersion_sources_salle",
+        "salle",
+        salle,
+        "haute",
+        Map.of("distanceMetres", 405L, "sourceA", "tm:1", "sourceB", "eventim:2"));
+    resoudreManuellement(salle);
+
+    service.signaler(
+        "dispersion_sources_salle",
+        "salle",
+        salle,
+        "haute",
+        Map.of("distanceMetres", 412L, "sourceA", "eventim:2", "sourceB", "tm:1"));
+
+    assertEquals(1L, compter(salle), "la décision de l'administrateur est conservée");
+  }
+
+  @Test
+  void signaler_dispersionTraiteeALaMainAvecUneAutrePaireDeSources_signaleDeNouveau() {
+    final UUID salle = UUID.randomUUID();
+    service.signaler(
+        "dispersion_sources_salle",
+        "salle",
+        salle,
+        "haute",
+        Map.of("distanceMetres", 405L, "sourceA", "tm:1", "sourceB", "eventim:2"));
+    resoudreManuellement(salle);
+
+    service.signaler(
+        "dispersion_sources_salle",
+        "salle",
+        salle,
+        "haute",
+        Map.of("distanceMetres", 900L, "sourceA", "tm:1", "sourceB", "eventim:3"));
+
+    assertEquals(2L, compter(salle), "une autre paire de lieux est une autre anomalie");
+  }
+
+  @Test
+  void signaler_memeLieuTraiteALaMainMemeAutreSalle_neRecreeRien() {
+    final UUID porteuse = UUID.randomUUID();
+    final String autre = UUID.randomUUID().toString();
+    service.signaler(
+        "meme_lieu_salles",
+        "salle",
+        porteuse,
+        "moyenne",
+        Map.of("autreSalleId", autre, "distanceMetres", 10L));
+    resoudreManuellement(porteuse);
+
+    service.signaler(
+        "meme_lieu_salles",
+        "salle",
+        porteuse,
+        "moyenne",
+        Map.of("autreSalleId", autre, "distanceMetres", 12L));
+
+    assertEquals(1L, compter(porteuse));
+  }
+
+  @Test
+  void signaler_signalementClosAutomatiquement_resteSignalableDeNouveau() {
+    final UUID salle = UUID.randomUUID();
+    final Map<String, Object> details = Map.of("sourceA", "tm:1", "sourceB", "eventim:2");
+    service.signaler("dispersion_sources_salle", "salle", salle, "haute", details);
+    jdbc.update(
+        "UPDATE signalements_matching SET resolu_le = now() WHERE entite_id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+
+    service.signaler("dispersion_sources_salle", "salle", salle, "haute", details);
+
+    assertEquals(2L, compter(salle), "une clôture automatique ne vaut pas décision");
+  }
 }

@@ -6,6 +6,7 @@ import {
 } from "@playwright/test";
 import { FICHIER_AUTH_USER } from "./global-setup.js";
 import { nettoyer } from "./helpers/admin.js";
+import { ouvrirSection } from "./helpers/sections.js";
 
 const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
 const E2E_USER_IDENTIFIANT = "e2euser";
@@ -86,12 +87,7 @@ test.describe("Scénario: paramètres — notifications, mise en page et sortie"
   async function ouvrirNotifications(page: Page) {
     // Sans ancre dans l'URL : WebKit double la navigation d'un goto avec fragment.
     await page.goto("/parametres");
-    const selecteur = page.locator("select.param-onglets-mobile");
-    if (await selecteur.isVisible()) {
-      await selecteur.selectOption("#notifications");
-    } else {
-      await page.locator('a.param-onglet[href="#notifications"]').click();
-    }
+    await ouvrirSection(page, "notifications");
     await expect(page.locator("section#notifications")).toBeVisible();
     await expect(
       page.getByRole("radio", { name: "Récapitulatif quotidien (12h)" }),

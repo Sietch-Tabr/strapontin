@@ -22,16 +22,17 @@
 <script setup>
 defineOptions({ name: "BandeauCanalPerdu" });
 
-import { onMounted, ref, watch } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { appelApi, lireJson } from "../../utils/api.js";
+import { estNavigationReelle } from "../../utils/navigationReelle.js";
 
 const route = useRoute();
 const router = useRouter();
 const canalPerdu = ref(false);
 const pushJamaisActive = ref(false);
 
-// Relu à chaque navigation : l'état change dès que l'utilisateur réactive un canal.
+// Relu à chaque changement de page : l'état change dès que l'utilisateur réactive un canal.
 async function charger() {
   if (route.meta.authPage) return;
   try {
@@ -49,7 +50,11 @@ onMounted(async () => {
   await router.isReady();
   await charger();
 });
-watch(() => route.path, charger);
+// Pas à la résolution de la route initiale : le montage vient de charger l'état.
+const retirerGarde = router.afterEach((vers, depuis, echec) => {
+  if (!echec && estNavigationReelle(vers, depuis)) charger();
+});
+onUnmounted(retirerGarde);
 </script>
 
 <style scoped>

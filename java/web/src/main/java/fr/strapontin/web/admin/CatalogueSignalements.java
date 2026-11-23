@@ -186,6 +186,13 @@ public final class CatalogueSignalements {
             + " sous-salle, dans deux salles d'une même commune ou deux fois dans une même salle :"
             + " une séance déplacée peut être restée publiée sous l'ancienne salle.");
     ajouter(
+        "fiche_suivie_en_absence",
+        "Fiche suivie que sa billetterie ne renvoie plus",
+        "Une séance à venir, suivie par des utilisateurs, n'est plus renvoyée par sa billetterie"
+            + " depuis environ deux jours : son heure et sa salle sont celles de la dernière"
+            + " lecture. Vérifier sur le site officiel de la salle, corriger la fiche ou la"
+            + " supprimer si la séance est annulée.");
+    ajouter(
         "hommage_rattache_artiste",
         "Hommage rattaché à l'artiste imité",
         "L'adresse de la séance annonce un hommage (tribute) mais la fiche est rattachée à"

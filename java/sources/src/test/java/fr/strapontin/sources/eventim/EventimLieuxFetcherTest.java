@@ -102,6 +102,41 @@ class EventimLieuxFetcherTest {
   }
 
   @Test
+  void fetchLieu_pagesDeProduitsHorsSpectacleAvantLesConcerts_atteintLesConcerts() {
+    final LocalDate demain = LocalDate.now().plusDays(1);
+    final EventimLieuxFetcher lieux =
+        fetcher(
+            uri -> {
+              if (uri.getQuery().contains("page=3")) {
+                return reponse(List.of(concert(demain, "75")), 60, 3);
+              }
+              // Produits reçus mais tous écartés (visites de musée) : liste de concerts vide.
+              return new PageProduitsEventim(List.of(), 60, 3, TAILLE_PAGE, true);
+            });
+
+    final List<ConcertBrut> concerts = lieux.fetchLieu("INSTITUT DU MONDE ARABE PARIS 05");
+
+    assertThat(concerts).hasSize(1);
+    assertThat(requetes).hasSize(3);
+  }
+
+  @Test
+  void fetchLieu_pageSansAucunProduit_arreteLaPagination() {
+    final LocalDate demain = LocalDate.now().plusDays(1);
+    final EventimLieuxFetcher lieux =
+        fetcher(
+            uri ->
+                uri.getQuery().contains("page=2")
+                    ? PageProduitsEventim.VIDE
+                    : reponse(List.of(concert(demain, "75")), 40, 5));
+
+    final List<ConcertBrut> concerts = lieux.fetchLieu("LIEU");
+
+    assertThat(concerts).hasSize(1);
+    assertThat(requetes).hasSize(2);
+  }
+
+  @Test
   void fetchVilles_premiereFenetrePlafonnee_repriseAuDernierJourRecu() {
     final LocalDate derniereDate = LocalDate.now().plusDays(20);
     final int totalAnnonce = 10_000;

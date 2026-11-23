@@ -78,6 +78,12 @@ final class WikidataSalleDecouverte {
           // Bâtiment ou structure détruit : l'ancien site, pas le lieu actuel.
           "Q19860854");
 
+  // Une œuvre d'art visuelle (sculpture, statue, peinture) n'est jamais un
+  // lieu de spectacle. La classe et ses sous-classes sont écartées
+  // (P31/P279*) : un monument, un théâtre ou une église n'en font pas partie.
+  /* package-private : réutilisé par WikidataSalleSource (même package). */
+  static final String CLASSE_OEUVRE_VISUELLE = "Q4502142";
+
   // Rempli par decouvrir() sur divergence GPS, vidé par preleverAmbiguites() —
   // même patron que WikidataArtisteSource.ambiguites.
   private final Map<UUID, Map<String, Object>> ambiguites = new HashMap<>();
@@ -390,6 +396,7 @@ final class WikidataSalleDecouverte {
         ?item wdt:P31 ?typeExclu .
         VALUES ?typeExclu { %s }
       }
+      FILTER NOT EXISTS { ?item wdt:P31/wdt:P279* wd:%s }
       FILTER NOT EXISTS { ?item wdt:P576 [] }
       OPTIONAL { ?item skos:altLabel ?alias . FILTER(LANG(?alias) = "fr") }
       OPTIONAL { ?item wdt:P625 ?coordValue }
@@ -403,6 +410,7 @@ final class WikidataSalleDecouverte {
         .formatted(
             ClientSparqlWikidata.echapperLitteral(nom),
             typesExclusSparql,
+            CLASSE_OEUVRE_VISUELLE,
             ClientSparqlWikidata.MOTIF_COMMUNE);
   }
 }

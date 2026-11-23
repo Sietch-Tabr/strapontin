@@ -4,6 +4,35 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.2.1 — 23 novembre 2026",
+    categories: [
+      {
+        categorie: "Concerts et salles",
+        items: [
+          "Les spectacles d'un lieu dont les premières pages de résultats sont des visites de musée (Institut du Monde Arabe) sont de nouveau rafraîchis : la fiche de Chayyel, Rayess Bek et Joan Baz n'est plus laissée de côté.",
+          "Les événements du Triton republiés par le site sous une adresse suffixée (Antonio Barcelona, 21 janvier) sont de nouveau lus et leur fiche reste à jour.",
+          "Deux productions de même titre dans deux salles proches (Casse-Noisette au 13e Art, à La Boussole et au Palais des Congrès de Paris) ne sont plus signalées comme une séance publiée deux fois.",
+          "La ville d'une salle suit sa commune réelle quand son code postal la confirme (Le K est à Tinqueux, et non à Reims).",
+          "Une salle dont un élément Wikidata est une œuvre d'art (la statue « La Nuit » de Maillol rattachée au club du même nom) n'est plus rattachée à ce faux élément, et un rattachement déjà posé est invalidé.",
+        ],
+      },
+      {
+        categorie: "Administration",
+        items: [
+          "Un signalement marqué « traité » ne revient plus la nuit suivante, quel que soit son type : les lieux dispersés et les salles au même lieu traités à la main restent traités tant que rien ne change.",
+          "Une séance suivie que sa billetterie ne renvoie plus depuis environ deux jours apparaît dans « À traiter » pour être vérifiée sur le site de la salle (KPop Demon Hunters à Plenitude Arena, dont l'heure était restée celle de la dernière lecture).",
+          "L'alerte de baisse de volume d'un cycle de récupération se compare à la médiane des cinq derniers cycles : elle ne se déclenche plus à volume normal.",
+        ],
+      },
+      {
+        categorie: "Application",
+        items: [
+          "Au chargement complet d'une page, la session, l'annonce de l'administrateur et l'alerte de notifications perdues ne sont plus demandées deux fois au serveur ; elles sont toujours relues à chaque changement de page.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.2.0 — 18 novembre 2026",
     categories: [
       {

@@ -200,8 +200,9 @@ public class WikidataSalleSource
 
   /**
    * Revalide le type Wikidata (P31) des wikidataId déjà stockés contre
-   * {@link WikidataSalleDecouverte#TYPES_EXCLUS} — un garde-fou introduit
-   * après coup ne s'applique jamais rétroactivement aux ids déjà posés.
+   * {@link WikidataSalleDecouverte#TYPES_EXCLUS} et la classe des œuvres d'art
+   * visuelles — un garde-fou introduit après coup ne s'applique jamais
+   * rétroactivement aux ids déjà posés.
    * @param wikidataIds Q-IDs déjà stockés à revalider
    * @return le sous-ensemble dont le type Wikidata est désormais exclu
    */
@@ -255,9 +256,11 @@ public class WikidataSalleSource
       VALUES ?item { %s }
       { ?item wdt:P31 ?type . VALUES ?type { %s } }
       UNION
+      { ?item wdt:P31/wdt:P279* wd:%s }
+      UNION
       { ?item wdt:P576 [] }
     }
     """
-        .formatted(items, typesExclusSparql);
+        .formatted(items, typesExclusSparql, WikidataSalleDecouverte.CLASSE_OEUVRE_VISUELLE);
   }
 }

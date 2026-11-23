@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.2</version>
+        <version>4.2.0</version>
         <relativePath/>
     </parent>
 
@@ -36,20 +36,19 @@
 
     <properties>
         <!-- Version CI-friendly : un seul bump ici met à jour parent + 4 modules enfants -->
-        <revision>3.2.0</revision>
+        <revision>3.2.1</revision>
         <java.version>27</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- Versions plus récentes que celles du BOM Spring Boot 4.1.1 (Flyway 12.4.0, Caffeine 3.2.4) -->
-        <flyway.version>13.9.0</flyway.version>
-        <caffeine.version>3.3.1</caffeine.version>
+        <!-- Versions plus récentes que celles du BOM Spring Boot 4.2.0 (Flyway 12.11.0, Logback 1.6.6) -->
+        <flyway.version>13.13.0</flyway.version>
         <!-- Versions non gérées par le BOM -->
         <bouncycastle.version>1.87</bouncycastle.version>
         <webpush.version>1.3.0</webpush.version>
         <okapibarcode.version>0.5.7</okapibarcode.version>
-        <resend.version>4.30.0</resend.version>
+        <resend.version>4.31.0</resend.version>
         <!-- resend-java épingle org.json à 20250517 (avis GHSA-ghc9-756g-vrcv) : version corrigée imposée ici -->
         <org-json.version>20260814</org-json.version>
-        <logback.version>1.6.7</logback.version>
+        <logback.version>1.6.8</logback.version>
         <!-- resend-java dépend directement d'okhttp-jvm (variante JVM d'okhttp 5, module Kotlin
              Multiplatform) ; version alignée ici sur la dernière publiée. -->
         <okhttp-jvm.version>5.5.1</okhttp-jvm.version>
@@ -59,7 +58,7 @@
              bouncycastle.version, vérifiées avec ce classpath exact. -->
         <sigstore-java.version>2.4.0</sigstore-java.version>
         <!-- Guava tiré par sigstore-java en 33.4.8-android (GHSA-xxph-c9ww-hj94, corrigé en 33.7.2) -->
-        <guava.version>33.7.2-android</guava.version>
+        <guava.version>33.8.0-android</guava.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
         <!-- Propriété dédiée à l'agent JaCoCo, distincte de argLine : le module worker fixe déjà
@@ -71,7 +70,7 @@
         <!-- PMD core surchargé — nécessaire pour le support Java 26, cf. commentaire sur le plugin -->
         <pmdCore.version>7.29.0</pmdCore.version>
         <jacoco.version>0.8.16</jacoco.version>
-        <spotless.version>3.11.0</spotless.version>
+        <spotless.version>3.12.0</spotless.version>
     </properties>
 
     <build>

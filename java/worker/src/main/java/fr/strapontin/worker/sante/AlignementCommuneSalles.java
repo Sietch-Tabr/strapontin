@@ -132,7 +132,7 @@ public class AlignementCommuneSalles {
     final List<Map<String, Object>> salles =
         jdbc.queryForList(
             """
-            SELECT s.id, s.nom, s.ville, s.dept, s.latitude, s.longitude
+            SELECT s.id, s.nom, s.ville, s.dept, s.latitude, s.longitude, s.code_postal
             FROM salles s
             WHERE s.wikidata_id IS NULL AND s.origine_position = 'sources'
               AND s.latitude IS NOT NULL AND s.longitude IS NOT NULL
@@ -173,6 +173,13 @@ public class AlignementCommuneSalles {
         .collect(Collectors.toSet());
   }
 
+  private static boolean codePostalConfirme(
+      final Map<String, Object> salle, final ClientNominatim.ResultatCommune resultat) {
+    final Object codePostalSalle = salle.get("code_postal");
+    return codePostalSalle != null
+        && resultat.codePostal().filter(codePostalSalle.toString()::equals).isPresent();
+  }
+
   private boolean corrigerSiBesoin(
       final Map<String, Object> salle, final ClientNominatim.ResultatCommune resultat) {
     final Optional<String> commune = resultat.commune().map(NomVille::nettoyer);
@@ -189,9 +196,11 @@ public class AlignementCommuneSalles {
     }
     // Une position de billetterie est imprécise près d'une limite communale :
     // si les concerts de la salle nomment sa ville actuelle et jamais la
-    // commune calculée, la ville est gardée.
+    // commune calculée, la ville est gardée, sauf si le code postal de la salle
+    // confirme la zone de la position.
     final Set<String> villesDesConcerts = villesDesConcerts(id);
-    if (villesDesConcerts.contains(Normalisation.normaliserTexte(ville))
+    if (!codePostalConfirme(salle, resultat)
+        && villesDesConcerts.contains(Normalisation.normaliserTexte(ville))
         && !villesDesConcerts.contains(communeNormalisee)) {
       signalements.signaler(
           TYPE_SIGNALEMENT,

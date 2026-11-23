@@ -23,8 +23,10 @@ record PageProduitsEventim(
   /* package-private : appel HTTP en échec. */
   static final PageProduitsEventim ECHEC = new PageProduitsEventim(List.of(), 0, 0, 0, false);
 
-  /* package-private : utilisé par EventimSource/EventimLieuxFetcher (même package). */
+  /* package-private : utilisé par EventimLieuxFetcher (même package).
+   * Se fonde sur les produits reçus, pas sur les concerts retenus : une page
+   * de visites de musée n'est pas la dernière. */
   boolean estVide() {
-    return concerts.isEmpty();
+    return nbProduits == 0;
   }
 }

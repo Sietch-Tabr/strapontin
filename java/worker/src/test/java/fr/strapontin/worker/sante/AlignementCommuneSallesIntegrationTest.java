@@ -82,6 +82,36 @@ class AlignementCommuneSallesIntegrationTest extends AbstractWorkerIntegrationTe
   }
 
   @Test
+  void aligner_codePostalDeLaSalleConfirmeLaPosition_alignePuisFermeLeSignalement() {
+    final UUID salle = salle("Le K", "Reims", null);
+    jdbc.update(
+        "UPDATE salles SET code_postal = '51430' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    villeDesConcerts(salle, "Reims");
+    when(nominatim.communeDe(any())).thenReturn(commune("Tinqueux", "51430"));
+
+    assertEquals(1, alignement.aligner());
+
+    assertEquals("Tinqueux", ville(salle));
+    assertEquals(0L, signalementsActifs(salle));
+  }
+
+  @Test
+  void aligner_codePostalDeLaSalleDifferentDeLaPosition_gardeLaVilleEtSignale() {
+    final UUID salle = salle("Le K", "Reims", null);
+    jdbc.update(
+        "UPDATE salles SET code_postal = '51100' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    villeDesConcerts(salle, "Reims");
+    when(nominatim.communeDe(any())).thenReturn(commune("Tinqueux", "51430"));
+
+    assertEquals(0, alignement.aligner());
+
+    assertEquals("Reims", ville(salle));
+    assertEquals(1L, signalementsActifs(salle));
+  }
+
+  @Test
   void aligner_concertsNommentLaCommuneCalculee_alignePuisFermeLeSignalement() {
     final UUID salle = salle("Salle Z", "Reims", null);
     villeDesConcerts(salle, "Reims");

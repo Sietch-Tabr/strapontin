@@ -44,7 +44,7 @@ Ne ratez plus les concerts de vos artistes préférés. Strapontin agrège autom
 - [Vue 3](https://vuejs.org/) + [Vite](https://vite.dev/) : application côté client
 - [Spring Security 7](https://spring.io/projects/spring-security) + Spring Session JDBC : authentification, sessions persistantes
 - [Quartz](https://www.quartz-scheduler.org/) : planification des jobs
-- [PostgreSQL 18](https://www.postgresql.org/) + [Flyway 13](https://flywaydb.org/) : persistance et migrations
+- [PostgreSQL 19](https://www.postgresql.org/) + [Flyway 13](https://flywaydb.org/) : persistance et migrations
 - [Resend](https://resend.com/) : emails ; Web Push (VAPID) : notifications
 - Wikidata, OpenStreetMap et Deezer : noms canoniques et position des salles
 - [Maven](https://maven.apache.org/) : monorepo (`core`, `sources`, `web`, `worker`, et `exploitation-commun`, `mise-a-jour`, `exploitation-controle` pour l'exploitation du serveur)

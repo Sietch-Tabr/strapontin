@@ -18,27 +18,27 @@
   },
   "dependencies": {
     "@vite-pwa/workbox-swkit": "8.0.15",
-    "vue": "^3.5.45",
+    "vue": "^3.5.46",
     "vue-router": "^5.5.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@unplugin-pwa/vite": "0.0.6",
+    "@unplugin-pwa/vite": "0.0.8",
     "@vitejs/plugin-vue": "^6.0.11",
     "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^10.12.1",
     "eslint-plugin-vuejs-accessibility": "^2.6.3",
     "globals": "^17.14.0",
-    "lucide-static": "^1.73.0",
+    "lucide-static": "^1.78.0",
     "postcss-html": "^2.0.1",
-    "stylelint": "^18.0.0",
+    "stylelint": "^18.1.0",
     "stylelint-config-html": "^2.0.0",
     "stylelint-config-recommended-vue": "^2.0.0",
-    "stylelint-config-standard": "^41.0.0",
+    "stylelint-config-standard": "^41.1.0",
     "stylelint-config-standard-vue": "^2.0.0",
     "vite": "^8.3.8",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.1"
   },
   "allowScripts": {
     "fsevents": false

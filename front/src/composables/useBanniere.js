@@ -1,7 +1,8 @@
 import { appelApi } from "../utils/api.js";
-import { ref, watch, onMounted, onUnmounted } from "vue";
-import { useRoute } from "vue-router";
+import { ref, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import { parseJsonOuNull } from "../utils/reponseJson.js";
+import { estNavigationReelle } from "../utils/navigationReelle.js";
 
 const banniere = ref(null);
 const visible = ref(false);
@@ -91,12 +92,13 @@ export function _etatBanniereTest() {
 }
 
 export function useBanniere() {
-  const route = useRoute();
+  const router = useRouter();
 
-  watch(
-    () => route.path,
-    () => afficherSiPertinente(),
-  );
+  // Relue à chaque changement de page, pas à la résolution de la route initiale : App.vue la
+  // charge déjà au montage.
+  const retirerGarde = router.afterEach((vers, depuis, echec) => {
+    if (!echec && estNavigationReelle(vers, depuis)) afficherSiPertinente();
+  });
 
   onMounted(() => {
     nbInstances += 1;
@@ -106,6 +108,7 @@ export function useBanniere() {
   });
 
   onUnmounted(() => {
+    retirerGarde();
     nbInstances -= 1;
     if (nbInstances <= 0 && intervalPoll) {
       clearInterval(intervalPoll);

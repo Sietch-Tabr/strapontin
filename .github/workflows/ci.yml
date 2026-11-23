@@ -80,6 +80,7 @@ jobs:
       - run: bash scripts/tester-verrou.sh
       - run: bash scripts/tester-preparer-mise-a-jour.sh
       - run: bash scripts/tester-controle.sh
+      - run: bash scripts/tester-systeme.sh
 
   front:
     name: front

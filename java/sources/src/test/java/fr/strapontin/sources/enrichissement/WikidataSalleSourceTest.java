@@ -85,6 +85,27 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
+  @Test
+  void enrichirLot_decouverteMwapi_ecarteLesOeuvresDArtVisuelles() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(UUID.randomUUID(), "La Nuit", "la nuit", null, null, null, null, null);
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q4502142")))
+        .andExpect(
+            MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("P279")))
+        .andRespond(withSuccess("{\"results\":{\"bindings\":[]}}", MediaType.APPLICATION_JSON));
+
+    source(restClient, Caffeine.newBuilder().build()).enrichirLot(List.of(salle));
+
+    serveur.verify();
+  }
+
   // Une réponse sans résultat n'est pas une panne : elle est comptée à part, une réponse en
   // erreur ne l'est pas.
   @Test
@@ -1244,6 +1265,32 @@ class WikidataSalleSourceTest {
     final Set<String> resultat = src.typesInvalides(List.of("Q110597455"));
 
     assertEquals(Set.of("Q110597455"), resultat);
+    serveur.verify();
+  }
+
+  // La statue « La Nuit » de Maillol (sculpture, P31 statue) avait été rattachée à un club.
+  @Test
+  void typesInvalides_requete_ecarteLesOeuvresDArtVisuellesEtLeurSousClasses() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("Q4502142")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q3211175"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+
+    assertEquals(Set.of("Q3211175"), src.typesInvalides(List.of("Q3211175")));
     serveur.verify();
   }
 

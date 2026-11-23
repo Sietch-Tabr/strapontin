@@ -16,12 +16,15 @@ suivant (contre-vérification du subagent, curseur partagé intact). Lecture seu
 
 import argparse
 import json
+from pathlib import Path
+import sys
 import math
 import re
 import time
 import unicodedata
 import urllib.request
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # lancement possible avec python3 -I
 import lot_rotation as lot
 
 AGENT = "strapontin-suivi/1.0"

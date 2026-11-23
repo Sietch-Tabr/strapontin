@@ -2,7 +2,7 @@
 
 ## Architecture — monorepo Maven
 
-`java/{core,sources,web,worker,exploitation-commun,mise-a-jour,exploitation-controle}` (BOM parent `java/pom.xml`, Java 27, Spring Boot 4.1.2) — `core` : normalisation/dédup/types partagés ; `exploitation-commun` : bibliothèque des modules d'exploitation (versions, chemins, verrou, contrat de mise à jour) ; `mise-a-jour` : mise à jour depuis l'admin, root, sans Spring ; `exploitation-controle` : commandes d'exploitation, root ; `sources` : clients TM/Eventim/Deezer ; `web` : REST API + Vue SPA (8080) ; `worker` : Quartz (8081). `scripts/` : provisionnement/déploiement/sauvegarde — noms auto-descriptifs sauf `restore-test.sh` (test de restauration à la demande, jamais en CI, voir section Sauvegarde).
+`java/{core,sources,web,worker,exploitation-commun,mise-a-jour,exploitation-controle}` (BOM parent `java/pom.xml`, Java 27, Spring Boot 4.2.0) — `core` : normalisation/dédup/types partagés ; `exploitation-commun` : bibliothèque des modules d'exploitation (versions, chemins, verrou, contrat de mise à jour) ; `mise-a-jour` : mise à jour depuis l'admin, root, sans Spring ; `exploitation-controle` : commandes d'exploitation, root ; `sources` : clients TM/Eventim/Deezer ; `web` : REST API + Vue SPA (8080) ; `worker` : Quartz (8081). `scripts/` : provisionnement/déploiement/sauvegarde — noms auto-descriptifs sauf `restore-test.sh` (test de restauration à la demande, jamais en CI, voir section Sauvegarde).
 
 ## Architecture module web — couche service/repository
 
@@ -12,21 +12,19 @@ Pattern 3-couches : `XxxController` (HTTP) → `XxxService` (`@Transactional`) �
 
 **Détail par package** (chargé automatiquement en travaillant dans le dossier) : persistance, résolution salle/artiste, fusions [`worker…/persister/CLAUDE.md`](java/worker/src/main/java/fr/strapontin/worker/persister/CLAUDE.md) ; santé des sources, référentiel, signalements [`worker…/sante/CLAUDE.md`](java/worker/src/main/java/fr/strapontin/worker/sante/CLAUDE.md) ; seuils de correspondance floue [`core…/core/CLAUDE.md`](java/core/src/main/java/fr/strapontin/core/CLAUDE.md) ; enrichissement Wikidata/OSM/Deezer [`worker…/enrichissement/CLAUDE.md`](java/worker/src/main/java/fr/strapontin/worker/enrichissement/CLAUDE.md) ; jobs Quartz [`worker…/worker/CLAUDE.md`](java/worker/src/main/java/fr/strapontin/worker/CLAUDE.md) ; Eventim par lieu/villes [`sources…/sources/CLAUDE.md`](java/sources/src/main/java/fr/strapontin/sources/CLAUDE.md) ; module web [`web…/web/CLAUDE.md`](java/web/src/main/java/fr/strapontin/web/CLAUDE.md) ; scripts de sauvegarde/restauration [`scripts/CLAUDE.md`](scripts/CLAUDE.md).
 
-**Sécurité admin/sessions, pagination admin, alertes internes, VAPID** : détail complet dans [`web/CLAUDE.md`](java/web/src/main/java/fr/strapontin/web/CLAUDE.md). ⚠️ Rappel critique : ne jamais appeler une méthode `REQUIRES_NEW`+`SERIALIZABLE` depuis une transaction déjà ouverte — épuisement garanti du pool HikariCP (incident réel).
+**Web** ([`web/CLAUDE.md`](java/web/src/main/java/fr/strapontin/web/CLAUDE.md)) : sécurité admin/sessions, pagination admin, alertes internes, VAPID, Bean Validation, piège `@ModelAttribute`/record primitif. ⚠️ Ne jamais appeler une méthode `REQUIRES_NEW`+`SERIALIZABLE` depuis une transaction déjà ouverte : épuisement garanti du pool HikariCP (incident réel). **Onboarding** (`ModaleEtapes.vue`) : [`.claude/rules/frontend-vue.md`](.claude/rules/frontend-vue.md).
 
-**Bean Validation, piège `@ModelAttribute`/record primitif** : détail dans [`web/CLAUDE.md`](java/web/src/main/java/fr/strapontin/web/CLAUDE.md). **Onboarding** (`ModaleEtapes.vue`) : détail dans [`.claude/rules/frontend-vue.md`](.claude/rules/frontend-vue.md).
-
-**okhttp/Resend (Kotlin Multiplatform)** : l'artefact `com.squareup.okhttp3:okhttp` est vide côté JVM depuis okhttp 5.0.0 ; resend-java (≥ 4.28.0) dépend directement de `okhttp-jvm`, dont la version est seulement gérée dans le pom parent. Revérifier par `dependency:tree` à chaque montée de Resend qu'aucun `okhttp` vide n'est tiré (un oubli côté worker a déjà causé un `NoClassDefFoundError` silencieux sur tout email worker). **Jackson 3 uniquement** (`tools.jackson`, `JsonMapper` autoconfiguré par Spring Boot, aucun bean maison) : les `RestClient` des sources retiennent Jackson 3 dans le runtime web/worker, le module `sources` en dépend pour que ses tests désérialisent avec la même pile ; seules les annotations restent dans `com.fasterxml.jackson.annotation`.
+**okhttp/Resend (KMP), Jackson 3 uniquement** : pièges de dépendances dans [`sources…/sources/CLAUDE.md`](java/sources/src/main/java/fr/strapontin/sources/CLAUDE.md) (revérifier `dependency:tree` à chaque montée de Resend).
 
 Historique jalon par jalon : [wiki Roadmap](https://github.com/Sietch-Tabr/strapontin/wiki/Roadmap). Détails par domaine : [wiki Architecture](https://github.com/Sietch-Tabr/strapontin/wiki/Architecture), [wiki Sources-de-données](https://github.com/Sietch-Tabr/strapontin/wiki/Sources-de-données), [wiki Sécurité](https://github.com/Sietch-Tabr/strapontin/wiki/Sécurité).
 
 ## Stack technique
 
-- **Spring Boot 4.1.2** + **Vue 3 + Vite 8** (`front/` → `static/`) — port 8080. Thymeleaf et HTMX supprimés.
+- **Spring Boot 4.2.0** + **Vue 3 + Vite 8** (`front/` → `static/`) — port 8080. Thymeleaf et HTMX supprimés.
 - **Vitest 5** (`front/vitest.config.js`, #781) : tests unitaires des fonctions pures partagées entre composants (`front/src/utils/`), sans montage de composant ni jsdom.
 - `npm run build`/`npm ci` n'émettent aucun avertissement (dette déclarée vide) : [`front/CLAUDE.md`](front/CLAUDE.md).
 - **Spring Security 7** — auth session, TOTP 2FA optionnel (limitation de débit en fenêtre glissante, `securite.LimiteurDebit`) ; `anyRequest().authenticated()` — non-API sans session → redirect `/login`, API → 401 JSON
-- **Spring Data JDBC** + PostgreSQL 18 — données persistantes. `statement_timeout=30s` / `idle_in_transaction_session_timeout=30s` (une transaction bloquante épuiserait sinon le pool HikariCP).
+- **Spring Data JDBC** + PostgreSQL 19 — données persistantes. `statement_timeout=30s` / `idle_in_transaction_session_timeout=30s` (une transaction bloquante épuiserait sinon le pool HikariCP).
 - **Quartz** — jobs background (fetch concerts) ; `threadPool.threadCount=10` (virtual threads)
 - **Flyway 13** — migrations DB, un seul jeu (`java/web/src/main/resources/db/migration/`) appliqué aussi par les tests worker. Conventions : [`.claude/rules/sql-migrations.md`](.claude/rules/sql-migrations.md).
 - **Resend** — notifications email (tier gratuit 3 000/mois) ; gabarits HTML via `EmailTemplates.java` (text blocks Java). Garde-fous de quota/anti-boucle : [`web/CLAUDE.md`](java/web/src/main/java/fr/strapontin/web/CLAUDE.md).
@@ -74,13 +72,13 @@ UPDATE_INTERNAL_SECRET=<secret Bearer protégeant POST /api/interne/mise-a-jour-
 SPRING_PROFILES_ACTIVE=dev|prod
 ```
 
-`BACKUP_INTERNAL_SECRET` : `backup-local.sh` le lit dans ce fichier et l'envoie via `Authorization: Bearer`. Absent → l'endpoint répond 403 (notifications de backup perdues, mais le dump continue). `INTEGRITY_INTERNAL_SECRET` : même mécanisme pour `aide-check.sh`/`update.sh` → `IntegriteAlerteController`. `update.sh` vérifie aussi, avant de régénérer la baseline AIDE, qu'aucun fichier hors livraison n'a été modifié — sinon baseline conservée et alerte `modifie`.
+Mécanisme des secrets `*_INTERNAL_SECRET` (403 si absent, baseline AIDE) : [`scripts/CLAUDE.md`](scripts/CLAUDE.md).
 
 **Rotation des secrets** : `scripts/rotation-secrets.sh` (`--db`/`--app-config`/`--backup`/`--integrite`/`--mise-a-jour`/`--tous`, sur le LXC), avec retour arrière. Détail du rechiffrement d'`APP_CONFIG_SECRET` : [`scripts/CLAUDE.md`](scripts/CLAUDE.md) ; procédure : [wiki Sécurité](https://github.com/Sietch-Tabr/strapontin/wiki/S%C3%A9curit%C3%A9).
 
 ## Configuration applicative (`app_config`)
 
-Chiffrement AES-256-GCM (`core.ConfigCipher`, clé dérivée de `APP_CONFIG_SECRET` via SCrypt, paramètres par défaut Node.js N=16384/r=8/p=1/dkLen=32 — différent de `BetterAuthPasswordEncoder` qui utilise r=16 — sel SCrypt volontairement fixe, non secret, la clé réelle dérivant du secret). Format de stockage `base64(IV(12) || TAG(16) || données_chiffrées)`, compatible avec les valeurs chiffrées par l'ancien module TypeScript.
+Chiffrement AES-256-GCM (`core.ConfigCipher`, détail : [`core…/core/CLAUDE.md`](java/core/src/main/java/fr/strapontin/core/CLAUDE.md)).
 ⚠️ Changer `APP_CONFIG_SECRET` sans `scripts/rotation-secrets.sh --app-config` → toutes les valeurs `app_config` et secrets TOTP illisibles.
 ⚠️ Changer les clés VAPID → supprimer `push_abonnements` d'abord.
 Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`, `VAPID_*`) configurables depuis `/admin`.
@@ -91,11 +89,11 @@ Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SE
 
 - **Ticketmaster Discovery v2**, **Eventim France** : sources principales (Eventim par lieu/villes : [`sources…/sources/CLAUDE.md`](java/sources/src/main/java/fr/strapontin/sources/CLAUDE.md)).
 - **Sites de salles** (`SourceSiteSalle`) : Le Triton, EMB, Usine à Chapeaux, Allmol (Antilles, Guyane), un passage par jour, `robots.txt` respecté ([`sources…/sources/CLAUDE.md`](java/sources/src/main/java/fr/strapontin/sources/CLAUDE.md)).
-- **Digitick** : retirée (v3.0.1, #1263), billetteries migrées vers Eventim ; valeur d'enum `digitick` conservée (non retirable en PostgreSQL), observations seules d'événements à venir conservées.
+- **Digitick** : retirée (v3.0.1, #1263), billetteries migrées vers Eventim ; valeur d'enum `digitick` conservée (non retirable en PostgreSQL).
 - **Deezer Search API** : autocomplete artiste (`/artistes`), sans clé ; remplace MusicBrainz.
 - **Wikidata (SPARQL) + OSM (Nominatim)** : enrichissement nocturne (noms canoniques, alias, Deezer ID) ; identifiant Wikidata d'une salle lu sur l'objet OSM que Nominatim trouve autour de sa position (`NominatimSalleSource`, 1 req/s) ; Overpass retiré en 3.0.2 (instance publique saturée) ; rotation hebdomadaire `jour_batch`.
-- **Wikidata Search (REST) + Nominatim** : recherche interactive à l'ajout (web, `SalleService`), sans clé ; Nominatim : `User-Agent` obligatoire, 1 req/s cadencé côté worker (`sources.ClientNominatim`, dernier recours de `ResolveurSalleParConcert`), pas encore côté web (appel non cadencé).
-- **Bandsintown** : abandonné (HTTP 401 depuis 2026-04-10, #65). **MusicBrainz** : bloqué (IP SFR blacklistée par Cloudflare, #293). **Dice** : abandonné (scraping interdit par les CGU, API réservée aux partenaires).
+- **Wikidata Search (REST) + Nominatim** : recherche interactive à l'ajout (web, `SalleService`), sans clé ; Nominatim : `User-Agent` obligatoire, 1 req/s cadencé via `CadenceurAppelsPartage` (partagé en base) côté worker (`sources.ClientNominatim`, dernier recours de `ResolveurSalleParConcert`) comme côté web (`SalleRechercheNominatimService`).
+- **Écartées** : Bandsintown (401, #65), MusicBrainz (IP blacklistée par Cloudflare, #293), Dice (scraping interdit par les CGU).
 
 ## Jobs background (Quartz)
 
@@ -113,7 +111,7 @@ Ordre de traitement, garde-fous et incidents : [`worker…/persister/CLAUDE.md`]
 
 ## Modèle événement canonique
 
-`evenements`+`observations` remplacent la table unique `concerts` : `evenements` porte l'identité canonique (`artiste_id`/`salle_id`/date/heure/statut/absences), `observations` une ligne par `(evenement_id, source, url)` — une fiche package TM et sa fiche normale sont désormais deux observations distinctes du même événement plutôt qu'un doublon supprimé, gain net d'information. `concerts` redevient une **vue** (agrégation `evenements`+meilleure `observations` par priorité de source TM>Eventim>Digitick, `LATERAL JOIN`) pour les lecteurs ; une vue multi-table n'étant pas modifiable, tout chemin d'écriture passe directement par `evenements`/`observations`. Le pattern de fusion (salle ou artiste) préserve les observations plutôt que de les supprimer : supprime les observations du doublon partageant déjà `(source, url)` avec la cible, réassigne le reste, supprime l'évènement source devenu vide.
+`evenements` (identité canonique) + `observations` (une ligne par `(evenement_id, source, url)`) ; `concerts` est une **vue** en lecture seule, toute écriture passe par `evenements`/`observations`. Détail et pattern de fusion : [`worker…/persister/CLAUDE.md`](java/worker/src/main/java/fr/strapontin/worker/persister/CLAUDE.md).
 
 `signalements_matching` (point d'entrée unique des signalements de matching) et observabilité des jobs multi-lots : [`worker…/sante/CLAUDE.md`](java/worker/src/main/java/fr/strapontin/worker/sante/CLAUDE.md), [`worker…/worker/CLAUDE.md`](java/worker/src/main/java/fr/strapontin/worker/CLAUDE.md).
 
