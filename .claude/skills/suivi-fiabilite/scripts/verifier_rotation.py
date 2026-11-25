@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Vérifie un lot de rotation (section 9) contre des sources indépendantes.
 
-Artistes : libellé Wikidata (fr, en ou mul) et nom Deezer comparés au nom suivi ;
+Artistes : libellé Wikidata (fr, en ou mul, lu sur WDQS v2 en une requête par lot) et nom Deezer comparés au nom suivi ;
 un identifiant Deezer à moins de 2 000 fans est signalé (cas Sellig : homonyme
 exact peu suivi). Salles : libellé Wikidata et écart entre la position stockée
 et le P625 (signalé au-delà de 500 m, sans position Wikidata comparable = A VOIR).
@@ -16,6 +16,7 @@ suivant (contre-vérification du subagent, curseur partagé intact). Lecture seu
 
 import argparse
 import json
+import subprocess
 from pathlib import Path
 import sys
 import math
@@ -27,7 +28,7 @@ import urllib.request
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # lancement possible avec python3 -I
 import lot_rotation as lot
 
-AGENT = "strapontin-suivi/1.0"
+AGENT = "strapontin-suivi/1.0"  # identique à celui des tests WDQS v2 du 25/11/2026
 SEUIL_FANS = 2000
 SEUIL_POSITION_METRES = 500
 
@@ -43,35 +44,74 @@ def normaliser(texte: str) -> str:
 
 
 def charger_json(url: str):
-    requete = urllib.request.Request(url, headers={"User-Agent": AGENT})
+    # curl et non urllib : Wikimedia répond 429 à l'empreinte d'urllib (constaté le 25/11/2026)
     for tentative in range(3):
+        sortie = subprocess.run(
+            ["curl", "-s", "--max-time", "15", "-A", AGENT, url],
+            capture_output=True, text=True,
+        )
         try:
-            with urllib.request.urlopen(requete, timeout=15) as reponse:
-                return json.load(reponse)
-        except Exception:
+            return json.loads(sortie.stdout)
+        except ValueError:
             time.sleep(2 * (tentative + 1))
     return None
 
 
-def entite_wikidata(identifiant: str):
-    donnees = charger_json(
-        f"https://www.wikidata.org/wiki/Special:EntityData/{identifiant}.json"
+POINT_WKT = re.compile(r"POINT\(\s*(-?[0-9.eE+-]+)\s+(-?[0-9.eE+-]+)\s*\)", re.IGNORECASE)
+URL_WDQS_V2 = "https://query-next.wikidata.org/sparql"
+
+
+def entites_wikidata(identifiants: list[str]) -> dict[str, dict]:
+    """Libellé (fr, en, mul) et P625 de chaque entité, en une requête WDQS v2.
+
+    v2 (QLever) n'a pas de budget de calcul par client, contrairement à v1 ;
+    les coordonnées reviennent en POINT(lon lat).
+    """
+    valeurs = " ".join(f"wd:{i}" for i in sorted(set(identifiants)) if re.fullmatch(r"Q[0-9]+", i))
+    if not valeurs:
+        return {}
+    # Trois OPTIONAL séparés : la forme BIND(LANG()) + IN dépasse 60 s sur QLever (testé le 25/11/2026)
+    requete = (
+        "SELECT ?item ?lfr ?len ?lmul ?coord WHERE { VALUES ?item { " + valeurs + " } "
+        'OPTIONAL { ?item rdfs:label ?lfr . FILTER(LANG(?lfr)="fr") } '
+        'OPTIONAL { ?item rdfs:label ?len . FILTER(LANG(?len)="en") } '
+        'OPTIONAL { ?item rdfs:label ?lmul . FILTER(LANG(?lmul)="mul") } '
+        "OPTIONAL { ?item wdt:P625 ?coord } }"
     )
-    time.sleep(1)
-    if not donnees:
-        return None
-    return donnees["entities"].get(identifiant) or next(
-        iter(donnees["entities"].values())
-    )
+    resultat: dict[str, dict] = {}
+    for tentative in range(3):
+        sortie = subprocess.run(
+            ["curl", "-s", "--max-time", "40", "-A", AGENT, "-G", URL_WDQS_V2,
+             "--data-urlencode", f"query={requete}",
+             "-H", "Accept: application/sparql-results+json"],
+            capture_output=True, text=True,
+        )
+        try:
+            lignes = json.loads(sortie.stdout)["results"]["bindings"]
+            break
+        except (ValueError, KeyError):
+            time.sleep(3 * (tentative + 1))
+    else:
+        return {}
+    for ligne in lignes:
+        identifiant = ligne["item"]["value"].rsplit("/", 1)[-1]
+        entite = resultat.setdefault(identifiant, {"labels": {}, "coord": None})
+        for langue, cle in (("fr", "lfr"), ("en", "len"), ("mul", "lmul")):
+            if cle in ligne:
+                entite["labels"][langue] = ligne[cle]["value"]
+        if "coord" in ligne and entite["coord"] is None:
+            m = POINT_WKT.search(ligne["coord"]["value"])
+            if m:
+                entite["coord"] = (float(m.group(2)), float(m.group(1)))
+    return resultat
 
 
 def libelle(entite) -> str | None:
     if not entite:
         return None
     for langue in ("fr", "en", "mul"):
-        valeur = entite.get("labels", {}).get(langue, {}).get("value")
-        if valeur:
-            return valeur
+        if entite["labels"].get(langue):
+            return entite["labels"][langue]
     return None
 
 
@@ -85,11 +125,12 @@ def distance_metres(lat1: float, lon1: float, lat2: float, lon2: float) -> float
 
 
 def verifier_artistes(lignes: list[list[str]]) -> None:
+    entites = entites_wikidata([c[2] for c in lignes if len(c) >= 4 and c[2]])
     for cellules in lignes:
         if len(cellules) < 4:
             continue
         _, nom, wikidata, deezer = cellules[:4]
-        nom_wikidata = libelle(entite_wikidata(wikidata)) if wikidata else None
+        nom_wikidata = libelle(entites.get(wikidata)) if wikidata else None
         artiste = (
             charger_json(f"https://api.deezer.com/artist/{deezer}") if deezer else None
         )
@@ -126,19 +167,17 @@ def positions_salles(identifiants: list[str]) -> dict[str, tuple[float, float]]:
 
 def verifier_salles(lignes: list[list[str]]) -> None:
     positions = positions_salles([c[0] for c in lignes if len(c) >= 5])
+    entites = entites_wikidata([c[4] for c in lignes if len(c) >= 5 and c[4]])
     for cellules in lignes:
         if len(cellules) < 5:
             continue
         identifiant, nom, ville, dept, wikidata = cellules[:5]
-        entite = entite_wikidata(wikidata) if wikidata else None
+        entite = entites.get(wikidata) if wikidata else None
         nom_wikidata = libelle(entite)
         ecart = None
-        revendications = (entite or {}).get("claims", {}).get("P625")
-        if revendications and identifiant in positions:
-            valeur = revendications[0]["mainsnak"]["datavalue"]["value"]
-            ecart = distance_metres(
-                *positions[identifiant], valeur["latitude"], valeur["longitude"]
-            )
+        coordonnees = (entite or {}).get("coord")
+        if coordonnees and identifiant in positions:
+            ecart = distance_metres(*positions[identifiant], *coordonnees)
         motifs = []
         if nom_wikidata is None:
             motifs.append("libellé Wikidata absent")
