@@ -63,7 +63,7 @@ Pour chaque ligne remontée aux étapes 2-4 : WebFetch/WebSearch vers le changel
 
 Repérer aussi, même sur une mise à jour sûre, les **nouveautés/optimisations** potentiellement pertinentes pour ce projet (même démarche que les revues historiques de `flyway` 13 ou `resend-java` déjà faites manuellement) — chacune devient un point de décision explicite (cf. étape 8), jamais une simple mention noyée dans le rapport qui n'engage à rien.
 
-⚠️ **Ne jamais grouper plusieurs bumps de dépendances dans un seul commit sans que chacune ait individuellement traversé cette étape** — un message `"chore: bump X, Y, Z"` en une ligne masque l'oubli de cette analyse pour une dépendance particulière (déjà arrivé : `resend-java` 4.23.0→4.24.0 groupé avec 3 autres dépendances le 11/09/2026, `feat(webhooks): add signing secret rotation endpoint` jamais repéré ni remonté, cf. `feedback_bump_groupe_sans_changelog`).
+⚠️ **Ne jamais grouper plusieurs bumps de dépendances dans un seul commit sans que chacune ait individuellement traversé cette étape** — un message `"chore: bump X, Y, Z"` en une ligne masque l'oubli de cette analyse pour une dépendance particulière (déjà arrivé : `resend-java` 4.23.0→4.24.0 groupé avec 3 autres dépendances le 11/09/2026, `feat(webhooks): add signing secret rotation endpoint` jamais repéré ni remonté, cf. `feedback_dependances_versions_changelogs`).
 
 ## 6. Vétusté et CVE (chaque dépendance pinnée, pas seulement celles avec une mise à jour disponible)
 
@@ -80,13 +80,13 @@ Pour chaque propriété de version du pom parent (`java/pom.xml`) et chaque dép
 
 L'étape 5 n'analyse que le _delta_ entre la version épinglée et la dernière disponible — une fonctionnalité déjà présente dans une version qu'on utilise **depuis longtemps**, jamais adoptée dans le code, ne remonte plus jamais dans aucun scan futur (la dépendance n'est plus "en retard" sur elle). Trouvé le 18/09/2026 : le module `Suppressions` de `resend-java`, disponible depuis la v4.18.0 (bien avant tous les bumps tracés dans l'historique du pom), jamais repéré par aucune invocation de ce skill.
 
-- Ne pas auditer ça à chaque invocation (coût disproportionné pour un projet perso, cf. `feedback_proportionnalite_ingenierie`) — seulement à la demande explicite de l'utilisateur sur une dépendance donnée ("on a implémenté les dernières nouveautés de X ?"), ou en mode jalon si le jalon touche déjà une fonctionnalité liée à cette dépendance.
+- Ne pas auditer ça à chaque invocation (coût disproportionné pour un projet perso, cf. `feedback_validation_et_perimetre`) — seulement à la demande explicite de l'utilisateur sur une dépendance donnée ("on a implémenté les dernières nouveautés de X ?"), ou en mode jalon si le jalon touche déjà une fonctionnalité liée à cette dépendance.
 - Démarche : lister les classes/méthodes du SDK réellement utilisées dans le code (grep) vs. celles exposées par la version actuellement installée (décompilation du jar en cache local `~/.m2`, `javap -classpath <jar> <classe>` — jamais deviner une signature). Comparer au changelog complet du projet amont (pas seulement le delta courant) pour retrouver depuis quelle version chaque capacité inexploitée existe.
 - Chaque capacité pertinente trouvée suit le même traitement qu'une nouveauté de l'étape 5 : point de décision explicite (étape 8), jamais une mention seule.
 
 ## 8. Application (mode jalon uniquement)
 
-- Bumper les propriétés/versions concernées. **Ne jamais toucher `<revision>`** (version applicative du pom parent) — décision utilisateur explicite requise, cf. mémoire `feedback_version_bump`.
+- Bumper les propriétés/versions concernées. **Ne jamais toucher `<revision>`** (version applicative du pom parent) — décision utilisateur explicite requise, cf. mémoire `feedback_dependances_versions_changelogs`.
 - Recompiler/tester avant de considérer la mise à jour intégrée :
   ```bash
   mvn -pl core,sources,web test
@@ -94,12 +94,12 @@ L'étape 5 n'analyse que le _delta_ entre la version épinglée et la dernière 
   cd front && npm run test:unit
   ```
   Une mise à jour de `e2e/` (Playwright) commence par `cd e2e && npx playwright install chromium firefox webkit` : chaque version embarque ses propres navigateurs, et leur absence se présente comme un run entier en échec (`browserType.launch: Executable doesn't exist`, 1 281 échecs constatés pour la 1.65.0). Elle se valide ensuite par la suite E2E complète, 5 navigateurs, un run unique à zéro échec et zéro instable.
-- Toute mise à jour "à risque" **ou nouveauté/optimisation repérée jugée pertinente** (étape 5) : poser la question précise **dans le même tour** — implémentation immédiate / ticket dédié / ignoré pour une nouveauté, à appliquer ou non pour une mise à jour à risque — jamais noter "en attente de décision" ou "à mentionner" sans la poser (cf. mémoire `feedback_question_doit_etre_posee`). Seule une réponse explicite ferme le point ; ne bloque pas le reste du jalon si elle n'est pas immédiate — continuer sur les tickets du jalon en parallèle.
+- Toute mise à jour "à risque" **ou nouveauté/optimisation repérée jugée pertinente** (étape 5) : poser la question précise **dans le même tour** — implémentation immédiate / ticket dédié / ignoré pour une nouveauté, à appliquer ou non pour une mise à jour à risque — jamais noter "en attente de décision" ou "à mentionner" sans la poser (cf. mémoire `feedback_validation_et_perimetre`). Seule une réponse explicite ferme le point ; ne bloque pas le reste du jalon si elle n'est pas immédiate — continuer sur les tickets du jalon en parallèle.
 - Le bump de dépendances rejoint le commit/la PR du jalon en cours, jamais une PR séparée.
 
 ## 9. Rapport (mode hors-jalon)
 
-Résumé structuré par dépendance : version actuelle → disponible, résumé du changelog, sûr/à risque, nouveauté notable. Si quelque chose mérite un suivi, proposer un ticket — **constat/analyse uniquement, jamais de piste d'implémentation** (cf. mémoire `feedback_ticket_pas_de_solution`). Aucune modification de fichier sans validation explicite de l'utilisateur.
+Résumé structuré par dépendance : version actuelle → disponible, résumé du changelog, sûr/à risque, nouveauté notable. Si quelque chose mérite un suivi, proposer un ticket — **constat/analyse uniquement, jamais de piste d'implémentation** (cf. mémoire `feedback_tickets`). Aucune modification de fichier sans validation explicite de l'utilisateur.
 
 ## 9 bis. Dette déclarée des avertissements front
 
@@ -120,4 +120,4 @@ Résumé structuré par dépendance : version actuelle → disponible, résumé 
 - Appliquer une mise à jour majeure/breaking sans avoir posé la question de décision dans le tour où elle est identifiée.
 - Rétrograder ou remplacer une dépendance vétuste par une alternative de son propre chef.
 - Mentionner une nouveauté/optimisation dans le rapport sans la poser comme point de décision explicite (étape 8) — une mention seule se perd et n'est jamais suivie d'effet.
-- Grouper plusieurs bumps de dépendances dans un seul commit sans que chacune ait individuellement traversé l'étape 5 (changelog) — cf. `feedback_bump_groupe_sans_changelog`.
+- Grouper plusieurs bumps de dépendances dans un seul commit sans que chacune ait individuellement traversé l'étape 5 (changelog) — cf. `feedback_dependances_versions_changelogs`.
