@@ -130,7 +130,8 @@ Seul l'outillage partagé de `.claude/` est versionné (liste blanche dans `.git
 - `/test` : Tests Java (4 modules) + Vitest + analyse statique + E2E Playwright, résumé chiffré par suite
 - `/pre-pr` : Wiki + CLAUDE.md + changelog + README + commit docs + `gh pr create`
 - `/suivi-fiabilite` : Check delta 360° du suivi de fiabilité prod — santé/jobs/données/tickets, état dans la mémoire personnelle (prérequis locaux listés dans le skill)
-- `check-deps` : Mises à jour Maven/npm/stack infra + changelogs — auto en début de jalon (`"Tickets du jalon X.Y.Z à implémenter :"`, mises à jour sûres appliquées au jalon) ; résumé + proposition de ticket en invocation ad-hoc
+- `/jalon` : Jalon de bout en bout (déclenché par `"Tickets du jalon X.Y.Z à implémenter :"` ou `/jalon X.Y.Z`) : tickets, check-deps, analyse validée, code par groupes commités, tests, dev, 12 jobs, console, revue, doc, PR
+- `check-deps` : Mises à jour Maven/npm/stack infra + changelogs — appelé par `/jalon` (mises à jour sûres appliquées au jalon) ; résumé + proposition de ticket en invocation ad-hoc
 - `/check-pipeline` : Statut et journaux de la dernière exécution de la CI sur `main`, via `gh run` (aucun jeton à passer)
 - `/ticket` : Création de ticket : doublon recherché, constat/analyse/attendu sans solution, étiquette et jalon vérifiés côté serveur
 - `/cloture-jalon` : Lancé par l'utilisateur uniquement : merge de la PR, pipeline, vérification prod, tag et release lisible, fermeture du jalon, nettoyage, wiki et mémoire

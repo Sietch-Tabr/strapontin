@@ -6,8 +6,7 @@ description: >
   Node, template LXC dans provision.sh et .github/workflows), analyse les changelogs pour
   repérer breaking changes et nouveautés exploitables.
 when_to_use: >
-  Invoquer automatiquement dès qu'un message utilisateur commence par
-  "Tickets du jalon X.Y.Z à implémenter" (mode jalon : mises à jour sûres
+  Invoquer depuis le skill jalon, étape 1 (mode jalon : mises à jour sûres
   appliquées et intégrées au jalon en cours, jamais de ticket de bruit) ;
   sinon invocation ad-hoc explicite (mode hors-jalon : résumé + proposition
   de ticket constat-only, aucune modification appliquée).
@@ -15,7 +14,7 @@ when_to_use: >
 
 ## 1. Détecter le mode
 
-- **Mode jalon** : le message qui déclenche cette session commence par `"Tickets du jalon X.Y.Z à implémenter :"`.
+- **Mode jalon** : invoqué par le skill `jalon` (message `"Tickets du jalon X.Y.Z à implémenter :"` ou `/jalon X.Y.Z`).
 - **Mode hors-jalon** : toute autre invocation (ad-hoc, explicite).
 
 Le mode ne change que l'étape 8 (application) — la collecte et l'analyse (étapes 2 à 7) sont identiques dans les deux cas.

@@ -49,6 +49,7 @@ QODER.md
 !.claude/skills/
 .claude/skills/*
 !.claude/skills/check-deps/
+!.claude/skills/jalon/
 !.claude/skills/suivi-fiabilite/
 !.claude/skills/ticket/
 !.claude/skills/cloture-jalon/
